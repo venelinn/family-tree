@@ -1,5 +1,5 @@
 // src/components/ProfileSidebar.tsx
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { PersonNode } from '../lib/types';
 
 interface SidebarProps {
@@ -45,15 +45,15 @@ export default function ProfileSidebar({
     const dialogElement = dialogRef.current;
     if (dialogElement) {
       if (person) {
+        // Use showModal() to open the dialog
         dialogElement.showModal();
-        // Prevent scrolling on the main page when dialog is open
         document.body.style.overflow = 'hidden';
       } else {
         dialogElement.close();
         document.body.style.overflow = 'unset';
       }
     }
-  }, [person]);
+  }, [person]); // Reruns whenever the person data changes
 
   // If no person is active, return null (dialog opening is controlled by useEffect)
   if (!person) return null;
@@ -89,7 +89,7 @@ export default function ProfileSidebar({
       <ul className='text-base text-gray-600'>
         <li>Born: {person.birthDate || 'Unknown'}</li>
         <li>Place: {person.birthPlace || 'Unknown'}</li>
-        <li>Place: {person.birthTimeNote || 'Unknown'}</li>
+        <li>Note: {person.birthTimeNote || 'Unknown'}</li>
       </ul>
 
       {person.deathDate && (

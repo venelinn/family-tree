@@ -1,6 +1,6 @@
 // src/lib/familyData.ts
 
-import 'server-only';
+// import 'server-only';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { RawData, PersonNode, RawIndividual, RawFamily } from './types'; // Assuming types are defined

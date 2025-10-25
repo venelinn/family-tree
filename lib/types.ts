@@ -32,6 +32,13 @@ export interface RawFamily {
   Husband?: string; // @I ID
   Wife?: string; // @I ID
   Children?: string[] | string; // Array of @I IDs
+  Marriage?: {
+    Date?: {
+      Original: string;
+      Value: string;
+    };
+    Place?: string;
+  };
 }
 
 export interface RawData {
