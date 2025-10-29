@@ -1,4 +1,3 @@
-// src/app/page.tsx
 import { PersonNode } from '../lib/types';
 import { getAllPeople } from '../lib/familyData';
 import FamilyTreeVisualization from '../components/FamilyTreeVisualization';
@@ -15,9 +14,13 @@ export default async function HomePage() {
   }
 
   return (
-    <main style={{ padding: '1rem' }}>
+    // FIX: Ensure the main container takes up viewport height
+    <main style={{ padding: '1rem', height: 'calc(100vh - 2rem)' }}>
       <h1>My Family Tree Viewer {rootPersonId}</h1>
-      <FamilyTreeVisualization peopleMap={peopleMap} rootId={rootPersonId} />
+      {/* Ensure the visualization component fills the available space */}
+      <div style={{ height: '100%', width: '100%' }}>
+        <FamilyTreeVisualization peopleMap={peopleMap} rootId={rootPersonId} />
+      </div>
     </main>
   );
 }
