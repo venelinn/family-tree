@@ -1,0 +1,117 @@
+# Memory
+
+Durable context for picking this project back up — the things that aren't
+obvious from reading the code, and the traps that already cost time once.
+
+Full detail lives in [docs/](docs/README.md). This is the short version.
+
+## What this is
+
+A self-hosted family tree viewer for a MyHeritage export, with two views —
+**Family** (kinship graph: couples, siblings, cousins) and **Pedigree** (strict
+binary ancestor chart). Next.js + React Flow. Personal project, ~252 people.
+
+Root person is **Venelin Nikolov Nikolov, `@I85@`** (`ROOT_PERSON_ID` in
+`lib/data.ts`).
+
+## Current state
+
+Working: load, pan/zoom, click a person for a side panel, switch views, expand
+and collapse branches, depth slider, portrait cards with photos and mourning
+ribbons.
+
+Editing works: select a card and ghost "Add brother / sister / partner / son /
+daughter / father / mother" cards appear around it, MyHeritage style; the panel
+has Edit and Delete. Writes go through server actions → `lib/tree-ops.ts` →
+`TreeStore`, then `revalidatePath("/")`.
+
+Not built: Supabase, photo upload for people added in-app, linking two people who
+are *already* in the tree (`linkRelative` exists in `tree-ops.ts` but nothing
+calls it).
+
+## Traps
+
+**Photo URLs expire in ~7 days.** They're HMAC-signed by MyHeritage; there is no
+token or session to refresh. After every export, run `pnpm photos` *promptly* or
+the images are gone until you export again.
+
+**Don't commit `data/` or `public/photos/`.** Living relatives' names, birth
+dates, birthplaces, email addresses. Both are gitignored — keep it that way. Same
+reason: don't paste the export into online GEDCOM converters.
+
+**`pnpm import` wipes the store.** Once you edit in the app, `data/tree.json` is
+the system of record. Re-importing discards your edits. There is no two-way sync
+with MyHeritage and that's deliberate.
+
+**Expand must grant the slider depth, not a fixed step.** `max(budget, 1)` looks
+harmless but the root already has the full budget while a spouse's is zeroed, so
+one button silently did two different things. Symmetry is the requirement.
+
+**Don't reach for dagre/ELK for the family view.** It was tried and produced
+tangles; generic layered layouters can't express "these two are married". The
+union-node model exists for this reason.
+
+**React Flow: `nodes` without `onNodesChange` silently breaks measurement.**
+`useNodesInitialized` stays false forever and anything waiting on it never runs.
+This caused a "fitView doesn't work" bug that looked like a React Flow problem
+and wasn't.
+
+**`fitView` is async** and will clobber a `setCenter` issued right after it.
+`TreeCanvas` computes zoom from node bounds instead.
+
+## Decisions already made (don't relitigate without reason)
+
+- React Flow renders; layout is ours. Layout has no React import so it's testable headlessly.
+- A couple is a node (union node). Load-bearing for both spouse adjacency and the sibling bar.
+- Store is rows (`people` / `unions` / `unionChildren`), not a document — so Supabase is a swap.
+- Back-references (`unionIds`, `childOfUnionId`) are derived, never stored.
+- GEDCOM is the import format; the parser is local and was validated against the older JSON export at **zero diffs** across 252 people / 94 unions.
+- Local store chosen over Supabase for now: free schema churn, git history, no auth work. Revisit if sharing with family becomes the goal.
+
+## Editing notes
+
+- **Ghost add-cards float over the chart, they aren't laid out into it.** Seven
+  extra cards would reflow the tree on every selection. MyHeritage overlaps
+  neighbours too.
+- **Slots are only offered where they'd mean something** — no "Add father" for
+  someone who already has one. The tree allows one father and one mother.
+- **Relationship logic lives in `lib/tree-ops.ts`, not the UI.** "Add a father"
+  means find-or-create the birth union, fill the husband seat, link the child;
+  the components never need to know that.
+- **Dates are free text on purpose.** Sources say "about 1910" as often as a full
+  date, and a date picker would force precision the record doesn't have.
+- **`lib/data.ts` is uncached** — a module cache would serve stale data to the
+  render right after a write.
+- **Deletion is not undoable in the app.** The only safety net is the store file.
+  Test scripts that mutate `data/tree.json` must restore it in a `finally` — one
+  here threw halfway and left three junk records behind.
+
+## Known limitation
+
+**In-law parents land in the nearest free slot**, not directly above their child,
+because the slot above a couple usually belongs to the other spouse's parents.
+Leaves a visible run of line when expanded. Fixing it properly means the tidy
+pass reserving space for in-law fans up front — a real change to
+`lib/layout/family.ts`, not a tweak.
+
+## Tuning knobs
+
+| Constant | Where | Effect |
+| --- | --- | --- |
+| `resolveAllowance` | `lib/layout/family.ts` | Expanding grants the full slider depth. It must not grant a fixed step — that made the same button behave differently on the root than on a spouse. |
+| `MAX_COLLATERAL_DESCENT` | `lib/layout/family.ts` | How far an ancestor's own descendants are followed back down. |
+| `EXPANSION_BUDGET` | `components/tree/TreeApp.tsx` | People an expansion may add before it displaces other open branches. |
+| `MIN_READABLE_ZOOM` | `components/tree/TreeCanvas.tsx` | Zoom floor before panning is preferred over shrinking. |
+| `SIBLING_GAP` / `SPOUSE_GAP` | `lib/layout/constants.ts` | Their *contrast* is what makes couples readable. |
+
+## Verifying changes
+
+No test suite. What's worked: run layouts headlessly under `npx tsx` and assert
+no card overlaps; diff two parsers' `FamilyGraph` output field by field; drive
+the app with Playwright and **look at the screenshot** — several layout bugs here
+were invisible to assertions and obvious on sight.
+
+## Depth reference (default depth 2)
+
+20 people, 4 rows. Depth 3 jumps to ~135 — great-grandparents multiply the clan
+back down. The slider goes to 4 but 3+ is a big chart.

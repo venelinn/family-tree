@@ -1,34 +1,35 @@
 {
-  "name": "family-tree",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "biome check",
-    "format": "biome format --write"
-  },
-  "dependencies": {
-    "@dagrejs/dagre": "^1.1.5",
-    "clsx": "^2.1.1",
-    "lodash": "^4.17.21",
-    "lucide-react": "^0.548.0",
-    "next": "16.0.0",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "reactflow": "^11.11.4",
-    "server-only": "^0.0.1"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.2.0",
-    "@tailwindcss/postcss": "^4",
-    "@types/lodash": "^4.17.20",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "tailwindcss": "^4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5"
-  }
+	"name": "family-tree",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev -p 3022",
+		"build": "next build",
+		"start": "next start",
+		"lint": "biome check",
+		"format": "biome format --write",
+		"photos": "tsx scripts/localize-photos.ts",
+		"import": "tsx scripts/import-gedcom.ts"
+	},
+	"dependencies": {
+		"@xyflow/react": "^12.11.2",
+		"clsx": "^2.1.1",
+		"lucide-react": "^0.548.0",
+		"next": "16.0.0",
+		"react": "19.2.0",
+		"react-dom": "19.2.0",
+		"server-only": "^0.0.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.0",
+		"@tailwindcss/postcss": "^4",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"baseline-browser-mapping": "^2.11.13",
+		"tailwindcss": "^4",
+		"ts-node": "^10.9.2",
+		"tsx": "^4.23.11",
+		"typescript": "^5"
+	}
 }

@@ -1,0 +1,185 @@
+"use client"
+
+import { useState } from "react"
+import type { PersonFormValues } from "@/lib/actions"
+import type { Person } from "@/lib/family-graph"
+
+/**
+ * Add or edit a person.
+ *
+ * Dates are free text on purpose. A genealogy source says "about 1910" or
+ * "Jun 1991" as often as it gives a full date, and a date picker would force a
+ * precision the record doesn't have. The parser already understands partial
+ * dates; this just has to not destroy them.
+ */
+
+interface PersonFormProps {
+	title: string
+	/** Present when editing; absent when adding. */
+	person?: Person
+	/** Fixed for add-slots ("Add sister" is always female), editable otherwise. */
+	lockedSex?: "M" | "F"
+	submitLabel: string
+	pending: boolean
+	error?: string
+	onSubmit: (values: PersonFormValues) => void
+	onCancel: () => void
+}
+
+const field =
+	"w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800 outline-none focus:border-slate-400"
+const label =
+	"block font-medium text-[11px] text-slate-500 uppercase tracking-wide"
+
+export function PersonForm({
+	title,
+	person,
+	lockedSex,
+	submitLabel,
+	pending,
+	error,
+	onSubmit,
+	onCancel,
+}: PersonFormProps) {
+	const [values, setValues] = useState<PersonFormValues>({
+		fullName: person?.name ?? "",
+		sex: lockedSex ?? person?.sex ?? "M",
+		birthDate: person?.birthDate ?? "",
+		birthPlace: person?.birthPlace ?? "",
+		deathDate: person?.deathDate ?? "",
+		deathPlace: person?.deathPlace ?? "",
+		deceased: person?.deceased ?? false,
+	})
+
+	const set = <K extends keyof PersonFormValues>(
+		key: K,
+		value: PersonFormValues[K],
+	) => setValues((current) => ({ ...current, [key]: value }))
+
+	return (
+		<form
+			onSubmit={(event) => {
+				event.preventDefault()
+				onSubmit(values)
+			}}
+			className="flex flex-col gap-3 p-5"
+		>
+			<h2 className="font-semibold text-slate-900">{title}</h2>
+
+			<div>
+				<label className={label}>
+					Full name
+					<input
+						// biome-ignore lint/a11y/noAutofocus: the form opens on an explicit click
+						autoFocus
+						required
+						value={values.fullName}
+						onChange={(event) => set("fullName", event.target.value)}
+						className={`${field} mt-1`}
+						placeholder="Given name Surname"
+					/>
+				</label>
+			</div>
+
+			{lockedSex ? null : (
+				<fieldset>
+					<legend className={label}>Sex</legend>
+					<div className="mt-1 flex gap-2">
+						{(["M", "F"] as const).map((sex) => (
+							<button
+								key={sex}
+								type="button"
+								onClick={() => set("sex", sex)}
+								className={`flex-1 rounded-lg border px-3 py-1.5 font-medium text-sm ${
+									values.sex === sex
+										? sex === "F"
+											? "border-rose-300 bg-rose-50 text-rose-700"
+											: "border-sky-300 bg-sky-50 text-sky-700"
+										: "border-slate-200 text-slate-500 hover:bg-slate-50"
+								}`}
+							>
+								{sex === "M" ? "Male" : "Female"}
+							</button>
+						))}
+					</div>
+				</fieldset>
+			)}
+
+			<div className="grid grid-cols-2 gap-2">
+				<label className={label}>
+					Born
+					<input
+						value={values.birthDate}
+						onChange={(event) => set("birthDate", event.target.value)}
+						className={`${field} mt-1`}
+						placeholder="1976-12-23"
+					/>
+				</label>
+				<label className={label}>
+					Birthplace
+					<input
+						value={values.birthPlace}
+						onChange={(event) => set("birthPlace", event.target.value)}
+						className={`${field} mt-1`}
+						placeholder="Plovdiv, Bulgaria"
+					/>
+				</label>
+			</div>
+
+			<label className="flex items-center gap-2 text-slate-600 text-sm">
+				<input
+					type="checkbox"
+					checked={values.deceased}
+					onChange={(event) => set("deceased", event.target.checked)}
+					className="accent-slate-700"
+				/>
+				Deceased
+			</label>
+
+			{values.deceased ? (
+				<div className="grid grid-cols-2 gap-2">
+					<label className={label}>
+						Died
+						<input
+							value={values.deathDate}
+							onChange={(event) => set("deathDate", event.target.value)}
+							className={`${field} mt-1`}
+							placeholder="1993-03-20"
+						/>
+					</label>
+					<label className={label}>
+						Place of death
+						<input
+							value={values.deathPlace}
+							onChange={(event) => set("deathPlace", event.target.value)}
+							className={`${field} mt-1`}
+						/>
+					</label>
+				</div>
+			) : null}
+
+			{error ? (
+				<p className="rounded-lg bg-rose-50 px-3 py-2 text-rose-700 text-sm">
+					{error}
+				</p>
+			) : null}
+
+			<div className="mt-1 flex gap-2">
+				<button
+					type="submit"
+					disabled={pending}
+					className="flex-1 rounded-lg bg-slate-900 px-3 py-2 font-medium text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+				>
+					{pending ? "Saving…" : submitLabel}
+				</button>
+				<button
+					type="button"
+					onClick={onCancel}
+					className="rounded-lg border border-slate-200 px-3 py-2 font-medium text-slate-600 text-sm hover:bg-slate-50"
+				>
+					Cancel
+				</button>
+			</div>
+		</form>
+	)
+}

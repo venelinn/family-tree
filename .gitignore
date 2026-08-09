@@ -23,7 +23,10 @@
 # misc
 .DS_Store
 *.pem
+
+# Family data and photos: real people, including living relatives. Kept local.
 /data
+/public/photos
 
 # debug
 npm-debug.log*
