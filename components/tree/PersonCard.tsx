@@ -2,6 +2,8 @@
 
 import { Handle, type NodeProps, Position } from "@xyflow/react"
 import { Minus, Plus, X } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
+import { formatTreeDate } from "@/lib/date-format"
 import {
 	CARD_HEIGHT,
 	CARD_WIDTH,
@@ -17,33 +19,6 @@ import { Avatar } from "./Avatar"
  * Both layouts pick handles by these names, so a card never needs to know
  * which view it is being rendered in.
  */
-
-const MONTHS = [
-	"Jan",
-	"Feb",
-	"Mar",
-	"Apr",
-	"May",
-	"Jun",
-	"Jul",
-	"Aug",
-	"Sep",
-	"Oct",
-	"Nov",
-	"Dec",
-]
-
-/**
- * `1976-12-23` -> `Dec 23 1976`. Dates that never parsed to ISO are free text
- * from the export ("about 1910", "1912–1913"), so they pass through untouched.
- */
-function formatDate(value: string | undefined): string | undefined {
-	if (!value) return undefined
-	const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-	if (!iso) return value
-	const [, year, month, day] = iso
-	return `${MONTHS[Number(month) - 1]} ${Number(day)} ${year}`
-}
 
 /**
  * The reveal bar that sits above or below a card.
@@ -70,14 +45,20 @@ function RevealBar({
 	direction: "up" | "down"
 	onToggle?: () => void
 }) {
-	const plural = direction === "up" ? "parents" : "children"
-	const noun = count === 1 ? (direction === "up" ? "parent" : "child") : plural
+	const t = useTranslations("card")
+
+	// Expanding names a number, so it needs the plural form for that number;
+	// collapsing just names the branch. Both come from the catalogue rather than
+	// an English `count === 1` test, because plural rules differ by language.
+	const label =
+		mode === "expand"
+			? t(direction === "up" ? "parents" : "children", { count })
+			: t(direction === "up" ? "parentsPlain" : "childrenPlain")
 
 	// Plus and minus rather than chevrons: an arrow has to encode both direction
 	// and action, and ends up meaning neither clearly. `+ 2 parents` reads on
 	// sight.
 	const Icon = mode === "expand" ? Plus : Minus
-	const label = mode === "expand" ? `${count} ${noun}` : plural
 
 	return (
 		<button
@@ -87,7 +68,7 @@ function RevealBar({
 				event.stopPropagation()
 				onToggle?.()
 			}}
-			title={mode === "expand" ? `Show ${label}` : label}
+			title={mode === "expand" ? t("showBranch", { branch: label }) : label}
 			className={`nodrag absolute left-0 z-10 flex w-full items-center justify-center gap-1 rounded-md border py-0.5 font-medium text-[10px] shadow-sm transition-colors ${
 				direction === "up" ? "-top-4" : "-bottom-4"
 			} ${
@@ -103,6 +84,9 @@ function RevealBar({
 }
 
 export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
+	const t = useTranslations("card")
+	const locale = useLocale()
+
 	const {
 		person,
 		isRoot,
@@ -128,8 +112,8 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 			? "ring-2 ring-emerald-400 ring-offset-1"
 			: ""
 
-	const born = formatDate(person.birthDate)
-	const died = formatDate(person.deathDate)
+	const born = formatTreeDate(person.birthDate, locale)
+	const died = formatTreeDate(person.deathDate, locale)
 
 	// Landscape in the pedigree, where a whole generation stacks in one column
 	// and height is the scarce dimension; portrait in the family view, where the
@@ -169,7 +153,7 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 			{/* Mourning ribbon across the top-left corner. */}
 			{person.deceased ? (
 				<span
-					title="Deceased"
+					title={t("deceased", { sex: person.sex })}
 					className="pointer-events-none absolute top-0 left-0 h-5 w-5 overflow-hidden rounded-tl-[9px]"
 				>
 					<span
@@ -208,7 +192,9 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 						event.stopPropagation()
 						onRequestAdd(person.id)
 					}}
-					title={isAdding ? "Close" : `Add a relative of ${person.name}`}
+					title={
+						isAdding ? t("close") : t("addRelative", { name: person.name })
+					}
 					className={`nodrag absolute top-1 right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border shadow-sm transition-opacity ${
 						isAdding
 							? "border-slate-700 bg-slate-800 text-white opacity-100"
@@ -244,7 +230,9 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 							<span className="text-slate-400">†</span> {died}
 						</div>
 					) : null}
-					{!born && !died && person.deceased ? <div>Deceased</div> : null}
+					{!born && !died && person.deceased ? (
+						<div>{t("deceased", { sex: person.sex })}</div>
+					) : null}
 				</div>
 			</div>
 		</div>

@@ -1,7 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { getTranslations } from "next-intl/server"
 import { store } from "./data"
+import { TreeOpError } from "./errors"
 import type { PersonInput } from "./store/types"
 import { addRelative, type Relation, removePerson } from "./tree-ops"
 
@@ -12,6 +14,9 @@ import { addRelative, type Relation, removePerson } from "./tree-ops"
  * panel can show a real message ("Venelin already has a father") instead of a
  * generic failure. Every mutation revalidates `/`, which re-runs the server
  * component and pushes a fresh graph down to the client.
+ *
+ * This is also where error *codes* from `tree-ops` become sentences: the
+ * request's language is known here and nowhere deeper.
  */
 
 export interface ActionResult {
@@ -20,10 +25,15 @@ export interface ActionResult {
 	personId?: string
 }
 
-const failure = (error: unknown): ActionResult => ({
-	ok: false,
-	error: error instanceof Error ? error.message : "Something went wrong",
-})
+async function failure(error: unknown): Promise<ActionResult> {
+	const t = await getTranslations("errors")
+	// `ErrorCode` is a subset of the `errors` keys, so a code with no message
+	// is a compile error rather than a raw code shown to the user.
+	if (error instanceof TreeOpError) {
+		return { ok: false, error: t(error.code, error.values) }
+	}
+	return { ok: false, error: t("unknown") }
+}
 
 /** Blank strings from an empty form field should be absent, not "". */
 const clean = (value: string | undefined) => value?.trim() || undefined
@@ -40,7 +50,7 @@ export interface PersonFormValues {
 
 function toInput(values: PersonFormValues): PersonInput {
 	const fullName = values.fullName.trim()
-	if (!fullName) throw new Error("A name is required")
+	if (!fullName) throw new TreeOpError("nameRequired")
 
 	const parts = fullName.split(/\s+/)
 	return {
@@ -70,7 +80,7 @@ export async function addRelativeAction(
 		revalidatePath("/")
 		return { ok: true, personId: person.id }
 	} catch (error) {
-		return failure(error)
+		return await failure(error)
 	}
 }
 
@@ -86,7 +96,7 @@ export async function updatePersonAction(
 		revalidatePath("/")
 		return { ok: true, personId }
 	} catch (error) {
-		return failure(error)
+		return await failure(error)
 	}
 }
 
@@ -98,6 +108,6 @@ export async function deletePersonAction(
 		revalidatePath("/")
 		return { ok: true }
 	} catch (error) {
-		return failure(error)
+		return await failure(error)
 	}
 }

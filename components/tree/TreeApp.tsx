@@ -1,6 +1,7 @@
 "use client"
 
 import { ReactFlowProvider } from "@xyflow/react"
+import { useTranslations } from "next-intl"
 import { useCallback, useMemo, useState, useTransition } from "react"
 import {
 	addRelativeAction,
@@ -15,6 +16,7 @@ import { layoutPedigree } from "@/lib/layout/pedigree"
 import type {
 	AddSlotNodeData,
 	PersonNodeData,
+	SlotKey,
 	ViewType,
 } from "@/lib/layout/types"
 import { PersonForm } from "./PersonForm"
@@ -42,6 +44,9 @@ type Overrides = ReadonlyMap<string, boolean>
 const EXPANSION_BUDGET = 4
 
 export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
+	const t = useTranslations("form")
+	const tSlots = useTranslations("slots")
+
 	const graph = useMemo(() => reviveFamilyGraph(serialized), [serialized])
 
 	const [view, setView] = useState<ViewType>("family")
@@ -66,7 +71,8 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 				anchorId: string
 				relation: AddSlotNodeData["relation"]
 				sex: "M" | "F"
-				label: string
+				/** Which ghost card opened this, so the form can title itself. */
+				slot: SlotKey
 		  }
 		| null
 	>(null)
@@ -196,9 +202,9 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 	}, [view, selectedId, layout.nodes])
 
 	const openAdd = useCallback<NonNullable<AddSlotNodeData["onAdd"]>>(
-		(anchorId, relation, sex, label) => {
+		(anchorId, relation, sex, slot) => {
 			setSaveError(undefined)
-			setEditor({ mode: "add", anchorId, relation, sex, label })
+			setEditor({ mode: "add", anchorId, relation, sex, slot })
 		},
 		[],
 	)
@@ -307,9 +313,7 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 					<aside className="w-80 shrink-0 overflow-y-auto border-slate-200 border-l bg-white">
 						<PersonForm
 							title={
-								editor.mode === "edit"
-									? "Edit person"
-									: (editor.label ?? "Add person")
+								editor.mode === "edit" ? t("editTitle") : tSlots(editor.slot)
 							}
 							person={
 								editor.mode === "edit"
@@ -317,7 +321,7 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 									: undefined
 							}
 							lockedSex={editor.mode === "add" ? editor.sex : undefined}
-							submitLabel={editor.mode === "edit" ? "Save" : "Add"}
+							submitLabel={editor.mode === "edit" ? t("save") : t("add")}
 							pending={saving}
 							error={saveError}
 							onSubmit={submitEditor}

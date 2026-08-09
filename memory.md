@@ -25,6 +25,10 @@ daughter / father / mother" cards appear around it, MyHeritage style; the panel
 has Edit and Delete. Writes go through server actions → `lib/tree-ops.ts` →
 `TreeStore`, then `revalidatePath("/")`.
 
+Localised: English and Bulgarian via `next-intl`, picked on `/settings` and kept
+in a cookie (no `/en` `/bg` prefix, no middleware). Adding a language is three
+files — see [docs/i18n.md](docs/i18n.md).
+
 Not built: Supabase, photo upload for people added in-app, linking two people who
 are *already* in the tree (`linkRelative` exists in `tree-ops.ts` but nothing
 calls it).
@@ -58,6 +62,17 @@ and wasn't.
 
 **`fitView` is async** and will clobber a `setCenter` issued right after it.
 `TreeCanvas` computes zoom from node bounds instead.
+
+**Nothing below a component may return an English string.** `lib/facts.ts`,
+`add-slots.ts` and `tree-ops.ts` return message *keys*; the component or the
+server action translates. They run on both sides of the server boundary and
+don't know the reader's language. Plurals and gender agreement live in the ICU
+message too — a `count === 1` test in a component bakes English grammar into
+every language, and Bulgarian inflects *Роден* / *Родена*.
+
+**Changing the language must `revalidatePath("/", "layout")`.** Without it the
+client router cache serves the chart back in the old language. The cookie alone
+is not enough.
 
 ## Decisions already made (don't relitigate without reason)
 

@@ -2,6 +2,7 @@
 
 import type { NodeProps } from "@xyflow/react"
 import { UserPlus } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { CARD_HEIGHT, CARD_WIDTH } from "@/lib/layout/constants"
 import type { AddSlotNodeData } from "@/lib/layout/types"
 
@@ -15,6 +16,7 @@ import type { AddSlotNodeData } from "@/lib/layout/types"
  * chart still while you decide.
  */
 export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
+	const t = useTranslations("slots")
 	const female = data.sex === "F"
 
 	return (
@@ -22,7 +24,7 @@ export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
 			type="button"
 			onClick={(event) => {
 				event.stopPropagation()
-				data.onAdd?.(data.anchorId, data.relation, data.sex, data.label)
+				data.onAdd?.(data.anchorId, data.relation, data.sex, data.slot)
 			}}
 			style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
 			className={`nodrag flex flex-col items-center justify-center gap-2 rounded-xl border-2 bg-white shadow-lg transition-transform hover:scale-[1.03] ${
@@ -39,7 +41,7 @@ export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
 				<UserPlus size={20} strokeWidth={2} />
 			</span>
 			<span className="px-1 text-center font-semibold text-[11px] text-slate-600 leading-tight">
-				{data.label}
+				{t(data.slot)}
 			</span>
 		</button>
 	)

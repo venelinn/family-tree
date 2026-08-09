@@ -1,6 +1,6 @@
 import type { FamilyGraph } from "../family-graph"
 import { CARD_HEIGHT, CARD_WIDTH, ROW_HEIGHT, SIBLING_GAP } from "./constants"
-import type { AddSlotNodeData, LayoutNode } from "./types"
+import type { AddSlotNodeData, LayoutNode, SlotKey } from "./types"
 
 /**
  * Ghost "Add …" cards arranged around the selected person.
@@ -18,10 +18,10 @@ import type { AddSlotNodeData, LayoutNode } from "./types"
 const GAP = SIBLING_GAP
 
 interface SlotSpec {
-	key: string
+	/** Both the node-id suffix and the `slots.*` message key. */
+	key: SlotKey
 	relation: AddSlotNodeData["relation"]
 	sex: "M" | "F"
-	label: string
 	dx: number
 	dy: number
 }
@@ -54,7 +54,6 @@ export function buildAddSlots(
 			key: "father",
 			relation: "parent",
 			sex: "M",
-			label: "Add father",
 			dx: -column / 2,
 			dy: -ROW_HEIGHT,
 		})
@@ -64,7 +63,6 @@ export function buildAddSlots(
 			key: "mother",
 			relation: "parent",
 			sex: "F",
-			label: "Add mother",
 			dx: column / 2,
 			dy: -ROW_HEIGHT,
 		})
@@ -76,7 +74,6 @@ export function buildAddSlots(
 			key: "brother",
 			relation: "sibling",
 			sex: "M",
-			label: "Add brother",
 			dx: -column,
 			dy: -(CARD_HEIGHT / 2 + 8),
 		},
@@ -84,18 +81,17 @@ export function buildAddSlots(
 			key: "sister",
 			relation: "sibling",
 			sex: "F",
-			label: "Add sister",
 			dx: -column,
 			dy: CARD_HEIGHT / 2 + 8,
 		},
 	)
 
 	// A partner goes where a spouse card would.
+	const partnerSex = person.sex === "M" ? "F" : "M"
 	specs.push({
-		key: "partner",
+		key: partnerSex === "F" ? "partnerFemale" : "partnerMale",
 		relation: "spouse",
-		sex: person.sex === "M" ? "F" : "M",
-		label: "Add partner",
+		sex: partnerSex,
 		dx: column,
 		dy: 0,
 	})
@@ -106,7 +102,6 @@ export function buildAddSlots(
 			key: "son",
 			relation: "child",
 			sex: "M",
-			label: "Add son",
 			dx: -column / 2,
 			dy: ROW_HEIGHT,
 		},
@@ -114,7 +109,6 @@ export function buildAddSlots(
 			key: "daughter",
 			relation: "child",
 			sex: "F",
-			label: "Add daughter",
 			dx: column / 2,
 			dy: ROW_HEIGHT,
 		},
@@ -129,7 +123,7 @@ export function buildAddSlots(
 			anchorId: selectedId,
 			relation: spec.relation,
 			sex: spec.sex,
-			label: spec.label,
+			slot: spec.key,
 			onAdd,
 		},
 	}))

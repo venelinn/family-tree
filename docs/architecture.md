@@ -89,8 +89,16 @@ client rebuilds.
 | `PersonPanel.tsx` | Sidebar: action bar, facts timeline, immediate family |
 | `PersonForm.tsx` | Add / edit fields |
 | `AddSlotCard.tsx` | Ghost "Add sister" cards around the selected person |
-| `Toolbar.tsx` | View switch, depth slider, person count |
+| `Toolbar.tsx` | View switch, depth slider, person count, link to settings |
 | `Avatar.tsx` | Photo with initials fallback |
+
+### `lib/localization.ts`, `messages/`, `i18n/request.ts`
+
+English and Bulgarian through `next-intl`, chosen on the settings page and kept
+in a cookie rather than a URL prefix. The rule that shapes the rest of the code:
+**anything below a component returns a message key, not a sentence** — fact
+titles, relationship labels, add-slot labels, and write failures alike. See
+[i18n.md](i18n.md).
 
 ## Writes
 

@@ -1,3 +1,4 @@
+import { TreeOpError } from "./errors"
 import type {
 	PersonInput,
 	PersonRecord,
@@ -56,7 +57,7 @@ export async function addRelative(
 ): Promise<PersonRecord> {
 	const snapshot = await store.read()
 	const anchor = snapshot.people.find((person) => person.id === anchorId)
-	if (!anchor) throw new Error(`No such person: ${anchorId}`)
+	if (!anchor) throw new TreeOpError("noSuchPerson", { id: anchorId })
 
 	if (relation === "parent") {
 		const seat = seatFor(input.sex)
@@ -65,8 +66,9 @@ export async function addRelative(
 		if (existingId) {
 			const union = snapshot.unions.find((u) => u.id === existingId)
 			if (union?.[seat]) {
-				throw new Error(
-					`${anchor.fullName} already has a ${input.sex === "M" ? "father" : "mother"}`,
+				throw new TreeOpError(
+					input.sex === "M" ? "alreadyHasFather" : "alreadyHasMother",
+					{ name: anchor.fullName },
 				)
 			}
 			const person = await store.createPerson(input)
@@ -142,27 +144,28 @@ export async function linkRelative(
 	otherId: string,
 ): Promise<void> {
 	if (anchorId === otherId) {
-		throw new Error("A person cannot be their own relative")
+		throw new TreeOpError("ownRelative")
 	}
 
 	const snapshot = await store.read()
 	const anchor = snapshot.people.find((person) => person.id === anchorId)
 	const other = snapshot.people.find((person) => person.id === otherId)
-	if (!anchor || !other) throw new Error("Both people must already exist")
+	if (!anchor || !other) throw new TreeOpError("bothMustExist")
 
 	if (relation === "parent") {
 		if (birthUnionOf(snapshot, otherId) === birthUnionOf(snapshot, anchorId)) {
 			// They'd be siblings, not parent and child.
-			throw new Error(
-				`${other.fullName} is already a sibling of ${anchor.fullName}`,
-			)
+			throw new TreeOpError("alreadySibling", {
+				other: other.fullName,
+				name: anchor.fullName,
+			})
 		}
 		const seat = seatFor(other.sex)
 		const existingId = birthUnionOf(snapshot, anchorId)
 		if (existingId) {
 			const union = snapshot.unions.find((u) => u.id === existingId)
 			if (union?.[seat] && union[seat] !== otherId) {
-				throw new Error(`${anchor.fullName} already has that parent`)
+				throw new TreeOpError("alreadyHasParent", { name: anchor.fullName })
 			}
 			await store.updateUnion(existingId, { [seat]: otherId })
 			return
@@ -175,7 +178,7 @@ export async function linkRelative(
 	if (relation === "sibling") {
 		const anchorUnion = birthUnionOf(snapshot, anchorId)
 		if (birthUnionOf(snapshot, otherId)) {
-			throw new Error(`${other.fullName} already has parents on record`)
+			throw new TreeOpError("alreadyHasParents", { other: other.fullName })
 		}
 		const targetId =
 			anchorUnion ?? (await store.createUnion({ divorced: false })).id
@@ -188,7 +191,7 @@ export async function linkRelative(
 		const already = spouseUnionsOf(snapshot, anchorId).some(
 			(union) => union.husbandId === otherId || union.wifeId === otherId,
 		)
-		if (already) throw new Error("They are already married in this tree")
+		if (already) throw new TreeOpError("alreadyMarried")
 		await store.createUnion({
 			[seatFor(anchor.sex)]: anchor.id,
 			[seatFor(other.sex)]: other.id,
@@ -198,7 +201,7 @@ export async function linkRelative(
 	}
 
 	if (birthUnionOf(snapshot, otherId)) {
-		throw new Error(`${other.fullName} already has parents on record`)
+		throw new TreeOpError("alreadyHasParents", { other: other.fullName })
 	}
 	const unions = spouseUnionsOf(snapshot, anchorId)
 	const targetId =

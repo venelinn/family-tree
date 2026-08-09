@@ -6,7 +6,20 @@ import type { FamilyGraph, Person } from "./family-graph"
  * Nothing here is a new kind of data — a marriage fact *is* the union row, a
  * "birth of daughter" fact *is* the child's birth. Deriving them keeps the one
  * source of truth and means the timeline updates itself when the tree is edited.
+ *
+ * Titles and relationship labels come out as message keys, not sentences: this
+ * runs on both sides of the server boundary and has no business knowing which
+ * language the reader picked.
  */
+
+/** Message key under `facts` — the panel translates it. */
+export type FactKey =
+	| "birth"
+	| "marriage"
+	| "marriageDivorced"
+	| "birthOfSon"
+	| "birthOfDaughter"
+	| "death"
 
 export interface Fact {
 	id: string
@@ -14,7 +27,7 @@ export interface Fact {
 	year?: number
 	/** Age of the subject when it happened, when both years are known. */
 	age?: number
-	title: string
+	titleKey: FactKey
 	/** A second person involved — spouse, child — for the avatar and name. */
 	relatedId?: string
 	date?: string
@@ -35,7 +48,7 @@ export function buildFacts(graph: FamilyGraph, person: Person): Fact[] {
 		facts.push({
 			id: "birth",
 			year: person.birthYear,
-			title: "Birth",
+			titleKey: "birth",
 			date: person.birthDate,
 			place: person.birthPlace,
 		})
@@ -54,7 +67,7 @@ export function buildFacts(graph: FamilyGraph, person: Person): Fact[] {
 				id: `marriage:${unionId}`,
 				year: union.marriageYear,
 				age: ageAt(person, union.marriageYear),
-				title: union.divorced ? "Marriage to (later divorced)" : "Marriage to",
+				titleKey: union.divorced ? "marriageDivorced" : "marriage",
 				relatedId: spouseId,
 				date: union.marriageDate,
 				place: union.marriagePlace,
@@ -68,7 +81,7 @@ export function buildFacts(graph: FamilyGraph, person: Person): Fact[] {
 				id: `child:${childId}`,
 				year: child.birthYear,
 				age: ageAt(person, child.birthYear),
-				title: child.sex === "F" ? "Birth of daughter" : "Birth of son",
+				titleKey: child.sex === "F" ? "birthOfDaughter" : "birthOfSon",
 				relatedId: childId,
 				date: child.birthDate,
 				place: child.birthPlace,
@@ -81,7 +94,7 @@ export function buildFacts(graph: FamilyGraph, person: Person): Fact[] {
 			id: "death",
 			year: person.deathYear,
 			age: ageAt(person, person.deathYear),
-			title: "Death",
+			titleKey: "death",
 			date: person.deathDate,
 			place: person.deathPlace,
 		})
@@ -97,14 +110,24 @@ export function buildFacts(graph: FamilyGraph, person: Person): Fact[] {
 	})
 }
 
-export type RelationLabel = string
+/** Message key under `relations` — the panel translates it. */
+export type RelationKey =
+	| "husband"
+	| "wife"
+	| "father"
+	| "mother"
+	| "brother"
+	| "sister"
+	| "son"
+	| "daughter"
+	| "relative"
 
 /** How `other` is related to `person`, for the immediate-family list. */
-export function relationLabel(
+export function relationKey(
 	graph: FamilyGraph,
 	person: Person,
 	other: Person,
-): RelationLabel {
+): RelationKey {
 	const female = other.sex === "F"
 
 	if (
@@ -113,23 +136,23 @@ export function relationLabel(
 			return union?.husbandId === other.id || union?.wifeId === other.id
 		})
 	) {
-		return female ? "Wife" : "Husband"
+		return female ? "wife" : "husband"
 	}
 
 	const birthUnion = person.childOfUnionId
 		? graph.unions.get(person.childOfUnionId)
 		: undefined
 	if (birthUnion?.husbandId === other.id || birthUnion?.wifeId === other.id) {
-		return female ? "Mother" : "Father"
+		return female ? "mother" : "father"
 	}
 	if (birthUnion?.childIds.includes(other.id)) {
-		return female ? "Sister" : "Brother"
+		return female ? "sister" : "brother"
 	}
 
 	const isChild = person.unionIds.some((id) =>
 		graph.unions.get(id)?.childIds.includes(other.id),
 	)
-	if (isChild) return female ? "Daughter" : "Son"
+	if (isChild) return female ? "daughter" : "son"
 
-	return "Relative"
+	return "relative"
 }

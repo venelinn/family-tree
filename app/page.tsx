@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { TreeApp } from "@/components/tree/TreeApp"
 import {
 	loadFamilyGraph,
@@ -9,9 +10,10 @@ export default async function HomePage() {
 	const graph = await loadFamilyGraph()
 
 	if (!graph.people.has(ROOT_PERSON_ID)) {
+		const t = await getTranslations("errors")
 		return (
 			<main className="grid h-screen place-items-center text-slate-500">
-				Could not find the root person ({ROOT_PERSON_ID}) in the family data.
+				{t("rootMissing", { id: ROOT_PERSON_ID })}
 			</main>
 		)
 	}

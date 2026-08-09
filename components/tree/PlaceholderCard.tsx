@@ -1,6 +1,7 @@
 "use client"
 
 import { Handle, type NodeProps, Position } from "@xyflow/react"
+import { useTranslations } from "next-intl"
 import {
 	CARD_HEIGHT,
 	CARD_WIDTH,
@@ -16,6 +17,8 @@ import type { PlaceholderNodeData } from "@/lib/layout/types"
 export function PlaceholderCard({
 	data,
 }: NodeProps & { data: PlaceholderNodeData }) {
+	// `relation` is "father" / "mother", which are also `slots.*` message keys.
+	const t = useTranslations("slots")
 	const landscape = data.variant === "landscape"
 
 	return (
@@ -32,7 +35,7 @@ export function PlaceholderCard({
 				position={Position.Left}
 				className="!opacity-0"
 			/>
-			<span>+ Add {data.relation}</span>
+			<span>+ {t(data.relation)}</span>
 		</div>
 	)
 }

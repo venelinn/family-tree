@@ -1,0 +1,120 @@
+{
+	"app": {
+		"title": "Family tree",
+		"description": "A private family tree"
+	},
+	"toolbar": {
+		"fallbackTitle": "Family tree",
+		"peopleCount": "{visible} of {total} people",
+		"generations": "Generations",
+		"columns": "Columns",
+		"backToMe": "Back to me",
+		"settings": "Settings",
+		"viewFamily": "Family",
+		"viewPedigree": "Pedigree"
+	},
+	"panel": {
+		"empty": "Select anyone in the tree to see their details.",
+		"closeDetails": "Close details",
+		"closeMenu": "Close menu",
+		"centre": "Centre",
+		"centred": "Centred",
+		"edit": "Edit",
+		"add": "Add",
+		"more": "More",
+		"showParents": "Show {count, plural, one {# hidden parent} other {# hidden parents}}",
+		"hideParents": "Hide parents",
+		"showChildren": "Show {count, plural, one {# hidden child} other {# hidden children}}",
+		"hideChildren": "Hide children",
+		"deletePerson": "Delete person",
+		"deleteConfirm": "Delete {name}? Their relationships will be removed too. This cannot be undone.",
+		"sectionFacts": "Facts",
+		"sectionFamily": "Immediate family",
+		"noFacts": "Nothing recorded yet.",
+		"noRelatives": "No relatives recorded. Use the + on their card to add some.",
+		"age": "Age {age}",
+		"lifespan": "{born} – {died}",
+		"born": "{sex, select, other {Born}} {date}",
+		"died": "{sex, select, other {Died}} {date}",
+		"deceased": "{sex, select, other {Deceased}}",
+		"noDates": "No dates recorded"
+	},
+	"form": {
+		"editTitle": "Edit person",
+		"addTitle": "Add person",
+		"fullName": "Full name",
+		"fullNamePlaceholder": "Given name Surname",
+		"sex": "Sex",
+		"male": "Male",
+		"female": "Female",
+		"birthDate": "Born",
+		"birthPlace": "Birthplace",
+		"birthPlacePlaceholder": "Plovdiv, Bulgaria",
+		"deceased": "Deceased",
+		"deathDate": "Died",
+		"deathPlace": "Place of death",
+		"save": "Save",
+		"add": "Add",
+		"saving": "Saving…",
+		"cancel": "Cancel"
+	},
+	"card": {
+		"deceased": "{sex, select, other {Deceased}}",
+		"addRelative": "Add a relative of {name}",
+		"close": "Close",
+		"parents": "{count, plural, one {# parent} other {# parents}}",
+		"children": "{count, plural, one {# child} other {# children}}",
+		"parentsPlain": "parents",
+		"childrenPlain": "children",
+		"showBranch": "Show {branch}"
+	},
+	"slots": {
+		"father": "Add father",
+		"mother": "Add mother",
+		"brother": "Add brother",
+		"sister": "Add sister",
+		"partnerMale": "Add partner",
+		"partnerFemale": "Add partner",
+		"son": "Add son",
+		"daughter": "Add daughter"
+	},
+	"facts": {
+		"birth": "Birth",
+		"marriage": "Marriage to",
+		"marriageDivorced": "Marriage to (later divorced)",
+		"birthOfSon": "Birth of son",
+		"birthOfDaughter": "Birth of daughter",
+		"death": "Death"
+	},
+	"relations": {
+		"husband": "Husband",
+		"wife": "Wife",
+		"father": "Father",
+		"mother": "Mother",
+		"brother": "Brother",
+		"sister": "Sister",
+		"son": "Son",
+		"daughter": "Daughter",
+		"relative": "Relative"
+	},
+	"settings": {
+		"title": "Settings",
+		"back": "Back to the tree",
+		"languageTitle": "Language",
+		"languageHelp": "The language of the interface. Names, dates and places recorded in the tree are shown exactly as they were entered."
+	},
+	"errors": {
+		"unknown": "Something went wrong",
+		"nameRequired": "A name is required",
+		"rootMissing": "Could not find the root person ({id}) in the family data.",
+		"noSuchPerson": "No such person: {id}",
+		"alreadyHasFather": "{name} already has a father",
+		"alreadyHasMother": "{name} already has a mother",
+		"ownRelative": "A person cannot be their own relative",
+		"bothMustExist": "Both people must already exist",
+		"alreadySibling": "{other} is already a sibling of {name}",
+		"alreadyHasParent": "{name} already has that parent",
+		"alreadyHasParents": "{other} already has parents on record",
+		"alreadyMarried": "They are already married in this tree"
+	}
+}

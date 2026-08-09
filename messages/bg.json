@@ -1,0 +1,120 @@
+{
+	"app": {
+		"title": "Семейно дърво",
+		"description": "Лично семейно дърво"
+	},
+	"toolbar": {
+		"fallbackTitle": "Семейно дърво",
+		"peopleCount": "{visible} от {total} души",
+		"generations": "Поколения",
+		"columns": "Колони",
+		"backToMe": "Обратно към мен",
+		"settings": "Настройки",
+		"viewFamily": "Семейство",
+		"viewPedigree": "Родословие"
+	},
+	"panel": {
+		"empty": "Изберете човек от дървото, за да видите подробности.",
+		"closeDetails": "Затваряне на панела",
+		"closeMenu": "Затваряне на менюто",
+		"centre": "Центрирай",
+		"centred": "Центриран",
+		"edit": "Редактирай",
+		"add": "Добави",
+		"more": "Още",
+		"showParents": "Покажи {count, plural, one {# скрит родител} other {# скрити родители}}",
+		"hideParents": "Скрий родителите",
+		"showChildren": "Покажи {count, plural, one {# скрито дете} other {# скрити деца}}",
+		"hideChildren": "Скрий децата",
+		"deletePerson": "Изтрий човека",
+		"deleteConfirm": "Да се изтрие ли {name}? Роднинските връзки също ще бъдат премахнати. Действието е необратимо.",
+		"sectionFacts": "Факти",
+		"sectionFamily": "Близки роднини",
+		"noFacts": "Няма записани данни.",
+		"noRelatives": "Няма записани роднини. Използвайте + върху картата, за да добавите.",
+		"age": "На {age} г.",
+		"lifespan": "{born} – {died}",
+		"born": "{sex, select, F {Родена} other {Роден}}: {date}",
+		"died": "{sex, select, F {Починала} other {Починал}}: {date}",
+		"deceased": "{sex, select, F {Починала} other {Починал}}",
+		"noDates": "Няма записани дати"
+	},
+	"form": {
+		"editTitle": "Редактиране на човек",
+		"addTitle": "Добавяне на човек",
+		"fullName": "Пълно име",
+		"fullNamePlaceholder": "Име Фамилия",
+		"sex": "Пол",
+		"male": "Мъж",
+		"female": "Жена",
+		"birthDate": "Дата на раждане",
+		"birthPlace": "Място на раждане",
+		"birthPlacePlaceholder": "Пловдив, България",
+		"deceased": "Починал/а",
+		"deathDate": "Дата на смърт",
+		"deathPlace": "Място на смърт",
+		"save": "Запази",
+		"add": "Добави",
+		"saving": "Запазване…",
+		"cancel": "Отказ"
+	},
+	"card": {
+		"deceased": "{sex, select, F {Починала} other {Починал}}",
+		"addRelative": "Добави роднина на {name}",
+		"close": "Затвори",
+		"parents": "{count, plural, one {# родител} other {# родители}}",
+		"children": "{count, plural, one {# дете} other {# деца}}",
+		"parentsPlain": "родители",
+		"childrenPlain": "деца",
+		"showBranch": "Покажи {branch}"
+	},
+	"slots": {
+		"father": "Добави баща",
+		"mother": "Добави майка",
+		"brother": "Добави брат",
+		"sister": "Добави сестра",
+		"partnerMale": "Добави партньор",
+		"partnerFemale": "Добави партньорка",
+		"son": "Добави син",
+		"daughter": "Добави дъщеря"
+	},
+	"facts": {
+		"birth": "Раждане",
+		"marriage": "Брак с",
+		"marriageDivorced": "Брак с (по-късно разведени)",
+		"birthOfSon": "Раждане на син",
+		"birthOfDaughter": "Раждане на дъщеря",
+		"death": "Смърт"
+	},
+	"relations": {
+		"husband": "Съпруг",
+		"wife": "Съпруга",
+		"father": "Баща",
+		"mother": "Майка",
+		"brother": "Брат",
+		"sister": "Сестра",
+		"son": "Син",
+		"daughter": "Дъщеря",
+		"relative": "Роднина"
+	},
+	"settings": {
+		"title": "Настройки",
+		"back": "Обратно към дървото",
+		"languageTitle": "Език",
+		"languageHelp": "Езикът на интерфейса. Имената, датите и местата, записани в дървото, се показват точно както са въведени."
+	},
+	"errors": {
+		"unknown": "Нещо се обърка",
+		"nameRequired": "Името е задължително",
+		"rootMissing": "Основният човек ({id}) не беше намерен в данните на семейството.",
+		"noSuchPerson": "Няма такъв човек: {id}",
+		"alreadyHasFather": "{name} вече има баща",
+		"alreadyHasMother": "{name} вече има майка",
+		"ownRelative": "Човек не може да бъде роднина на себе си",
+		"bothMustExist": "И двамата души трябва вече да съществуват",
+		"alreadySibling": "{other} вече е брат или сестра на {name}",
+		"alreadyHasParent": "{name} вече има такъв родител",
+		"alreadyHasParents": "{other} вече има записани родители",
+		"alreadyMarried": "Те вече са в брак в това дърво"
+	}
+}

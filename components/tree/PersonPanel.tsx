@@ -9,8 +9,14 @@ import {
 	Trash2,
 	UserPlus,
 } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
-import { buildFacts, relationLabel } from "@/lib/facts"
+import { formatTreeDate } from "@/lib/date-format"
+import {
+	buildFacts,
+	type RelationKey,
+	relationKey as relationKeyFor,
+} from "@/lib/facts"
 import {
 	byBirthYear,
 	type FamilyGraph,
@@ -86,36 +92,60 @@ function Section({
 	)
 }
 
-function lifespan(person: Person): string {
+/**
+ * The line under the name: a span if we have both ends, otherwise whichever end
+ * we have. Bulgarian inflects "born" and "died" for the subject, so the sex is
+ * handed to the catalogue and the catalogue decides whether it matters.
+ *
+ * A component rather than a helper because it needs the translator, and the
+ * panel returns early when nobody is selected — a hook call after that would
+ * break the rules of hooks.
+ */
+function Lifespan({ person }: { person: Person }) {
+	const t = useTranslations("panel")
+	const locale = useLocale()
+
 	const born =
-		person.birthDate ??
+		formatTreeDate(person.birthDate, locale) ??
 		(person.birthYear ? String(person.birthYear) : undefined)
 	const died =
-		person.deathDate ??
+		formatTreeDate(person.deathDate, locale) ??
 		(person.deathYear ? String(person.deathYear) : undefined)
-	if (born && died) return `${born} – ${died}`
-	if (born) return `Born ${born}`
-	if (died) return `Died ${died}`
-	return person.deceased ? "Deceased" : "No dates recorded"
+
+	if (born && died) {
+		return t("lifespan", {
+			born: t("born", { sex: person.sex, date: born }),
+			died: t("died", { sex: person.sex, date: died }),
+		})
+	}
+	if (born) return t("born", { sex: person.sex, date: born })
+	if (died) return t("died", { sex: person.sex, date: died })
+	return person.deceased ? t("deceased", { sex: person.sex }) : t("noDates")
 }
 
 /** One row of the immediate-family list: photo, name, how they're related. */
 function RelativeRow({
 	person,
-	label,
+	relation,
 	onFocus,
 }: {
 	person: Person
-	label: string
+	relation: RelationKey
 	onFocus: (personId: string) => void
 }) {
+	const t = useTranslations("panel")
+	const tRelations = useTranslations("relations")
+
 	const years =
 		person.birthYear && person.deathYear
-			? `${person.birthYear} – ${person.deathYear}`
+			? t("lifespan", {
+					born: String(person.birthYear),
+					died: String(person.deathYear),
+				})
 			: person.birthYear
-				? `Born ${person.birthYear}`
+				? t("born", { sex: person.sex, date: String(person.birthYear) })
 				: person.deceased
-					? "Deceased"
+					? t("deceased", { sex: person.sex })
 					: ""
 
 	return (
@@ -130,7 +160,9 @@ function RelativeRow({
 					<span className="block truncate font-medium text-slate-800 text-sm">
 						{person.name}
 					</span>
-					<span className="block text-slate-500 text-xs">{label}</span>
+					<span className="block text-slate-500 text-xs">
+						{tRelations(relation)}
+					</span>
 					{years ? (
 						<span className="block text-slate-400 text-xs">{years}</span>
 					) : null}
@@ -214,12 +246,15 @@ export function PersonPanel({
 	onDelete,
 	onRequestAdd,
 }: PersonPanelProps) {
+	const t = useTranslations("panel")
+	const tFacts = useTranslations("facts")
+	const locale = useLocale()
 	const [menuOpen, setMenuOpen] = useState(false)
 
 	if (!person) {
 		return (
 			<aside className="flex w-80 shrink-0 items-center justify-center border-slate-200 border-l bg-white p-6 text-center text-slate-400 text-sm">
-				Select anyone in the tree to see their details.
+				{t("empty")}
 			</aside>
 		)
 	}
@@ -244,7 +279,9 @@ export function PersonPanel({
 						<h2 className="font-semibold text-lg text-slate-900 leading-tight">
 							{person.name}
 						</h2>
-						<p className="mt-1 text-slate-500 text-sm">{lifespan(person)}</p>
+						<p className="mt-1 text-slate-500 text-sm">
+							<Lifespan person={person} />
+						</p>
 						{person.birthPlace ? (
 							<p className="mt-0.5 text-slate-400 text-xs">
 								{person.birthPlace}
@@ -254,7 +291,7 @@ export function PersonPanel({
 					<button
 						type="button"
 						onClick={onClose}
-						aria-label="Close details"
+						aria-label={t("closeDetails")}
 						className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
 					>
 						✕
@@ -272,25 +309,25 @@ export function PersonPanel({
 				<div className="relative mt-4 flex items-start gap-1">
 					<Action
 						icon={<Crosshair size={17} strokeWidth={2} />}
-						label={isRoot ? "Centred" : "Centre"}
+						label={isRoot ? t("centred") : t("centre")}
 						active={isRoot}
 						disabled={isRoot}
 						onClick={() => onFocus(person.id)}
 					/>
 					<Action
 						icon={<Pencil size={17} strokeWidth={2} />}
-						label="Edit"
+						label={t("edit")}
 						onClick={() => onEdit(person.id)}
 					/>
 					<Action
 						icon={<UserPlus size={17} strokeWidth={2} />}
-						label="Add"
+						label={t("add")}
 						disabled={!onRequestAdd}
 						onClick={() => onRequestAdd?.(person.id)}
 					/>
 					<Action
 						icon={<MoreHorizontal size={17} strokeWidth={2} />}
-						label="More"
+						label={t("more")}
 						disabled={busy}
 						onClick={() => setMenuOpen((open) => !open)}
 					/>
@@ -300,7 +337,7 @@ export function PersonPanel({
 							{/* Backdrop so clicking anywhere else closes the menu. */}
 							<button
 								type="button"
-								aria-label="Close menu"
+								aria-label={t("closeMenu")}
 								className="fixed inset-0 z-10 cursor-default"
 								onClick={() => setMenuOpen(false)}
 							/>
@@ -313,8 +350,10 @@ export function PersonPanel({
 										}}
 									>
 										{branches.ancestors === "expandable"
-											? `Show ${branches.hiddenAncestorCount} hidden parents`
-											: "Hide parents"}
+											? t("showParents", {
+													count: branches.hiddenAncestorCount,
+												})
+											: t("hideParents")}
 									</MenuItem>
 								) : null}
 								{branches?.descendants !== "none" && branches ? (
@@ -325,8 +364,10 @@ export function PersonPanel({
 										}}
 									>
 										{branches.descendants === "expandable"
-											? `Show ${branches.hiddenDescendantCount} hidden children`
-											: "Hide children"}
+											? t("showChildren", {
+													count: branches.hiddenDescendantCount,
+												})
+											: t("hideChildren")}
 									</MenuItem>
 								) : null}
 								<div className="my-1 border-slate-100 border-t" />
@@ -337,9 +378,7 @@ export function PersonPanel({
 										// Deleting a person is not undoable in the app — the
 										// only safety net is the store file itself.
 										if (
-											window.confirm(
-												`Delete ${person.name}? Their relationships will be removed too. This cannot be undone.`,
-											)
+											window.confirm(t("deleteConfirm", { name: person.name }))
 										) {
 											onDelete(person.id)
 										}
@@ -347,7 +386,7 @@ export function PersonPanel({
 								>
 									<span className="flex items-center gap-2">
 										<Trash2 size={13} strokeWidth={2} />
-										Delete person
+										{t("deletePerson")}
 									</span>
 								</MenuItem>
 							</div>
@@ -356,9 +395,9 @@ export function PersonPanel({
 				</div>
 			</header>
 
-			<Section title="Facts" count={facts.length}>
+			<Section title={t("sectionFacts")} count={facts.length}>
 				{facts.length === 0 ? (
-					<p className="text-slate-400 text-sm">Nothing recorded yet.</p>
+					<p className="text-slate-400 text-sm">{t("noFacts")}</p>
 				) : (
 					<ol className="space-y-3">
 						{facts.map((fact) => {
@@ -373,13 +412,13 @@ export function PersonPanel({
 										</div>
 										{fact.age != null ? (
 											<div className="text-[10px] text-slate-400">
-												Age {fact.age}
+												{t("age", { age: fact.age })}
 											</div>
 										) : null}
 									</div>
 									<div className="min-w-0 flex-1 border-slate-100 border-l pl-3">
 										<div className="font-medium text-slate-800 text-sm">
-											{fact.title}
+											{tFacts(fact.titleKey)}
 										</div>
 										{related ? (
 											<button
@@ -393,7 +432,7 @@ export function PersonPanel({
 										) : null}
 										{fact.date ? (
 											<div className="mt-0.5 text-slate-500 text-xs">
-												{fact.date}
+												{formatTreeDate(fact.date, locale)}
 											</div>
 										) : null}
 										{fact.place ? (
@@ -410,18 +449,16 @@ export function PersonPanel({
 				)}
 			</Section>
 
-			<Section title="Immediate family" count={family.length}>
+			<Section title={t("sectionFamily")} count={family.length}>
 				{family.length === 0 ? (
-					<p className="text-slate-400 text-sm">
-						No relatives recorded. Use the + on their card to add some.
-					</p>
+					<p className="text-slate-400 text-sm">{t("noRelatives")}</p>
 				) : (
 					<ul className="space-y-0.5">
 						{family.map((relative) => (
 							<RelativeRow
 								key={relative.id}
 								person={relative}
-								label={relationLabel(graph, person, relative)}
+								relation={relationKeyFor(graph, person, relative)}
 								onFocus={onFocus}
 							/>
 						))}

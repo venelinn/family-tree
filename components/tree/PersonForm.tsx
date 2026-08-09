@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import type { PersonFormValues } from "@/lib/actions"
 import type { Person } from "@/lib/family-graph"
@@ -41,6 +42,8 @@ export function PersonForm({
 	onSubmit,
 	onCancel,
 }: PersonFormProps) {
+	const t = useTranslations("form")
+
 	const [values, setValues] = useState<PersonFormValues>({
 		fullName: person?.name ?? "",
 		sex: lockedSex ?? person?.sex ?? "M",
@@ -68,7 +71,7 @@ export function PersonForm({
 
 			<div>
 				<label className={label}>
-					Full name
+					{t("fullName")}
 					<input
 						// biome-ignore lint/a11y/noAutofocus: the form opens on an explicit click
 						autoFocus
@@ -76,14 +79,14 @@ export function PersonForm({
 						value={values.fullName}
 						onChange={(event) => set("fullName", event.target.value)}
 						className={`${field} mt-1`}
-						placeholder="Given name Surname"
+						placeholder={t("fullNamePlaceholder")}
 					/>
 				</label>
 			</div>
 
 			{lockedSex ? null : (
 				<fieldset>
-					<legend className={label}>Sex</legend>
+					<legend className={label}>{t("sex")}</legend>
 					<div className="mt-1 flex gap-2">
 						{(["M", "F"] as const).map((sex) => (
 							<button
@@ -98,7 +101,7 @@ export function PersonForm({
 										: "border-slate-200 text-slate-500 hover:bg-slate-50"
 								}`}
 							>
-								{sex === "M" ? "Male" : "Female"}
+								{sex === "M" ? t("male") : t("female")}
 							</button>
 						))}
 					</div>
@@ -107,7 +110,7 @@ export function PersonForm({
 
 			<div className="grid grid-cols-2 gap-2">
 				<label className={label}>
-					Born
+					{t("birthDate")}
 					<input
 						value={values.birthDate}
 						onChange={(event) => set("birthDate", event.target.value)}
@@ -116,12 +119,12 @@ export function PersonForm({
 					/>
 				</label>
 				<label className={label}>
-					Birthplace
+					{t("birthPlace")}
 					<input
 						value={values.birthPlace}
 						onChange={(event) => set("birthPlace", event.target.value)}
 						className={`${field} mt-1`}
-						placeholder="Plovdiv, Bulgaria"
+						placeholder={t("birthPlacePlaceholder")}
 					/>
 				</label>
 			</div>
@@ -133,13 +136,13 @@ export function PersonForm({
 					onChange={(event) => set("deceased", event.target.checked)}
 					className="accent-slate-700"
 				/>
-				Deceased
+				{t("deceased")}
 			</label>
 
 			{values.deceased ? (
 				<div className="grid grid-cols-2 gap-2">
 					<label className={label}>
-						Died
+						{t("deathDate")}
 						<input
 							value={values.deathDate}
 							onChange={(event) => set("deathDate", event.target.value)}
@@ -148,7 +151,7 @@ export function PersonForm({
 						/>
 					</label>
 					<label className={label}>
-						Place of death
+						{t("deathPlace")}
 						<input
 							value={values.deathPlace}
 							onChange={(event) => set("deathPlace", event.target.value)}
@@ -170,14 +173,14 @@ export function PersonForm({
 					disabled={pending}
 					className="flex-1 rounded-lg bg-slate-900 px-3 py-2 font-medium text-sm text-white hover:bg-slate-700 disabled:opacity-50"
 				>
-					{pending ? "Saving…" : submitLabel}
+					{pending ? t("saving") : submitLabel}
 				</button>
 				<button
 					type="button"
 					onClick={onCancel}
 					className="rounded-lg border border-slate-200 px-3 py-2 font-medium text-slate-600 text-sm hover:bg-slate-50"
 				>
-					Cancel
+					{t("cancel")}
 				</button>
 			</div>
 		</form>

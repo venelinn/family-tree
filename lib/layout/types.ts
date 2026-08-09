@@ -54,17 +54,32 @@ export interface UnionNodeData {
 	[key: string]: unknown
 }
 
+/**
+ * Which ghost card this is. Doubles as its message key under `slots`, so the
+ * layout never carries a translated string across the server boundary.
+ * "Partner" is split by sex because Bulgarian inflects it.
+ */
+export type SlotKey =
+	| "father"
+	| "mother"
+	| "brother"
+	| "sister"
+	| "partnerMale"
+	| "partnerFemale"
+	| "son"
+	| "daughter"
+
 /** A ghost "Add sister" card floating beside the selected person. */
 export interface AddSlotNodeData {
 	anchorId: string
 	relation: "parent" | "spouse" | "child" | "sibling"
 	sex: "M" | "F"
-	label: string
+	slot: SlotKey
 	onAdd?: (
 		anchorId: string,
 		relation: AddSlotNodeData["relation"],
 		sex: "M" | "F",
-		label: string,
+		slot: SlotKey,
 	) => void
 	[key: string]: unknown
 }

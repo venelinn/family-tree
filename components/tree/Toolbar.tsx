@@ -1,5 +1,8 @@
 "use client"
 
+import { Settings } from "lucide-react"
+import Link from "next/link"
+import { useTranslations } from "next-intl"
 import type { Person } from "@/lib/family-graph"
 import type { ViewType } from "@/lib/layout/types"
 
@@ -16,10 +19,10 @@ interface ToolbarProps {
 	onReset: () => void
 }
 
-const VIEWS: Array<{ id: ViewType; label: string }> = [
-	{ id: "family", label: "Family" },
-	{ id: "pedigree", label: "Pedigree" },
-]
+const VIEWS = [
+	{ id: "family", labelKey: "viewFamily" },
+	{ id: "pedigree", labelKey: "viewPedigree" },
+] as const satisfies ReadonlyArray<{ id: ViewType; labelKey: string }>
 
 export function Toolbar({
 	view,
@@ -32,20 +35,22 @@ export function Toolbar({
 	canReset,
 	onReset,
 }: ToolbarProps) {
+	const t = useTranslations("toolbar")
+
 	return (
 		<header className="flex shrink-0 items-center gap-4 border-slate-200 border-b bg-white px-5 py-3">
 			<div className="min-w-0">
 				<h1 className="truncate font-semibold text-slate-900">
-					{focusPerson?.name ?? "Family tree"}
+					{focusPerson?.name ?? t("fallbackTitle")}
 				</h1>
 				<p className="text-slate-400 text-xs">
-					{visibleCount} of {totalCount} people
+					{t("peopleCount", { visible: visibleCount, total: totalCount })}
 				</p>
 			</div>
 
 			<div className="ml-auto flex items-center gap-3">
 				<label className="flex items-center gap-2 text-slate-500 text-xs">
-					<span>{view === "family" ? "Generations" : "Columns"}</span>
+					<span>{view === "family" ? t("generations") : t("columns")}</span>
 					<input
 						type="range"
 						min={1}
@@ -63,12 +68,12 @@ export function Toolbar({
 						onClick={onReset}
 						className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 text-sm hover:bg-slate-50"
 					>
-						Back to me
+						{t("backToMe")}
 					</button>
 				) : null}
 
 				<div className="flex rounded-lg bg-slate-100 p-0.5">
-					{VIEWS.map(({ id, label }) => (
+					{VIEWS.map(({ id, labelKey }) => (
 						<button
 							key={id}
 							type="button"
@@ -79,10 +84,22 @@ export function Toolbar({
 									: "text-slate-500 hover:text-slate-700"
 							}`}
 						>
-							{label}
+							{t(labelKey)}
 						</button>
 					))}
 				</div>
+
+				{/* Language lives on the settings page rather than in a toolbar
+				    switcher — it is a preference you set once, not a control you
+				    reach for while reading the chart. */}
+				<Link
+					href="/settings"
+					title={t("settings")}
+					aria-label={t("settings")}
+					className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+				>
+					<Settings size={16} strokeWidth={2} />
+				</Link>
 			</div>
 		</header>
 	)
