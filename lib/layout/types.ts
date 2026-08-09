@@ -11,8 +11,12 @@ export type ViewType = "family" | "pedigree"
  */
 export type BranchState = "none" | "expandable" | "collapsible"
 
+/** Portrait in the family view, landscape in the pedigree. */
+export type CardVariant = "portrait" | "landscape"
+
 export interface PersonNodeData {
 	person: Person
+	variant?: CardVariant
 	/** The person the view is currently centred on. */
 	isRoot: boolean
 	/** Set by the canvas, not the layout — see TreeCanvas for why it lives here. */
@@ -38,6 +42,7 @@ export interface PersonNodeData {
 
 /** A "+ Add father" slot in the pedigree view — an ancestor we don't have yet. */
 export interface PlaceholderNodeData {
+	variant?: CardVariant
 	relation: "father" | "mother"
 	/** The person whose parent is missing. */
 	forPersonId: string

@@ -68,6 +68,24 @@ and wasn't.
 - GEDCOM is the import format; the parser is local and was validated against the older JSON export at **zero diffs** across 252 people / 94 unions.
 - Local store chosen over Supabase for now: free schema churn, git history, no auth work. Revisit if sharing with family becomes the goal.
 
+## Sidebar
+
+One **action bar** — Centre / Edit / Add / More — carries everything you can do
+to a person. Branch show/hide and Delete live in the More menu; they used to be
+a banner, a button pair and an accordion scattered down the panel.
+
+Accordion sections: **Facts** (a life timeline — birth, marriages, each child's
+birth, death, with year and age in the margin), **Immediate family** (avatars +
+relationship labels), . Facts and relationship labels are derived in
+`lib/facts.ts`, never stored.
+
+## Card geometry differs per view
+
+Family cards are **portrait** (132×140) because that chart sprawls sideways;
+pedigree cards are **landscape** (200×76) because that one stacks a generation
+per column and height is the scarce dimension. The layout tags nodes with
+`variant` and the cards switch on it — don't unify them.
+
 ## Editing notes
 
 - **Ghost add-cards float over the chart, they aren't laid out into it.** Seven

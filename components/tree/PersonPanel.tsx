@@ -1,6 +1,16 @@
 "use client"
 
-import { Pencil, Trash2 } from "lucide-react"
+import {
+	ChevronDown,
+	Crosshair,
+	MapPin,
+	MoreHorizontal,
+	Pencil,
+	Trash2,
+	UserPlus,
+} from "lucide-react"
+import { useState } from "react"
+import { buildFacts, relationLabel } from "@/lib/facts"
 import {
 	byBirthYear,
 	type FamilyGraph,
@@ -34,36 +44,45 @@ interface PersonPanelProps {
 	error?: string
 	onEdit: (personId: string) => void
 	onDelete: (personId: string) => void
+	/** Opens the ghost "Add …" cards on the canvas. Absent in the pedigree view. */
+	onRequestAdd?: (personId: string) => void
 }
 
-/**
- * Show/hide for one branch, spelled out.
- *
- * The canvas only ever advertises hidden branches; collapsing something already
- * on screen is a deliberate act, so it lives here where there is room to label
- * it properly rather than behind a hover-only icon.
- */
-function BranchButton({
-	state,
-	hidden,
-	noun,
-	onToggle,
+/** Collapsible section. Open by default — the content is why you clicked. */
+function Section({
+	title,
+	count,
+	children,
+	defaultOpen = true,
 }: {
-	state: BranchState
-	hidden: number
-	noun: "parents" | "children"
-	onToggle: () => void
+	title: string
+	count?: number
+	children: React.ReactNode
+	defaultOpen?: boolean
 }) {
-	if (state === "none") return null
-	const expandable = state === "expandable"
+	const [open, setOpen] = useState(defaultOpen)
 	return (
-		<button
-			type="button"
-			onClick={onToggle}
-			className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-left font-medium text-slate-600 text-xs hover:bg-slate-50"
-		>
-			{expandable ? `Show ${hidden} hidden ${noun}` : `Hide ${noun}`}
-		</button>
+		<section className="border-slate-100 border-t">
+			<button
+				type="button"
+				onClick={() => setOpen((current) => !current)}
+				className="flex w-full items-center gap-1.5 px-5 py-3 text-left hover:bg-slate-50"
+			>
+				<span className="font-semibold text-[11px] text-slate-400 uppercase tracking-wide">
+					{title}
+				</span>
+				{count != null ? (
+					<span className="text-[11px] text-slate-300">{count}</span>
+				) : null}
+				<ChevronDown
+					size={14}
+					className={`ml-auto text-slate-400 transition-transform ${
+						open ? "" : "-rotate-90"
+					}`}
+				/>
+			</button>
+			{open ? <div className="px-5 pb-4">{children}</div> : null}
+		</section>
 	)
 }
 
@@ -80,40 +99,103 @@ function lifespan(person: Person): string {
 	return person.deceased ? "Deceased" : "No dates recorded"
 }
 
-function RelationList({
-	title,
-	people,
+/** One row of the immediate-family list: photo, name, how they're related. */
+function RelativeRow({
+	person,
+	label,
 	onFocus,
 }: {
-	title: string
-	people: Person[]
+	person: Person
+	label: string
 	onFocus: (personId: string) => void
 }) {
-	if (people.length === 0) return null
+	const years =
+		person.birthYear && person.deathYear
+			? `${person.birthYear} – ${person.deathYear}`
+			: person.birthYear
+				? `Born ${person.birthYear}`
+				: person.deceased
+					? "Deceased"
+					: ""
+
 	return (
-		<section className="border-slate-100 border-t px-5 py-4">
-			<h3 className="mb-2 font-semibold text-[11px] text-slate-400 uppercase tracking-wide">
-				{title}
-			</h3>
-			<ul className="space-y-1">
-				{people.map((person) => (
-					<li key={person.id}>
-						<button
-							type="button"
-							onClick={() => onFocus(person.id)}
-							className="w-full rounded-md px-2 py-1 text-left text-slate-700 text-sm hover:bg-slate-100"
-						>
-							<span className="font-medium">{person.name}</span>
-							{person.birthYear ? (
-								<span className="ml-1.5 text-slate-400 text-xs">
-									{person.birthYear}
-								</span>
-							) : null}
-						</button>
-					</li>
-				))}
-			</ul>
-		</section>
+		<li>
+			<button
+				type="button"
+				onClick={() => onFocus(person.id)}
+				className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-100"
+			>
+				<Avatar person={person} size={34} />
+				<span className="min-w-0 flex-1">
+					<span className="block truncate font-medium text-slate-800 text-sm">
+						{person.name}
+					</span>
+					<span className="block text-slate-500 text-xs">{label}</span>
+					{years ? (
+						<span className="block text-slate-400 text-xs">{years}</span>
+					) : null}
+				</span>
+			</button>
+		</li>
+	)
+}
+
+/** One circular icon button with its label underneath. */
+function Action({
+	icon,
+	label,
+	onClick,
+	disabled,
+	active,
+}: {
+	icon: React.ReactNode
+	label: string
+	onClick: () => void
+	disabled?: boolean
+	active?: boolean
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			title={label}
+			className="group flex flex-1 flex-col items-center gap-1 disabled:opacity-40"
+		>
+			<span
+				className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
+					active
+						? "border-emerald-300 bg-emerald-50 text-emerald-600"
+						: "border-slate-200 bg-slate-50 text-slate-600 group-hover:border-slate-300 group-hover:bg-slate-100 group-enabled:group-hover:text-slate-900"
+				}`}
+			>
+				{icon}
+			</span>
+			<span className="font-medium text-[10px] text-slate-500">{label}</span>
+		</button>
+	)
+}
+
+/** An entry in the overflow menu. */
+function MenuItem({
+	children,
+	onClick,
+	danger,
+}: {
+	children: React.ReactNode
+	onClick: () => void
+	danger?: boolean
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${
+				danger ? "text-rose-600" : "text-slate-700"
+			}`}
+		>
+			{children}
+		</button>
 	)
 }
 
@@ -130,7 +212,10 @@ export function PersonPanel({
 	error,
 	onEdit,
 	onDelete,
+	onRequestAdd,
 }: PersonPanelProps) {
+	const [menuOpen, setMenuOpen] = useState(false)
+
 	if (!person) {
 		return (
 			<aside className="flex w-80 shrink-0 items-center justify-center border-slate-200 border-l bg-white p-6 text-center text-slate-400 text-sm">
@@ -139,10 +224,15 @@ export function PersonPanel({
 		)
 	}
 
-	const parents = getParents(graph, person.id).sort(byBirthYear)
-	const spouses = getSpouses(graph, person.id)
-	const children = getChildren(graph, person.id).sort(byBirthYear)
-	const siblings = getSiblings(graph, person.id).sort(byBirthYear)
+	// Ordered the way you'd introduce a family: partner, children, then parents
+	// and siblings.
+	const family = [
+		...getSpouses(graph, person.id),
+		...getChildren(graph, person.id).sort(byBirthYear),
+		...getParents(graph, person.id).sort(byBirthYear),
+		...getSiblings(graph, person.id).sort(byBirthYear),
+	]
+	const facts = buildFacts(graph, person)
 
 	return (
 		<aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-slate-200 border-l bg-white">
@@ -171,92 +261,173 @@ export function PersonPanel({
 					</button>
 				</div>
 
-				{!isRoot ? (
-					<button
-						type="button"
-						onClick={() => onFocus(person.id)}
-						className="mt-4 w-full rounded-lg bg-slate-900 px-3 py-2 font-medium text-sm text-white hover:bg-slate-700"
-					>
-						Centre tree on {person.givenName ?? person.name}
-					</button>
-				) : (
-					<p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-emerald-700 text-sm">
-						Tree is centred here
-					</p>
-				)}
-			</header>
-
-			<section className="space-y-2 border-slate-100 border-t px-5 py-4">
 				{error ? (
-					<p className="rounded-lg bg-rose-50 px-3 py-2 text-rose-700 text-sm">
+					<p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-rose-700 text-sm">
 						{error}
 					</p>
 				) : null}
-				<div className="flex gap-2">
-					<button
-						type="button"
+
+				{/* One row for everything you can do to this person, rather than a
+				    banner, a button pair and an accordion scattered down the panel. */}
+				<div className="relative mt-4 flex items-start gap-1">
+					<Action
+						icon={<Crosshair size={17} strokeWidth={2} />}
+						label={isRoot ? "Centred" : "Centre"}
+						active={isRoot}
+						disabled={isRoot}
+						onClick={() => onFocus(person.id)}
+					/>
+					<Action
+						icon={<Pencil size={17} strokeWidth={2} />}
+						label="Edit"
 						onClick={() => onEdit(person.id)}
-						title={`Edit ${person.name}`}
-						className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 text-sm hover:bg-slate-50"
-					>
-						<Pencil size={13} strokeWidth={2} />
-						Edit
-					</button>
-					<button
-						type="button"
+					/>
+					<Action
+						icon={<UserPlus size={17} strokeWidth={2} />}
+						label="Add"
+						disabled={!onRequestAdd}
+						onClick={() => onRequestAdd?.(person.id)}
+					/>
+					<Action
+						icon={<MoreHorizontal size={17} strokeWidth={2} />}
+						label="More"
 						disabled={busy}
-						title={`Delete ${person.name}`}
-						onClick={() => {
-							// Deleting a person is not undoable in the app — the only
-							// safety net is the store file itself.
-							if (
-								window.confirm(
-									`Delete ${person.name}? Their relationships will be removed too. This cannot be undone.`,
-								)
-							) {
-								onDelete(person.id)
-							}
-						}}
-						className="flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 text-sm hover:bg-rose-50 disabled:opacity-50"
-					>
-						<Trash2 size={13} strokeWidth={2} />
-						Delete
-					</button>
+						onClick={() => setMenuOpen((open) => !open)}
+					/>
+
+					{menuOpen ? (
+						<>
+							{/* Backdrop so clicking anywhere else closes the menu. */}
+							<button
+								type="button"
+								aria-label="Close menu"
+								className="fixed inset-0 z-10 cursor-default"
+								onClick={() => setMenuOpen(false)}
+							/>
+							<div className="absolute top-12 right-0 z-20 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+								{branches?.ancestors !== "none" && branches ? (
+									<MenuItem
+										onClick={() => {
+											onToggleAncestors(person.id)
+											setMenuOpen(false)
+										}}
+									>
+										{branches.ancestors === "expandable"
+											? `Show ${branches.hiddenAncestorCount} hidden parents`
+											: "Hide parents"}
+									</MenuItem>
+								) : null}
+								{branches?.descendants !== "none" && branches ? (
+									<MenuItem
+										onClick={() => {
+											onToggleDescendants(person.id)
+											setMenuOpen(false)
+										}}
+									>
+										{branches.descendants === "expandable"
+											? `Show ${branches.hiddenDescendantCount} hidden children`
+											: "Hide children"}
+									</MenuItem>
+								) : null}
+								<div className="my-1 border-slate-100 border-t" />
+								<MenuItem
+									danger
+									onClick={() => {
+										setMenuOpen(false)
+										// Deleting a person is not undoable in the app — the
+										// only safety net is the store file itself.
+										if (
+											window.confirm(
+												`Delete ${person.name}? Their relationships will be removed too. This cannot be undone.`,
+											)
+										) {
+											onDelete(person.id)
+										}
+									}}
+								>
+									<span className="flex items-center gap-2">
+										<Trash2 size={13} strokeWidth={2} />
+										Delete person
+									</span>
+								</MenuItem>
+							</div>
+						</>
+					) : null}
 				</div>
-				<p className="text-[11px] text-slate-400">
-					Use the <span className="font-semibold">+</span> on a card to add a
-					relative.
-				</p>
-			</section>
+			</header>
 
-			{branches ? (
-				<section className="space-y-2 border-slate-100 border-t px-5 py-4">
-					<h3 className="font-semibold text-[11px] text-slate-400 uppercase tracking-wide">
-						Branches
-					</h3>
-					<BranchButton
-						state={branches.ancestors}
-						hidden={branches.hiddenAncestorCount}
-						noun="parents"
-						onToggle={() => onToggleAncestors(person.id)}
-					/>
-					<BranchButton
-						state={branches.descendants}
-						hidden={branches.hiddenDescendantCount}
-						noun="children"
-						onToggle={() => onToggleDescendants(person.id)}
-					/>
-				</section>
-			) : null}
+			<Section title="Facts" count={facts.length}>
+				{facts.length === 0 ? (
+					<p className="text-slate-400 text-sm">Nothing recorded yet.</p>
+				) : (
+					<ol className="space-y-3">
+						{facts.map((fact) => {
+							const related = fact.relatedId
+								? graph.people.get(fact.relatedId)
+								: undefined
+							return (
+								<li key={fact.id} className="flex gap-3">
+									<div className="w-11 shrink-0 pt-0.5 text-right">
+										<div className="font-semibold text-slate-700 text-sm tabular-nums">
+											{fact.year ?? "—"}
+										</div>
+										{fact.age != null ? (
+											<div className="text-[10px] text-slate-400">
+												Age {fact.age}
+											</div>
+										) : null}
+									</div>
+									<div className="min-w-0 flex-1 border-slate-100 border-l pl-3">
+										<div className="font-medium text-slate-800 text-sm">
+											{fact.title}
+										</div>
+										{related ? (
+											<button
+												type="button"
+												onClick={() => onFocus(related.id)}
+												className="mt-1 flex items-center gap-1.5 rounded px-1 py-0.5 text-slate-600 text-xs hover:bg-slate-100"
+											>
+												<Avatar person={related} size={18} />
+												<span className="truncate">{related.name}</span>
+											</button>
+										) : null}
+										{fact.date ? (
+											<div className="mt-0.5 text-slate-500 text-xs">
+												{fact.date}
+											</div>
+										) : null}
+										{fact.place ? (
+											<div className="mt-0.5 flex items-start gap-1 text-slate-400 text-xs">
+												<MapPin size={11} className="mt-0.5 shrink-0" />
+												<span>{fact.place}</span>
+											</div>
+										) : null}
+									</div>
+								</li>
+							)
+						})}
+					</ol>
+				)}
+			</Section>
 
-			<RelationList title="Parents" people={parents} onFocus={onFocus} />
-			<RelationList
-				title={spouses.length > 1 ? "Spouses" : "Spouse"}
-				people={spouses}
-				onFocus={onFocus}
-			/>
-			<RelationList title="Children" people={children} onFocus={onFocus} />
-			<RelationList title="Siblings" people={siblings} onFocus={onFocus} />
+			<Section title="Immediate family" count={family.length}>
+				{family.length === 0 ? (
+					<p className="text-slate-400 text-sm">
+						No relatives recorded. Use the + on their card to add some.
+					</p>
+				) : (
+					<ul className="space-y-0.5">
+						{family.map((relative) => (
+							<RelativeRow
+								key={relative.id}
+								person={relative}
+								label={relationLabel(graph, person, relative)}
+								onFocus={onFocus}
+							/>
+						))}
+					</ul>
+				)}
+			</Section>
 		</aside>
 	)
 }

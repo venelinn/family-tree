@@ -59,6 +59,14 @@ loses data. (Tested: 10 concurrent `createPerson` calls, all 10 persisted.)
 `childOfUnionId` — are **computed, never stored**, so they cannot drift from the
 union rows that are the truth.
 
+### `lib/facts.ts`
+
+The sidebar's life timeline and relationship labels, **derived rather than
+stored**. A marriage fact *is* the union row; a "birth of daughter" fact *is* the
+child's birth. Deriving keeps one source of truth and means the timeline updates
+itself when the tree is edited. Undated events sort last rather than pretending
+to be ancient history.
+
 ### `lib/family-graph.ts`
 
 `Person`, `Union`, and the relationship queries (`getParents`, `getSpouses`,
@@ -78,7 +86,9 @@ client rebuilds.
 | `PersonCard.tsx` | Portrait card, mourning ribbon, reveal bars |
 | `UnionCard.tsx` | The couple marker children hang from |
 | `PlaceholderCard.tsx` | "+ Add father" slots in the pedigree view |
-| `PersonPanel.tsx` | Details, relatives, branch controls |
+| `PersonPanel.tsx` | Sidebar: action bar, facts timeline, immediate family |
+| `PersonForm.tsx` | Add / edit fields |
+| `AddSlotCard.tsx` | Ghost "Add sister" cards around the selected person |
 | `Toolbar.tsx` | View switch, depth slider, person count |
 | `Avatar.tsx` | Photo with initials fallback |
 
@@ -95,6 +105,20 @@ ghost card / panel  →  lib/actions.ts (server actions)
 means find-or-create the birth union, fill the husband seat, then link the
 child. Actions return `{ ok, error }` rather than throwing across the boundary,
 so the panel can show a real message ("Venelin already has a father").
+
+## Card geometry per view
+
+The two views want opposite things, so they have separate constants.
+
+| | Card | Scarce dimension |
+| --- | --- | --- |
+| Family | portrait 132×140 | width — the chart sprawls sideways |
+| Pedigree | landscape 200×76 | height — a whole generation stacks in one column |
+
+The layout tags each person node with `variant`, and `PersonCard` /
+`PlaceholderCard` switch on it. `TreeCanvas` picks the matching size when
+computing bounds for framing. Landscape took a 5-column pedigree from 2,469px
+tall to 1,456px.
 
 ## Handle contract
 

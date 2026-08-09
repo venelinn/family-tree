@@ -2,7 +2,12 @@
 
 import { Handle, type NodeProps, Position } from "@xyflow/react"
 import { Minus, Plus, X } from "lucide-react"
-import { CARD_HEIGHT, CARD_WIDTH } from "@/lib/layout/constants"
+import {
+	CARD_HEIGHT,
+	CARD_WIDTH,
+	PEDIGREE_CARD_HEIGHT,
+	PEDIGREE_CARD_WIDTH,
+} from "@/lib/layout/constants"
 import type { PersonNodeData } from "@/lib/layout/types"
 import { Avatar } from "./Avatar"
 
@@ -106,6 +111,7 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 		descendants,
 		hiddenAncestorCount,
 		hiddenDescendantCount,
+		variant,
 		isAdding,
 		onToggleAncestors,
 		onToggleDescendants,
@@ -125,10 +131,21 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 	const born = formatDate(person.birthDate)
 	const died = formatDate(person.deathDate)
 
+	// Landscape in the pedigree, where a whole generation stacks in one column
+	// and height is the scarce dimension; portrait in the family view, where the
+	// chart sprawls sideways instead.
+	const landscape = variant === "landscape"
+	const width = landscape ? PEDIGREE_CARD_WIDTH : CARD_WIDTH
+	const height = landscape ? PEDIGREE_CARD_HEIGHT : CARD_HEIGHT
+
 	return (
 		<div
-			className={`group relative flex flex-col items-center rounded-xl border-2 px-1.5 pt-2.5 pb-2 shadow-sm transition-shadow hover:shadow-md ${accent} ${ring}`}
-			style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+			className={`group relative flex rounded-xl border-2 shadow-sm transition-shadow hover:shadow-md ${accent} ${ring} ${
+				landscape
+					? "items-center gap-2.5 px-2.5"
+					: "flex-col items-center px-1.5 pt-2.5 pb-2"
+			}`}
+			style={{ width, height }}
 		>
 			<Handle
 				type="target"
@@ -206,9 +223,13 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 				</button>
 			) : null}
 
-			<Avatar person={person} size={52} />
+			<Avatar person={person} size={landscape ? 46 : 52} />
 
-			<div className="mt-1.5 w-full text-center">
+			<div
+				className={
+					landscape ? "min-w-0 flex-1 text-left" : "mt-1.5 w-full text-center"
+				}
+			>
 				<div className="line-clamp-2 font-semibold text-[11px] text-slate-800 leading-tight">
 					{person.name}
 				</div>

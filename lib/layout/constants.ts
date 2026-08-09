@@ -25,7 +25,16 @@ export const GENERATION_GAP = 76
 /** The union marker is a small dot the couple and their children connect through. */
 export const UNION_SIZE = 10
 
-/* Pedigree view: laid out left-to-right, so "generation" advances along x. */
+/*
+ * Pedigree view: laid out left-to-right, so "generation" advances along x.
+ *
+ * Its cards are landscape — photo left, text right. The pedigree stacks a whole
+ * generation vertically in one column (8 cards in the fourth), so height is the
+ * scarce dimension here, exactly the opposite of the family view where the chart
+ * sprawls sideways. Same trade, opposite axis.
+ */
+export const PEDIGREE_CARD_WIDTH = 200
+export const PEDIGREE_CARD_HEIGHT = 76
 export const PEDIGREE_COLUMN_GAP = 70
 export const PEDIGREE_ROW_GAP = 16
 

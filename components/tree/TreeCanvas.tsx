@@ -14,7 +14,13 @@ import {
 	useStore,
 } from "@xyflow/react"
 import { useEffect, useMemo } from "react"
-import { CARD_HEIGHT, CARD_WIDTH, UNION_SIZE } from "@/lib/layout/constants"
+import {
+	CARD_HEIGHT,
+	CARD_WIDTH,
+	PEDIGREE_CARD_HEIGHT,
+	PEDIGREE_CARD_WIDTH,
+	UNION_SIZE,
+} from "@/lib/layout/constants"
 import type { LayoutNode, LayoutResult, ViewType } from "@/lib/layout/types"
 import { AddSlotCard } from "./AddSlotCard"
 import { PersonCard } from "./PersonCard"
@@ -138,6 +144,9 @@ export function TreeCanvas({
 		setEdges(layoutEdges)
 	}, [layoutEdges, setEdges])
 
+	const cardWidth = view === "pedigree" ? PEDIGREE_CARD_WIDTH : CARD_WIDTH
+	const cardHeight = view === "pedigree" ? PEDIGREE_CARD_HEIGHT : CARD_HEIGHT
+
 	/** Extent of the drawn chart, in layout coordinates. */
 	const bounds = useMemo(() => {
 		let minX = Number.POSITIVE_INFINITY
@@ -145,8 +154,8 @@ export function TreeCanvas({
 		let maxX = Number.NEGATIVE_INFINITY
 		let maxY = Number.NEGATIVE_INFINITY
 		for (const node of layout.nodes) {
-			const width = node.type === "union" ? UNION_SIZE : CARD_WIDTH
-			const height = node.type === "union" ? UNION_SIZE : CARD_HEIGHT
+			const width = node.type === "union" ? UNION_SIZE : cardWidth
+			const height = node.type === "union" ? UNION_SIZE : cardHeight
 			minX = Math.min(minX, node.x)
 			minY = Math.min(minY, node.y)
 			maxX = Math.max(maxX, node.x + width)
@@ -158,7 +167,7 @@ export function TreeCanvas({
 			width: maxX - minX,
 			height: maxY - minY,
 		}
-	}, [layout.nodes])
+	}, [layout.nodes, cardWidth, cardHeight])
 
 	const { setCenter } = useReactFlow()
 	const nodesInitialized = useNodesInitialized()
@@ -192,13 +201,22 @@ export function TreeCanvas({
 		// pinned at the left edge, so centring there would waste half the canvas —
 		// frame it horizontally instead, keeping the root's row vertically centred.
 		const centerX =
-			view === "pedigree" ? bounds.centerX : root.x + CARD_WIDTH / 2
+			view === "pedigree" ? bounds.centerX : root.x + cardWidth / 2
 
 		// Vertically the chart is only a few rows, so frame all of them. Centring
 		// on the root's own row instead would push the top generation off-screen
 		// whenever the root isn't the middle one.
 		setCenter(centerX, bounds.centerY, { zoom, duration: 400 })
-	}, [nodesInitialized, setCenter, flowWidth, flowHeight, bounds, view, rootId])
+	}, [
+		nodesInitialized,
+		setCenter,
+		flowWidth,
+		flowHeight,
+		bounds,
+		cardWidth,
+		view,
+		rootId,
+	])
 
 	return (
 		<ReactFlow

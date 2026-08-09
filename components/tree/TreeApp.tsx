@@ -295,7 +295,7 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 								if (personId !== addingFor) setAddingFor(null)
 							}}
 							addingFor={addingFor}
-							onRequestAdd={requestAdd}
+							{...(view === "family" ? { onRequestAdd: requestAdd } : {})}
 							onToggleAncestors={toggleAncestors}
 							onToggleDescendants={toggleDescendants}
 							addSlots={addSlots}
@@ -339,6 +339,7 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 						onToggleDescendants={toggleDescendants}
 						busy={saving}
 						error={saveError}
+						{...(view === "family" ? { onRequestAdd: requestAdd } : {})}
 						onEdit={(personId) => {
 							setSaveError(undefined)
 							setEditor({ mode: "edit", personId })

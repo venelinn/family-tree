@@ -1,7 +1,7 @@
 import { type FamilyGraph, getFather, getMother } from "../family-graph"
 import {
-	CARD_HEIGHT,
-	CARD_WIDTH,
+	PEDIGREE_CARD_HEIGHT,
+	PEDIGREE_CARD_WIDTH,
 	PEDIGREE_COLUMN_GAP,
 	PEDIGREE_ROW_GAP,
 } from "./constants"
@@ -24,8 +24,8 @@ export interface PedigreeLayoutOptions {
 	showPlaceholders?: boolean
 }
 
-const COLUMN_STRIDE = CARD_WIDTH + PEDIGREE_COLUMN_GAP
-const ROW_STRIDE = CARD_HEIGHT + PEDIGREE_ROW_GAP
+const COLUMN_STRIDE = PEDIGREE_CARD_WIDTH + PEDIGREE_COLUMN_GAP
+const ROW_STRIDE = PEDIGREE_CARD_HEIGHT + PEDIGREE_ROW_GAP
 
 export function layoutPedigree(
 	graph: FamilyGraph,
@@ -63,7 +63,7 @@ export function layoutPedigree(
 			type: "placeholder",
 			x: generation * COLUMN_STRIDE,
 			y,
-			data: { relation, forPersonId: childId },
+			data: { relation, forPersonId: childId, variant: "landscape" },
 		})
 		connect(childId, id)
 		return y
@@ -96,6 +96,7 @@ export function layoutPedigree(
 					data: {
 						person,
 						isRoot: generation === 0,
+						variant: "landscape",
 						ancestors: "none",
 						descendants: "none",
 						hiddenAncestorCount: 0,
@@ -144,6 +145,7 @@ export function layoutPedigree(
 			data: {
 				person,
 				isRoot: generation === 0,
+				variant: "landscape",
 				ancestors: "none",
 				descendants: "none",
 				hiddenAncestorCount: 0,
