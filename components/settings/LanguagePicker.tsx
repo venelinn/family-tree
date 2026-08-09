@@ -23,7 +23,7 @@ export function LanguagePicker({ current }: { current: string }) {
 	}
 
 	return (
-		<ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200">
+		<ul className="divide-y divide-line-subtle overflow-hidden rounded-lg border border-line">
 			{localization.locales.map((locale) => {
 				const active = locale === current
 				return (
@@ -34,21 +34,17 @@ export function LanguagePicker({ current }: { current: string }) {
 							disabled={pending}
 							aria-current={active ? "true" : undefined}
 							className={`flex w-full items-center gap-3 px-4 py-3 text-left disabled:opacity-60 ${
-								active ? "bg-emerald-50" : "hover:bg-slate-50"
+								active ? "bg-root-soft" : "hover:bg-wash"
 							}`}
 						>
-							<span className="flex-1 font-medium text-slate-800 text-sm">
+							<span className="flex-1 font-medium text-ink-soft text-sm">
 								{localeNames[locale]}
 							</span>
-							<span className="font-medium text-[11px] text-slate-400 uppercase">
+							<span className="font-medium text-[11px] text-ink-faint uppercase">
 								{locale}
 							</span>
 							{active ? (
-								<Check
-									size={16}
-									strokeWidth={2.5}
-									className="text-emerald-600"
-								/>
+								<Check size={16} strokeWidth={2.5} className="text-root-ink" />
 							) : (
 								// Keeps the rows the same width whether ticked or not.
 								<span className="h-4 w-4" />

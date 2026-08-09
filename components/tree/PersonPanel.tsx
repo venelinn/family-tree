@@ -68,21 +68,21 @@ function Section({
 }) {
 	const [open, setOpen] = useState(defaultOpen)
 	return (
-		<section className="border-slate-100 border-t">
+		<section className="border-line-subtle border-t">
 			<button
 				type="button"
 				onClick={() => setOpen((current) => !current)}
-				className="flex w-full items-center gap-1.5 px-5 py-3 text-left hover:bg-slate-50"
+				className="flex w-full items-center gap-1.5 px-5 py-3 text-left hover:bg-wash"
 			>
-				<span className="font-semibold text-[11px] text-slate-400 uppercase tracking-wide">
+				<span className="font-semibold text-[11px] text-ink-faint uppercase tracking-wide">
 					{title}
 				</span>
 				{count != null ? (
-					<span className="text-[11px] text-slate-300">{count}</span>
+					<span className="text-[11px] text-ink-ghost">{count}</span>
 				) : null}
 				<ChevronDown
 					size={14}
-					className={`ml-auto text-slate-400 transition-transform ${
+					className={`ml-auto text-ink-faint transition-transform ${
 						open ? "" : "-rotate-90"
 					}`}
 				/>
@@ -153,18 +153,18 @@ function RelativeRow({
 			<button
 				type="button"
 				onClick={() => onFocus(person.id)}
-				className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-100"
+				className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-muted"
 			>
 				<Avatar person={person} size={34} />
 				<span className="min-w-0 flex-1">
-					<span className="block truncate font-medium text-slate-800 text-sm">
+					<span className="block truncate font-medium text-ink text-sm">
 						{person.name}
 					</span>
-					<span className="block text-slate-500 text-xs">
+					<span className="block text-ink-muted text-xs">
 						{tRelations(relation)}
 					</span>
 					{years ? (
-						<span className="block text-slate-400 text-xs">{years}</span>
+						<span className="block text-ink-faint text-xs">{years}</span>
 					) : null}
 				</span>
 			</button>
@@ -197,13 +197,13 @@ function Action({
 			<span
 				className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
 					active
-						? "border-emerald-300 bg-emerald-50 text-emerald-600"
-						: "border-slate-200 bg-slate-50 text-slate-600 group-hover:border-slate-300 group-hover:bg-slate-100 group-enabled:group-hover:text-slate-900"
+						? "border-root-line bg-root-soft text-root-ink"
+						: "border-line bg-wash text-ink-soft group-hover:border-line-strong group-hover:bg-muted group-enabled:group-hover:text-ink"
 				}`}
 			>
 				{icon}
 			</span>
-			<span className="font-medium text-[10px] text-slate-500">{label}</span>
+			<span className="font-medium text-[10px] text-ink-muted">{label}</span>
 		</button>
 	)
 }
@@ -222,8 +222,8 @@ function MenuItem({
 		<button
 			type="button"
 			onClick={onClick}
-			className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${
-				danger ? "text-rose-600" : "text-slate-700"
+			className={`w-full px-3 py-2 text-left text-sm hover:bg-wash ${
+				danger ? "text-danger-text" : "text-ink-soft"
 			}`}
 		>
 			{children}
@@ -253,7 +253,7 @@ export function PersonPanel({
 
 	if (!person) {
 		return (
-			<aside className="flex w-80 shrink-0 items-center justify-center border-slate-200 border-l bg-white p-6 text-center text-slate-400 text-sm">
+			<aside className="flex w-80 shrink-0 items-center justify-center border-line border-l bg-panel p-6 text-center text-ink-faint text-sm">
 				{t("empty")}
 			</aside>
 		)
@@ -270,20 +270,20 @@ export function PersonPanel({
 	const facts = buildFacts(graph, person)
 
 	return (
-		<aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-slate-200 border-l bg-white">
+		<aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-line border-l bg-panel">
 			<header className="px-5 pt-5 pb-4">
 				<div className="flex items-start gap-3">
 					{/* Keyed so a previous person's failed-photo state doesn't stick. */}
 					<Avatar key={person.id} person={person} size={64} />
 					<div className="min-w-0 flex-1">
-						<h2 className="font-semibold text-lg text-slate-900 leading-tight">
+						<h2 className="font-semibold text-ink text-lg leading-tight">
 							{person.name}
 						</h2>
-						<p className="mt-1 text-slate-500 text-sm">
+						<p className="mt-1 text-ink-muted text-sm">
 							<Lifespan person={person} />
 						</p>
 						{person.birthPlace ? (
-							<p className="mt-0.5 text-slate-400 text-xs">
+							<p className="mt-0.5 text-ink-faint text-xs">
 								{person.birthPlace}
 							</p>
 						) : null}
@@ -292,14 +292,14 @@ export function PersonPanel({
 						type="button"
 						onClick={onClose}
 						aria-label={t("closeDetails")}
-						className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+						className="rounded p-1 text-ink-faint hover:bg-muted hover:text-ink-soft"
 					>
 						✕
 					</button>
 				</div>
 
 				{error ? (
-					<p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-rose-700 text-sm">
+					<p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
 						{error}
 					</p>
 				) : null}
@@ -341,7 +341,7 @@ export function PersonPanel({
 								className="fixed inset-0 z-10 cursor-default"
 								onClick={() => setMenuOpen(false)}
 							/>
-							<div className="absolute top-12 right-0 z-20 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+							<div className="absolute top-12 right-0 z-20 w-56 overflow-hidden rounded-lg border border-line bg-panel py-1 shadow-lg">
 								{branches?.ancestors !== "none" && branches ? (
 									<MenuItem
 										onClick={() => {
@@ -370,7 +370,7 @@ export function PersonPanel({
 											: t("hideChildren")}
 									</MenuItem>
 								) : null}
-								<div className="my-1 border-slate-100 border-t" />
+								<div className="my-1 border-line-subtle border-t" />
 								<MenuItem
 									danger
 									onClick={() => {
@@ -397,7 +397,7 @@ export function PersonPanel({
 
 			<Section title={t("sectionFacts")} count={facts.length}>
 				{facts.length === 0 ? (
-					<p className="text-slate-400 text-sm">{t("noFacts")}</p>
+					<p className="text-ink-faint text-sm">{t("noFacts")}</p>
 				) : (
 					<ol className="space-y-3">
 						{facts.map((fact) => {
@@ -407,36 +407,36 @@ export function PersonPanel({
 							return (
 								<li key={fact.id} className="flex gap-3">
 									<div className="w-11 shrink-0 pt-0.5 text-right">
-										<div className="font-semibold text-slate-700 text-sm tabular-nums">
+										<div className="font-semibold text-ink-soft text-sm tabular-nums">
 											{fact.year ?? "—"}
 										</div>
 										{fact.age != null ? (
-											<div className="text-[10px] text-slate-400">
+											<div className="text-[10px] text-ink-faint">
 												{t("age", { age: fact.age })}
 											</div>
 										) : null}
 									</div>
-									<div className="min-w-0 flex-1 border-slate-100 border-l pl-3">
-										<div className="font-medium text-slate-800 text-sm">
+									<div className="min-w-0 flex-1 border-line-subtle border-l pl-3">
+										<div className="font-medium text-ink text-sm">
 											{tFacts(fact.titleKey)}
 										</div>
 										{related ? (
 											<button
 												type="button"
 												onClick={() => onFocus(related.id)}
-												className="mt-1 flex items-center gap-1.5 rounded px-1 py-0.5 text-slate-600 text-xs hover:bg-slate-100"
+												className="mt-1 flex items-center gap-1.5 rounded px-1 py-0.5 text-ink-soft text-xs hover:bg-muted"
 											>
 												<Avatar person={related} size={18} />
 												<span className="truncate">{related.name}</span>
 											</button>
 										) : null}
 										{fact.date ? (
-											<div className="mt-0.5 text-slate-500 text-xs">
+											<div className="mt-0.5 text-ink-muted text-xs">
 												{formatTreeDate(fact.date, locale)}
 											</div>
 										) : null}
 										{fact.place ? (
-											<div className="mt-0.5 flex items-start gap-1 text-slate-400 text-xs">
+											<div className="mt-0.5 flex items-start gap-1 text-ink-faint text-xs">
 												<MapPin size={11} className="mt-0.5 shrink-0" />
 												<span>{fact.place}</span>
 											</div>
@@ -451,7 +451,7 @@ export function PersonPanel({
 
 			<Section title={t("sectionFamily")} count={family.length}>
 				{family.length === 0 ? (
-					<p className="text-slate-400 text-sm">{t("noRelatives")}</p>
+					<p className="text-ink-faint text-sm">{t("noRelatives")}</p>
 				) : (
 					<ul className="space-y-0.5">
 						{family.map((relative) => (

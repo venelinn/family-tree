@@ -4,6 +4,8 @@ import path from "node:path"
 import type {
 	PersonInput,
 	PersonRecord,
+	TreeMeta,
+	TreeRows,
 	TreeSnapshot,
 	TreeStore,
 	UnionInput,
@@ -22,35 +24,66 @@ import type {
  * place, and concurrent calls are serialised through a promise chain, because
  * Next.js will happily run two route handlers at once.
  *
+ * The file may live anywhere on disk, which is why the path is a constructor
+ * argument rather than a constant: see `lib/store/registry.ts`, which is what
+ * decides where. Files are written owner-only — this is a household's names,
+ * birth dates and addresses, and on a shared machine the default umask would
+ * otherwise leave them world-readable.
+ *
  * The Supabase implementation will replace this file and nothing else.
  */
 
-const DEFAULT_PATH = path.join(process.cwd(), "data", "tree.json")
-
-const EMPTY: TreeSnapshot = { people: [], unions: [], unionChildren: [] }
+/** Owner read/write only. Directories need the execute bit to be traversable. */
+export const FILE_MODE = 0o600
+export const DIR_MODE = 0o700
 
 const now = () => new Date().toISOString()
 
 /** Short, readable, and unique enough for a personal tree. */
-const newId = (prefix: string) =>
+export const newId = (prefix: string) =>
 	`${prefix}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`
 
 export class LocalTreeStore implements TreeStore {
-	private readonly file: string
+	readonly file: string
+	private readonly id: string
 	/** Serialises mutations so two writes can't interleave. */
 	private queue: Promise<unknown> = Promise.resolve()
 
-	constructor(file: string = DEFAULT_PATH) {
+	constructor(file: string, id?: string) {
 		this.file = file
+		this.id = id ?? path.basename(file, ".json")
 	}
 
 	async read(): Promise<TreeSnapshot> {
-		if (!existsSync(this.file)) return structuredClone(EMPTY)
-		const parsed = JSON.parse(await readFile(this.file, "utf8")) as TreeSnapshot
+		if (!existsSync(this.file)) return this.empty()
+
+		const parsed = JSON.parse(
+			await readFile(this.file, "utf8"),
+		) as Partial<TreeSnapshot>
+
 		return {
+			// A file written before trees had metadata still loads: the id comes
+			// from its filename and the name from the registry's migration. This
+			// is also what lets someone hand-write or hand-edit a tree file.
+			meta: { ...this.empty().meta, ...parsed.meta, id: this.id },
 			people: parsed.people ?? [],
 			unions: parsed.unions ?? [],
 			unionChildren: parsed.unionChildren ?? [],
+		}
+	}
+
+	private empty(): TreeSnapshot {
+		const timestamp = now()
+		return {
+			meta: {
+				id: this.id,
+				name: this.id,
+				createdAt: timestamp,
+				updatedAt: timestamp,
+			},
+			people: [],
+			unions: [],
+			unionChildren: [],
 		}
 	}
 
@@ -61,6 +94,7 @@ export class LocalTreeStore implements TreeStore {
 		const run = this.queue.then(async () => {
 			const snapshot = await this.read()
 			const result = await fn(snapshot)
+			snapshot.meta.updatedAt = now()
 			await this.write(snapshot)
 			return result
 		})
@@ -70,9 +104,11 @@ export class LocalTreeStore implements TreeStore {
 	}
 
 	private async write(snapshot: TreeSnapshot): Promise<void> {
-		await mkdir(path.dirname(this.file), { recursive: true })
+		await mkdir(path.dirname(this.file), { recursive: true, mode: DIR_MODE })
 		const temp = `${this.file}.tmp`
-		await writeFile(temp, `${JSON.stringify(snapshot, null, 2)}\n`)
+		await writeFile(temp, `${JSON.stringify(snapshot, null, 2)}\n`, {
+			mode: FILE_MODE,
+		})
 		// Rename is atomic on the same filesystem, so a crash mid-write leaves
 		// the previous good file rather than a truncated one.
 		await rename(temp, this.file)
@@ -114,6 +150,11 @@ export class LocalTreeStore implements TreeStore {
 			for (const union of snapshot.unions) {
 				if (union.husbandId === id) union.husbandId = undefined
 				if (union.wifeId === id) union.wifeId = undefined
+			}
+			// Deleting the person the chart opens on would leave the tree with no
+			// way in; the next reader picks a new root.
+			if (snapshot.meta.rootPersonId === id) {
+				snapshot.meta.rootPersonId = snapshot.people[0]?.id
 			}
 		})
 	}
@@ -176,11 +217,25 @@ export class LocalTreeStore implements TreeStore {
 		})
 	}
 
-	replaceAll(next: TreeSnapshot): Promise<void> {
+	updateMeta(
+		patch: Partial<Omit<TreeMeta, "id" | "createdAt" | "updatedAt">>,
+	): Promise<TreeMeta> {
 		return this.mutate((snapshot) => {
-			snapshot.people = next.people
-			snapshot.unions = next.unions
-			snapshot.unionChildren = next.unionChildren
+			Object.assign(snapshot.meta, patch)
+			return snapshot.meta
+		})
+	}
+
+	replaceAll(rows: TreeRows): Promise<void> {
+		return this.mutate((snapshot) => {
+			snapshot.people = rows.people
+			snapshot.unions = rows.unions
+			snapshot.unionChildren = rows.unionChildren
+			// The root person may not have survived the replacement.
+			const stillThere = rows.people.some(
+				(person) => person.id === snapshot.meta.rootPersonId,
+			)
+			if (!stillThere) snapshot.meta.rootPersonId = undefined
 		})
 	}
 }

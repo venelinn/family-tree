@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getTranslations } from "next-intl/server"
+import { getUserTheme } from "@/lib/theme"
 import "./globals.css"
 
 // Cyrillic is loaded for Bulgarian. It costs nothing when unused — the subsets
@@ -31,9 +32,15 @@ export default async function RootLayout({
 	children: React.ReactNode
 }>) {
 	const locale = await getLocale()
+	const theme = await getUserTheme()
 
 	return (
-		<html lang={locale}>
+		// Rendered from the cookie on the server, so the first paint is already
+		// the right theme — no flash, and no blocking script in `<head>`.
+		// `system` is stamped too, purely so the choice is visible in devtools;
+		// no selector matches it, which is what leaves `color-scheme: light dark`
+		// in place to follow the OS.
+		<html lang={locale} data-theme={theme}>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>

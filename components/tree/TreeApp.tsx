@@ -19,6 +19,7 @@ import type {
 	SlotKey,
 	ViewType,
 } from "@/lib/layout/types"
+import type { ThemePreference } from "@/lib/theming"
 import { PersonForm } from "./PersonForm"
 import { PersonPanel } from "./PersonPanel"
 import { Toolbar } from "./Toolbar"
@@ -29,6 +30,14 @@ import "@xyflow/react/dist/style.css"
 interface TreeAppProps {
 	graph: { people: Person[]; unions: Union[] }
 	homePersonId: string
+	/** Which family this is. Shown in the toolbar, since there can be several. */
+	treeName: string
+	/**
+	 * Read from the cookie on the server and passed down solely for React Flow's
+	 * `colorMode` — every other element in the app is themed by CSS variables and
+	 * never needs to know which theme is on.
+	 */
+	theme: ThemePreference
 }
 
 /** Sensible starting depth per view; each is remembered separately. */
@@ -43,7 +52,12 @@ type Overrides = ReadonlyMap<string, boolean>
  */
 const EXPANSION_BUDGET = 4
 
-export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
+export function TreeApp({
+	graph: serialized,
+	homePersonId,
+	treeName,
+	theme,
+}: TreeAppProps) {
 	const t = useTranslations("form")
 	const tSlots = useTranslations("slots")
 
@@ -274,6 +288,7 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 	return (
 		<div className="flex h-screen flex-col">
 			<Toolbar
+				treeName={treeName}
 				view={view}
 				onViewChange={setView}
 				focusPerson={graph.people.get(rootId)}
@@ -305,12 +320,13 @@ export function TreeApp({ graph: serialized, homePersonId }: TreeAppProps) {
 							onToggleAncestors={toggleAncestors}
 							onToggleDescendants={toggleDescendants}
 							addSlots={addSlots}
+							theme={theme}
 						/>
 					</ReactFlowProvider>
 				</div>
 
 				{editor ? (
-					<aside className="w-80 shrink-0 overflow-y-auto border-slate-200 border-l bg-white">
+					<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
 						<PersonForm
 							title={
 								editor.mode === "edit" ? t("editTitle") : tSlots(editor.slot)

@@ -28,9 +28,9 @@ interface PersonFormProps {
 }
 
 const field =
-	"w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800 outline-none focus:border-slate-400"
+	"w-full rounded-lg border border-line bg-panel px-2.5 py-1.5 text-ink text-sm outline-none focus:border-line-strong"
 const label =
-	"block font-medium text-[11px] text-slate-500 uppercase tracking-wide"
+	"block font-medium text-[11px] text-ink-muted uppercase tracking-wide"
 
 export function PersonForm({
 	title,
@@ -67,7 +67,7 @@ export function PersonForm({
 			}}
 			className="flex flex-col gap-3 p-5"
 		>
-			<h2 className="font-semibold text-slate-900">{title}</h2>
+			<h2 className="font-semibold text-ink">{title}</h2>
 
 			<div>
 				<label className={label}>
@@ -96,9 +96,9 @@ export function PersonForm({
 								className={`flex-1 rounded-lg border px-3 py-1.5 font-medium text-sm ${
 									values.sex === sex
 										? sex === "F"
-											? "border-rose-300 bg-rose-50 text-rose-700"
-											: "border-sky-300 bg-sky-50 text-sky-700"
-										: "border-slate-200 text-slate-500 hover:bg-slate-50"
+											? "border-female-line bg-female-soft text-female-ink"
+											: "border-male-line bg-male-soft text-male-ink"
+										: "border-line text-ink-muted hover:bg-wash"
 								}`}
 							>
 								{sex === "M" ? t("male") : t("female")}
@@ -129,12 +129,12 @@ export function PersonForm({
 				</label>
 			</div>
 
-			<label className="flex items-center gap-2 text-slate-600 text-sm">
+			<label className="flex items-center gap-2 text-ink-soft text-sm">
 				<input
 					type="checkbox"
 					checked={values.deceased}
 					onChange={(event) => set("deceased", event.target.checked)}
-					className="accent-slate-700"
+					className="accent-invert"
 				/>
 				{t("deceased")}
 			</label>
@@ -162,7 +162,7 @@ export function PersonForm({
 			) : null}
 
 			{error ? (
-				<p className="rounded-lg bg-rose-50 px-3 py-2 text-rose-700 text-sm">
+				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
 					{error}
 				</p>
 			) : null}
@@ -171,14 +171,14 @@ export function PersonForm({
 				<button
 					type="submit"
 					disabled={pending}
-					className="flex-1 rounded-lg bg-slate-900 px-3 py-2 font-medium text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+					className="flex-1 rounded-lg bg-invert px-3 py-2 font-medium text-on-invert text-sm hover:bg-invert-hover disabled:opacity-50"
 				>
 					{pending ? t("saving") : submitLabel}
 				</button>
 				<button
 					type="button"
 					onClick={onCancel}
-					className="rounded-lg border border-slate-200 px-3 py-2 font-medium text-slate-600 text-sm hover:bg-slate-50"
+					className="rounded-lg border border-line px-3 py-2 font-medium text-ink-soft text-sm hover:bg-wash"
 				>
 					{t("cancel")}
 				</button>

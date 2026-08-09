@@ -7,6 +7,8 @@ import type { Person } from "@/lib/family-graph"
 import type { ViewType } from "@/lib/layout/types"
 
 interface ToolbarProps {
+	/** The tree being viewed, not the person — there can be more than one. */
+	treeName: string
 	view: ViewType
 	onViewChange: (view: ViewType) => void
 	focusPerson: Person | undefined
@@ -25,6 +27,7 @@ const VIEWS = [
 ] as const satisfies ReadonlyArray<{ id: ViewType; labelKey: string }>
 
 export function Toolbar({
+	treeName,
 	view,
 	onViewChange,
 	focusPerson,
@@ -38,18 +41,20 @@ export function Toolbar({
 	const t = useTranslations("toolbar")
 
 	return (
-		<header className="flex shrink-0 items-center gap-4 border-slate-200 border-b bg-white px-5 py-3">
+		<header className="flex shrink-0 items-center gap-4 border-line border-b bg-panel px-5 py-3">
 			<div className="min-w-0">
-				<h1 className="truncate font-semibold text-slate-900">
+				<h1 className="truncate font-semibold text-ink">
 					{focusPerson?.name ?? t("fallbackTitle")}
 				</h1>
-				<p className="text-slate-400 text-xs">
+				<p className="truncate text-ink-faint text-xs">
+					{treeName}
+					<span className="mx-1.5 text-ink-ghost">·</span>
 					{t("peopleCount", { visible: visibleCount, total: totalCount })}
 				</p>
 			</div>
 
 			<div className="ml-auto flex items-center gap-3">
-				<label className="flex items-center gap-2 text-slate-500 text-xs">
+				<label className="flex items-center gap-2 text-ink-muted text-xs">
 					<span>{view === "family" ? t("generations") : t("columns")}</span>
 					<input
 						type="range"
@@ -57,7 +62,7 @@ export function Toolbar({
 						max={view === "family" ? 4 : 6}
 						value={depth}
 						onChange={(event) => onDepthChange(Number(event.target.value))}
-						className="w-24 accent-slate-700"
+						className="w-24 accent-invert"
 					/>
 					<span className="w-3 tabular-nums">{depth}</span>
 				</label>
@@ -66,13 +71,13 @@ export function Toolbar({
 					<button
 						type="button"
 						onClick={onReset}
-						className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 text-sm hover:bg-slate-50"
+						className="rounded-lg border border-line px-3 py-1.5 font-medium text-ink-soft text-sm hover:bg-wash"
 					>
 						{t("backToMe")}
 					</button>
 				) : null}
 
-				<div className="flex rounded-lg bg-slate-100 p-0.5">
+				<div className="flex rounded-lg bg-muted p-0.5">
 					{VIEWS.map(({ id, labelKey }) => (
 						<button
 							key={id}
@@ -80,8 +85,8 @@ export function Toolbar({
 							onClick={() => onViewChange(id)}
 							className={`rounded-md px-3 py-1.5 font-medium text-sm transition-colors ${
 								view === id
-									? "bg-white text-slate-900 shadow-sm"
-									: "text-slate-500 hover:text-slate-700"
+									? "bg-panel text-ink shadow-sm"
+									: "text-ink-muted hover:text-ink-soft"
 							}`}
 						>
 							{t(labelKey)}
@@ -96,7 +101,7 @@ export function Toolbar({
 					href="/settings"
 					title={t("settings")}
 					aria-label={t("settings")}
-					className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+					className="rounded-lg border border-line p-2 text-ink-muted hover:bg-wash hover:text-ink"
 				>
 					<Settings size={16} strokeWidth={2} />
 				</Link>

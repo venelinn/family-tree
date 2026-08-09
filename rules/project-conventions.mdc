@@ -1,0 +1,83 @@
+---
+description: Core project conventions and coding standards for boats-web
+alwaysApply: true
+---
+
+# Project Conventions
+
+## Stack
+
+- TypeScript 6.0, React 19, Next.js 16.2 (App Router)
+- SCSS Modules for styling, clsx for class composition
+- next-intl for i18n (messages in `messages/{en,fr,es}.json`)
+- lucide-react 1.x for icons (via `components/Icon`)
+- Contentful as CMS (data fetched in server components)
+- amazon-cognito-identity-js for auth
+- Tailwind CSS 4.2 (integrated alongside SCSS Modules)
+- Stripe 9.x / react-stripe-js 6.x for payments
+
+## Architecture
+
+- **Server Components** for data fetching (`app/[lang]/` pages, layout)
+- **Client Components** marked with `"use client"` for interactivity
+- Component files: `components/ComponentName/ComponentName.tsx` + `.module.scss`
+- Utils in `utils/` — pure functions, no React imports
+- Hooks in `hooks/` — client-side only
+
+### Dashboard Pages (admin/owner/renter)
+
+Dashboard pages use a **server → client split** with cookie-based auth:
+
+- **Thin wrappers** (no data): Server component resolves `params` with `await`, renders client child components directly. No `"use client"` needed.
+- **Data pages**: Server component fetches initial data via `fetchWithAuthServerJson()` (reads `idToken` cookie), passes as `initialData` prop to a `*Content.tsx` client component.
+- **Interactive pages** (forms, editors, real-time): Stay fully client-side with `"use client"`.
+
+Pattern for data pages:
+- `page.tsx` — async server component, fetches data in try/catch (returns `undefined` on failure)
+- `*Content.tsx` — `"use client"` component next to page, receives `lang` + `initialData` props
+- Hooks accept optional `initialData` to skip initial fetch when server data is available
+
+Server-side auth fetch: `fetchWithAuthServerJson()` from `utils/fetchWithAuthServer.ts`
+Use `get*ApiUrl()` helpers for direct backend URLs (not `/api/*` proxy).
+
+## Agent memory
+
+Long-lived stack notes, architecture guardrails, and session learnings: **`.cursor/memory.md`** at the monorepo root. Prefer updating that file over scattering one-off rules.
+
+## Code Style
+
+- Never use `!important` in CSS
+- Never add comments that just narrate what code does
+- Use `clsx` (imported as `cx` or `clsx`) for conditional class names
+- Translations: use `useTranslations()` from next-intl, keys in `messages/*.json`
+- All three locale files (en, fr, es) must stay in sync when adding translations
+- Prefer editing existing files over creating new ones
+
+## Contentful Data
+
+- Menu data: `extractMenuColumns()` from `utils/menuHelpers.ts`
+- Links: `contentfulItemToLink()` from `utils/linkHelpers.ts`
+- Pages: `getPageBySlug()` from `utils/content.ts`
+- Locales: `getContentfulLocale()` maps app locale to Contentful locale
+- Auth-gated links: Contentful Link model has `requiresAuth` boolean — when `true`, the link is hidden from unauthenticated users (filtered in `NavigationInner.tsx`)
+- Custom submenus: Contentful Link model has `submenuId` field — maps to code-defined submenus in `components/Navigation/submenuRegistry.ts`
+
+## Contentful Caching (`utils/content.ts`)
+
+- The Contentful SDK uses Axios (not `fetch`), so Next.js fetch cache does not apply — we use `unstable_cache` from `next/cache` to wrap SDK calls
+- All cached functions are tagged `"contentful"` for bulk on-demand purge
+- Preview mode (`draftMode`) always **skips the cache** — call the raw `fetch*` function directly
+- Pattern for adding a new cached Contentful function:
+  1. Write the uncached fetcher (`async function fetchThing(…)`)
+  2. In the public export, check `preview` — if true call uncached, otherwise wrap in `unstable_cache` with key array, `revalidate`, and `tags: ["contentful"]`
+- Use `REVALIDATE_MINUTES` (60s) for page content, `REVALIDATE_HOURS` (3600s) for layout/config
+- On-demand revalidation: `POST /api/revalidate` with `x-revalidate-secret` header calls `revalidateTag("contentful")`
+- See `docs/ssr-architecture.md` for the full cache profile table and Contentful webhook setup
+
+## Component Patterns
+
+- Icons: `<Icon name="IconName" size={24} />` — name is PascalCase or kebab-case
+- Buttons: `<Button variant="primary" size="sm" />` — variants: primary, secondary, toggle, danger, warning, link, ghost
+- Sections: wrap in `<SectionConnector>` with section props from Contentful
+- Headings: `<Heading as="h1" size="h1">` — `as` is semantic, `size` is visual
+

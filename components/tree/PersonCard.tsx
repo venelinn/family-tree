@@ -73,8 +73,8 @@ function RevealBar({
 				direction === "up" ? "-top-4" : "-bottom-4"
 			} ${
 				mode === "expand"
-					? "border-slate-300 border-dashed bg-white/95 text-slate-500 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700"
-					: "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+					? "border-line-strong border-dashed bg-panel-veil text-ink-muted hover:border-ink-faint hover:bg-wash hover:text-ink-soft"
+					: "border-branch-line bg-branch-soft text-branch-ink hover:bg-branch-soft-hover"
 			}`}
 		>
 			<Icon size={11} strokeWidth={2.5} />
@@ -104,12 +104,14 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 
 	const accent =
 		person.sex === "F"
-			? "border-rose-300 bg-rose-50"
-			: "border-sky-300 bg-sky-50"
+			? "border-female-line bg-female-soft"
+			: "border-male-line bg-male-soft"
+	// The offset colour has to be named: Tailwind's default is white, which
+	// would draw a white halo around every ring on the dark canvas.
 	const ring = isSelected
-		? "ring-2 ring-amber-400 ring-offset-1"
+		? "ring-2 ring-branch-ring ring-offset-1 ring-offset-surface"
 		: isRoot
-			? "ring-2 ring-emerald-400 ring-offset-1"
+			? "ring-2 ring-root-ring ring-offset-1 ring-offset-surface"
 			: ""
 
 	const born = formatTreeDate(person.birthDate, locale)
@@ -157,7 +159,7 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 					className="pointer-events-none absolute top-0 left-0 h-5 w-5 overflow-hidden rounded-tl-[9px]"
 				>
 					<span
-						className="block h-full w-full bg-slate-800"
+						className="block h-full w-full bg-ribbon"
 						style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
 					/>
 				</span>
@@ -197,8 +199,8 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 					}
 					className={`nodrag absolute top-1 right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border shadow-sm transition-opacity ${
 						isAdding
-							? "border-slate-700 bg-slate-800 text-white opacity-100"
-							: "border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:text-slate-800"
+							? "border-invert bg-invert text-on-invert opacity-100"
+							: "border-line-strong bg-panel text-ink-muted hover:border-ink-faint hover:text-ink"
 					} ${isSelected || isAdding ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
 				>
 					{isAdding ? (
@@ -216,18 +218,18 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 					landscape ? "min-w-0 flex-1 text-left" : "mt-1.5 w-full text-center"
 				}
 			>
-				<div className="line-clamp-2 font-semibold text-[11px] text-slate-800 leading-tight">
+				<div className="line-clamp-2 font-semibold text-[11px] text-ink leading-tight">
 					{person.name}
 				</div>
-				<div className="mt-1 space-y-px text-[10px] text-slate-500 leading-tight">
+				<div className="mt-1 space-y-px text-[10px] text-ink-muted leading-tight">
 					{born ? (
 						<div className="truncate">
-							<span className="text-slate-400">✳</span> {born}
+							<span className="text-ink-faint">✳</span> {born}
 						</div>
 					) : null}
 					{died ? (
 						<div className="truncate">
-							<span className="text-slate-400">†</span> {died}
+							<span className="text-ink-faint">†</span> {died}
 						</div>
 					) : null}
 					{!born && !died && person.deceased ? (

@@ -1,21 +1,194 @@
 @import "tailwindcss";
 
+/**
+ * Colour is a two-layer system.
+ *
+ * Layer one is this `:root` block: semantic tokens (`--panel`, `--ink`,
+ * `--female-soft`) whose values are `light-dark()` pairs. Layer two is the
+ * `@theme inline` block below, which hands those tokens to Tailwind so they
+ * generate utilities — `bg-panel`, `text-ink`, `border-female-line`.
+ *
+ * Components name the *role*, never the colour. `bg-panel`, not `bg-white`.
+ * That is what makes the dark theme a change to this file rather than a
+ * `dark:` variant on every element in the app.
+ *
+ * `light-dark()` resolves against the `color-scheme` set at the bottom of this
+ * file, so each token is written once with both its values. The alternative —
+ * a `@media (prefers-color-scheme: dark)` block plus a `[data-theme="dark"]`
+ * block — states the dark palette twice and lets the two drift apart.
+ *
+ * Setting `color-scheme` also gets the native controls for free: the range
+ * slider, the checkbox and the scrollbars follow the theme without being
+ * styled.
+ */
 :root {
-	--background: #ffffff;
-	--foreground: #171717;
+	/* Neutral chrome. `surface` is the page, `panel` is anything raised off it
+	   — header, sidebar, cards. In light they're near-identical and the border
+	   does the separating; in dark the panel is *lighter* than the page, which
+	   is how depth reads without shadows. */
+	--surface: light-dark(#f8fafc, #0b1120);
+	--panel: light-dark(#ffffff, #151e2e);
+	--panel-veil: light-dark(rgb(255 255 255 / 0.95), rgb(21 30 46 / 0.95));
+	--wash: light-dark(#f8fafc, #1d2839);
+	--muted: light-dark(#f1f5f9, #232f42);
+
+	--line-subtle: light-dark(#f1f5f9, #1e2839);
+	--line: light-dark(#e2e8f0, #2a3648);
+	--line-strong: light-dark(#cbd5e1, #3b4a61);
+
+	--ink: light-dark(#0f172a, #e8edf5);
+	--ink-soft: light-dark(#334155, #c2cbd9);
+	--ink-muted: light-dark(#64748b, #93a1b5);
+	--ink-faint: light-dark(#94a3b8, #6f7f96);
+	--ink-ghost: light-dark(#cbd5e1, #55637a);
+
+	/* The one inverted surface: primary buttons and the active "add" toggle. */
+	--invert: light-dark(#0f172a, #e2e8f0);
+	--invert-hover: light-dark(#334155, #cbd5e1);
+	--on-invert: light-dark(#ffffff, #0b1120);
+
+	/* Sex accents on person cards. The tints carry the meaning, so in dark they
+	   become deep washes rather than the pale ones — a light tint on a dark card
+	   would read as a highlight instead of a category. */
+	--male-line: light-dark(#7dd3fc, #2a5f80);
+	--male-soft: light-dark(#f0f9ff, #12283a);
+	--male-ink: light-dark(#0369a1, #7dd3fc);
+	--male-solid: light-dark(#bae6fd, #2b5470);
+
+	--female-line: light-dark(#fda4af, #8a3f55);
+	--female-soft: light-dark(#fff1f2, #351621);
+	--female-ink: light-dark(#be123c, #fda4af);
+	--female-solid: light-dark(#fecdd3, #6f2c40);
+
+	/* The person the chart is centred on. */
+	--root-ring: light-dark(#34d399, #34d399);
+	--root-line: light-dark(#6ee7b7, #1f6a53);
+	--root-soft: light-dark(#ecfdf5, #0d2b23);
+	--root-ink: light-dark(#059669, #6ee7b7);
+
+	/* Selection ring, and the reveal bars that collapse a branch. */
+	--branch-ring: light-dark(#fbbf24, #fbbf24);
+	--branch-line: light-dark(#fcd34d, #7a5a18);
+	--branch-soft: light-dark(#fffbeb, #2e2411);
+	--branch-soft-hover: light-dark(#fef3c7, #3d3016);
+	--branch-ink: light-dark(#b45309, #fcd34d);
+
+	--danger-soft: light-dark(#fff1f2, #351620);
+	--danger-ink: light-dark(#be123c, #fda4af);
+	--danger-text: light-dark(#e11d48, #fb7185);
+
+	/* Canvas. These are read from TypeScript as `var(--…)` rather than turned
+	   into utilities — React Flow takes edge stroke, the background pattern
+	   colour and minimap fills as inline styles, so a variable resolves. */
+	--canvas-dot: light-dark(#e2e8f0, #253044);
+	--edge-spouse: light-dark(#94a3b8, #64748b);
+	--edge-descent: light-dark(#cbd5e1, #475569);
+	--union: light-dark(#94a3b8, #64748b);
+
+	/* Mourning ribbon. Deliberately neutral rather than `--ink`: inverting it
+	   would put a near-white corner on a dark card, which reads as a highlight
+	   — the opposite of what it means. */
+	--ribbon: light-dark(#1e293b, #9aa8bd);
 }
 
 @theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
+	--color-surface: var(--surface);
+	--color-panel: var(--panel);
+	--color-panel-veil: var(--panel-veil);
+	--color-wash: var(--wash);
+	--color-muted: var(--muted);
+
+	--color-line-subtle: var(--line-subtle);
+	--color-line: var(--line);
+	--color-line-strong: var(--line-strong);
+
+	--color-ink: var(--ink);
+	--color-ink-soft: var(--ink-soft);
+	--color-ink-muted: var(--ink-muted);
+	--color-ink-faint: var(--ink-faint);
+	--color-ink-ghost: var(--ink-ghost);
+
+	--color-invert: var(--invert);
+	--color-invert-hover: var(--invert-hover);
+	--color-on-invert: var(--on-invert);
+
+	--color-male-line: var(--male-line);
+	--color-male-soft: var(--male-soft);
+	--color-male-ink: var(--male-ink);
+	--color-male-solid: var(--male-solid);
+
+	--color-female-line: var(--female-line);
+	--color-female-soft: var(--female-soft);
+	--color-female-ink: var(--female-ink);
+	--color-female-solid: var(--female-solid);
+
+	--color-root-ring: var(--root-ring);
+	--color-root-line: var(--root-line);
+	--color-root-soft: var(--root-soft);
+	--color-root-ink: var(--root-ink);
+
+	--color-branch-ring: var(--branch-ring);
+	--color-branch-line: var(--branch-line);
+	--color-branch-soft: var(--branch-soft);
+	--color-branch-soft-hover: var(--branch-soft-hover);
+	--color-branch-ink: var(--branch-ink);
+
+	--color-danger-soft: var(--danger-soft);
+	--color-danger-ink: var(--danger-ink);
+	--color-danger-text: var(--danger-text);
+
+	--color-union: var(--union);
+	--color-ribbon: var(--ribbon);
+
 	--font-sans: var(--font-geist-sans);
 	--font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
+/**
+ * What `light-dark()` resolves against.
+ *
+ * No attribute — the "system" preference, and the default for a first visit —
+ * leaves `light dark` in place, so the OS decides and a change to it is picked
+ * up live with no JavaScript. An explicit choice pins one of the two.
+ *
+ * The attribute is server-rendered from the cookie in `app/layout.tsx`, which
+ * is why there is no theme flash on load and no blocking inline script.
+ */
+:root {
+	color-scheme: light dark;
+}
+:root[data-theme="light"] {
+	color-scheme: light;
+}
+:root[data-theme="dark"] {
+	color-scheme: dark;
+}
+
+/**
+ * Onboarding's step transition.
+ *
+ * Here rather than in a CSS module because there are no CSS modules in this
+ * project — one `.scss` file would drag in a Sass toolchain for two keyframes.
+ */
+@keyframes step-enter {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.slot-enter {
+	animation: step-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Someone who has asked their OS to stop moving things means it. */
+@media (prefers-reduced-motion: reduce) {
+	.slot-enter {
+		animation: none;
 	}
 }
 
@@ -24,8 +197,8 @@ body {
 	height: 100%;
 }
 body {
-	background: var(--background);
-	color: var(--foreground);
+	background: var(--surface);
+	color: var(--ink);
 	font-family: Arial, Helvetica, sans-serif;
 	-moz-osx-font-smoothing: grayscale;
 	-webkit-font-smoothing: antialiased;

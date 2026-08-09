@@ -1,0 +1,8 @@
+---
+description: Canonical location for long-lived agent guardrails (stack, patterns, learnings)
+alwaysApply: true
+---
+
+# Agent memory
+
+Persistent guardrails for this repository live in **`.cursor/memory.md`** (monorepo root). When the user asks to record learnings, update guardrails, or “add to memory”, edit that file. Application source is under **`boats-web/`**; paths in `memory.md` are relative to `boats-web/` unless noted otherwise.

@@ -91,6 +91,37 @@ A large expansion closes the user's other open branches. Without it, expansions
 accumulate and sprawl the chart until nothing is legible — and the point of a
 neighbourhood is that you follow one line at a time.
 
+## Semantic colour tokens, not `dark:` variants
+
+Dark mode could have been added by putting a `dark:` variant next to each of the
+~180 palette classes in the app. Instead every element was changed to name a
+*role* — `bg-panel`, `text-ink-muted` — and the two palettes live in
+`globals.css`.
+
+The variant approach doubles the class soup on every element, and it fails
+silently: miss one and it looks fine until someone opens the app in dark. With
+tokens there is one place to look, and a component that skipped them is
+conspicuous because its colours don't respond to the setting at all.
+
+**Rejected:** `next-themes`. It solves the flash-of-wrong-theme problem for apps
+that keep the preference in `localStorage`. This one already reads a cookie on
+the server for the locale, so the same trick gives a correct `<html data-theme>`
+in the first byte of HTML — no provider, no blocking script, no dependency.
+
+## `light-dark()` rather than a duplicated dark block
+
+The conventional shape is a `@media (prefers-color-scheme: dark)` block plus a
+`[data-theme="dark"]` block for the override, which states the dark palette
+twice and lets the two drift. `light-dark()` states each token once, and the
+`data-theme` attribute picks a `color-scheme` for it to resolve against.
+
+Setting `color-scheme` also themes the native controls — the depth slider, the
+checkbox, the scrollbars — which the duplicated-block approach doesn't.
+
+Lightning CSS downlevels `light-dark()` in the production build, and the
+polyfill is correct: the `[data-theme]` rules outrank the media query, so an
+explicit choice beats the OS in both directions.
+
 ## Reveal bars, not chevrons
 
 The first version used a 36px chevron pill, with collapse hidden behind hover.

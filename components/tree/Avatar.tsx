@@ -49,7 +49,9 @@ export function Avatar({
 		<div
 			style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
 			className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${
-				isFemale ? "bg-rose-200 text-rose-700" : "bg-sky-200 text-sky-700"
+				isFemale
+					? "bg-female-solid text-female-ink"
+					: "bg-male-solid text-male-ink"
 			} ${className}`}
 		>
 			{initials}

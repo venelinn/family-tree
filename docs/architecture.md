@@ -3,9 +3,13 @@
 ```
 data/nikolov.ged            MyHeritage GEDCOM export (import source only)
   │ pnpm photos             photos → public/photos/, export rewritten to local paths
-  │ pnpm import             one-way
+  │ pnpm import             one-way, into a registered tree
   ▼
-data/tree.json              the editable store — system of record
+data/trees.json             which trees exist and where each file is
+  │ lib/store/registry.ts   create / adopt / move / forget; the file may be anywhere
+  │ lib/active-tree.ts      which one this browser is showing (cookie)
+  ▼
+<the chosen file>.json      the editable store — system of record for that tree
   │ lib/store/local.ts      TreeStore implementation (file-backed)
   │ lib/store/to-graph.ts   rows → read model
   ▼
@@ -22,8 +26,12 @@ Almost all the flexibility in this codebase comes from two boundaries.
 
 **`lib/data.ts`** is the only module that knows where data lives. Everything
 downstream consumes `FamilyGraph`. Moving to Supabase means implementing
-`TreeStore` against it and changing the line that constructs `LocalTreeStore` —
-no view, layout or component code moves.
+`TreeStore` against it and changing what `getStore()` returns — no view, layout
+or component code moves.
+
+It no longer holds a hard-coded `ROOT_PERSON_ID`, and that is what made more
+than one tree possible: the person a chart opens on is `meta.rootPersonId`
+inside each tree file. See [storage.md](storage.md).
 
 **`lib/layout/`** is plain TypeScript with no React or React Flow import. It
 takes a graph and a root and returns positioned nodes and edges. That means
@@ -92,6 +100,14 @@ client rebuilds.
 | `Toolbar.tsx` | View switch, depth slider, person count, link to settings |
 | `Avatar.tsx` | Photo with initials fallback |
 
+`components/settings/` holds the preference pickers — `LanguagePicker`,
+`ThemePicker` and `TreeManager`, deliberately the same row shape, since they all
+answer "one of these, please".
+
+`components/Onboarding/` is the first-run wizard at `/welcome`: name the tree,
+choose where its file is kept, set language and theme, and add the first person.
+`components/tree/EmptyTree.tsx` is its counterpart for a tree started empty.
+
 ### `lib/localization.ts`, `messages/`, `i18n/request.ts`
 
 English and Bulgarian through `next-intl`, chosen on the settings page and kept
@@ -99,6 +115,18 @@ in a cookie rather than a URL prefix. The rule that shapes the rest of the code:
 **anything below a component returns a message key, not a sentence** — fact
 titles, relationship labels, add-slot labels, and write failures alike. See
 [i18n.md](i18n.md).
+
+### `lib/theming.ts`, `lib/theme.ts`, `app/globals.css`
+
+Light and dark, `system` by default. Same three-file shape as the locale —
+shared constants, a server-side cookie read, a server action for the write — for
+the same reason: it is one preference, set once, on the settings page.
+
+The rule that shapes the components: **name the role, not the colour**.
+`bg-panel`, never `bg-white`. Every colour in the app resolves through a token in
+`globals.css`, including the React Flow canvas, so the dark theme is a change to
+that one file rather than a `dark:` variant on every element. See
+[theming.md](theming.md).
 
 ## Writes
 

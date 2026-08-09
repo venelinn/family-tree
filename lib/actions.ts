@@ -1,10 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getTranslations } from "next-intl/server"
-import { store } from "./data"
-import { TreeOpError } from "./errors"
-import type { PersonInput } from "./store/types"
+import { toActionError } from "./action-error"
+import { getStore } from "./data"
+import { type PersonFormValues, toPersonInput } from "./person-input"
 import { addRelative, type Relation, removePerson } from "./tree-ops"
 
 /**
@@ -25,50 +24,7 @@ export interface ActionResult {
 	personId?: string
 }
 
-async function failure(error: unknown): Promise<ActionResult> {
-	const t = await getTranslations("errors")
-	// `ErrorCode` is a subset of the `errors` keys, so a code with no message
-	// is a compile error rather than a raw code shown to the user.
-	if (error instanceof TreeOpError) {
-		return { ok: false, error: t(error.code, error.values) }
-	}
-	return { ok: false, error: t("unknown") }
-}
-
-/** Blank strings from an empty form field should be absent, not "". */
-const clean = (value: string | undefined) => value?.trim() || undefined
-
-export interface PersonFormValues {
-	fullName: string
-	sex: "M" | "F"
-	birthDate?: string
-	birthPlace?: string
-	deathDate?: string
-	deathPlace?: string
-	deceased: boolean
-}
-
-function toInput(values: PersonFormValues): PersonInput {
-	const fullName = values.fullName.trim()
-	if (!fullName) throw new TreeOpError("nameRequired")
-
-	const parts = fullName.split(/\s+/)
-	return {
-		fullName,
-		// Best-effort split so surname-based sorting keeps working; both are
-		// editable later if the guess is wrong.
-		givenName: parts.slice(0, -1).join(" ") || fullName,
-		surname: parts.length > 1 ? parts.at(-1) : undefined,
-		sex: values.sex,
-		birthDate: clean(values.birthDate),
-		birthPlace: clean(values.birthPlace),
-		deathDate: clean(values.deathDate),
-		deathPlace: clean(values.deathPlace),
-		// A death date implies deceased even if the box wasn't ticked.
-		deceased: values.deceased || Boolean(clean(values.deathDate)),
-		photos: [],
-	}
-}
+export type { PersonFormValues }
 
 export async function addRelativeAction(
 	anchorId: string,
@@ -76,11 +32,17 @@ export async function addRelativeAction(
 	values: PersonFormValues,
 ): Promise<ActionResult> {
 	try {
-		const person = await addRelative(store, anchorId, relation, toInput(values))
+		const store = await getStore()
+		const person = await addRelative(
+			store,
+			anchorId,
+			relation,
+			toPersonInput(values),
+		)
 		revalidatePath("/")
 		return { ok: true, personId: person.id }
 	} catch (error) {
-		return await failure(error)
+		return await toActionError(error)
 	}
 }
 
@@ -89,14 +51,15 @@ export async function updatePersonAction(
 	values: PersonFormValues,
 ): Promise<ActionResult> {
 	try {
-		const { photos: _photos, ...patch } = toInput(values)
+		const store = await getStore()
+		const { photos: _photos, ...patch } = toPersonInput(values)
 		// `photos` is deliberately dropped: it's managed by the import and photo
 		// scripts, and this form would otherwise blank it out on every save.
 		await store.updatePerson(personId, patch)
 		revalidatePath("/")
 		return { ok: true, personId }
 	} catch (error) {
-		return await failure(error)
+		return await toActionError(error)
 	}
 }
 
@@ -104,10 +67,33 @@ export async function deletePersonAction(
 	personId: string,
 ): Promise<ActionResult> {
 	try {
+		const store = await getStore()
 		await removePerson(store, personId)
 		revalidatePath("/")
 		return { ok: true }
 	} catch (error) {
-		return await failure(error)
+		return await toActionError(error)
+	}
+}
+
+/**
+ * The first person in an empty tree.
+ *
+ * Separate from `addRelativeAction` because there is no anchor to hang them
+ * off, and because this is the moment a tree gets a root: every layout starts
+ * from someone, so a tree with people but no `rootPersonId` has no way in.
+ * Used by onboarding and by the empty state on `/`.
+ */
+export async function createFirstPersonAction(
+	values: PersonFormValues,
+): Promise<ActionResult> {
+	try {
+		const store = await getStore()
+		const person = await store.createPerson(toPersonInput(values))
+		await store.updateMeta({ rootPersonId: person.id })
+		revalidatePath("/", "layout")
+		return { ok: true, personId: person.id }
+	} catch (error) {
+		return await toActionError(error)
 	}
 }

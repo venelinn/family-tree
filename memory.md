@@ -11,8 +11,8 @@ A self-hosted family tree viewer for a MyHeritage export, with two views —
 **Family** (kinship graph: couples, siblings, cousins) and **Pedigree** (strict
 binary ancestor chart). Next.js + React Flow. Personal project, ~252 people.
 
-Root person is **Venelin Nikolov Nikolov, `@I85@`** (`ROOT_PERSON_ID` in
-`lib/data.ts`).
+Root person is **Venelin Nikolov Nikolov, `@I85@`** — now `meta.rootPersonId`
+inside the tree file, not a constant. `ROOT_PERSON_ID` is gone.
 
 ## Current state
 
@@ -29,6 +29,15 @@ Localised: English and Bulgarian via `next-intl`, picked on `/settings` and kept
 in a cookie (no `/en` `/bg` prefix, no middleware). Adding a language is three
 files — see [docs/i18n.md](docs/i18n.md).
 
+Themed: light and dark, `system` by default, picked on `/settings` and kept in a
+cookie the same way. Colour lives in semantic tokens in `app/globals.css` — see
+[docs/theming.md](docs/theming.md).
+
+Multi-tree: several trees, each a file that **may live anywhere on disk** —
+external drive, encrypted volume, off the repo entirely. First run goes through
+`/welcome` (name → where to store it → language/theme → start from me or empty).
+Settings switches, renames, moves, adopts. See [docs/storage.md](docs/storage.md).
+
 Not built: Supabase, photo upload for people added in-app, linking two people who
 are *already* in the tree (`linkRelative` exists in `tree-ops.ts` but nothing
 calls it).
@@ -43,9 +52,16 @@ the images are gone until you export again.
 dates, birthplaces, email addresses. Both are gitignored — keep it that way. Same
 reason: don't paste the export into online GEDCOM converters.
 
-**`pnpm import` wipes the store.** Once you edit in the app, `data/tree.json` is
+**`pnpm import` wipes the store.** Once you edit in the app, the tree file is
 the system of record. Re-importing discards your edits. There is no two-way sync
-with MyHeritage and that's deliberate.
+with MyHeritage and that's deliberate. It now targets a *registered tree* —
+`pnpm import <file> <treeId>`, first tree by default.
+
+**Adopting a tree file must validate the raw JSON, not a loaded snapshot.**
+`LocalTreeStore.read()` defaults missing rows to `[]`, so *every* well-formed
+JSON file looks like a valid empty tree. Adopting rewrites the file wholesale —
+during development this overwrote `package.json`. `assertLooksLikeTree` requires
+`people` and `unions` to both be arrays.
 
 **Expand must grant the slider depth, not a fixed step.** `max(budget, 1)` looks
 harmless but the root already has the full budget while a spouse's is zeroed, so
@@ -70,9 +86,23 @@ don't know the reader's language. Plurals and gender agreement live in the ICU
 message too — a `count === 1` test in a component bakes English grammar into
 every language, and Bulgarian inflects *Роден* / *Родена*.
 
+**The active tree is a cookie, not `localStorage`.** The tree is loaded during
+the *server* render, so the choice has to arrive with the request; localStorage
+would paint one family's chart and then swap it for another's. Same reason as
+the theme, with higher stakes.
+
 **Changing the language must `revalidatePath("/", "layout")`.** Without it the
 client router cache serves the chart back in the old language. The cookie alone
-is not enough.
+is not enough. **The theme has exactly the same requirement** — the `data-theme`
+attribute lives on the root layout.
+
+**Never write a Tailwind palette class.** `bg-slate-100`, `text-rose-600` and
+friends look correct in light and wrong in dark, and nothing fails to tell you.
+Every colour goes through a semantic token — `bg-panel`, `text-ink-muted`,
+`border-female-line` — defined in `app/globals.css`. Two naming traps when adding
+one: it must not collide with a Tailwind utility (`--color-solid` had to become
+`--color-invert`, because `border-solid` is a border-style), and rings need
+`ring-offset-surface` or Tailwind's white default halos them on the dark canvas.
 
 ## Decisions already made (don't relitigate without reason)
 
@@ -82,6 +112,10 @@ is not enough.
 - Back-references (`unionIds`, `childOfUnionId`) are derived, never stored.
 - GEDCOM is the import format; the parser is local and was validated against the older JSON export at **zero diffs** across 252 people / 94 unions.
 - Local store chosen over Supabase for now: free schema churn, git history, no auth work. Revisit if sharing with family becomes the goal.
+- Dark mode is semantic tokens + `light-dark()`, not `dark:` variants and not `next-themes`. The preference is a server-read cookie, which is why there's no flash and no blocking script.
+- A tree's *name and root person* live in its own file; the index (`data/trees.json`) holds only id + path. Copy the file anywhere and it stays whole.
+- Tree files are written `0600`, directories `0700`. Cloud-synced destinations (iCloud, Dropbox, OneDrive) are warned about, never blocked.
+- No delete for trees — only "remove from list". Deletion is unrecoverable and there is no undo.
 
 ## Sidebar
 

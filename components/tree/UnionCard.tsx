@@ -11,7 +11,7 @@ import { UNION_SIZE } from "@/lib/layout/constants"
 export function UnionCard() {
 	return (
 		<div
-			className="rounded-full bg-slate-400"
+			className="rounded-full bg-union"
 			style={{ width: UNION_SIZE, height: UNION_SIZE }}
 		>
 			<Handle

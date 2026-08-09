@@ -22,6 +22,7 @@ import {
 	UNION_SIZE,
 } from "@/lib/layout/constants"
 import type { LayoutNode, LayoutResult, ViewType } from "@/lib/layout/types"
+import type { ThemePreference } from "@/lib/theming"
 import { AddSlotCard } from "./AddSlotCard"
 import { PersonCard } from "./PersonCard"
 import { PlaceholderCard } from "./PlaceholderCard"
@@ -58,6 +59,13 @@ interface TreeCanvasProps {
 	/** Whose add-slots are open, so their card can show a close button. */
 	addingFor?: string | null
 	onRequestAdd?: (personId: string) => void
+	/**
+	 * Handed to React Flow's own `colorMode` so its chrome — the zoom controls,
+	 * the minimap frame, the attribution — follows the theme. Our three
+	 * preferences happen to be exactly React Flow's three, `system` included, so
+	 * this passes straight through with nothing to resolve.
+	 */
+	theme: ThemePreference
 }
 
 export function TreeCanvas({
@@ -71,6 +79,7 @@ export function TreeCanvas({
 	addSlots = [],
 	addingFor,
 	onRequestAdd,
+	theme,
 }: TreeCanvasProps) {
 	const layoutNodes = useMemo<Node[]>(
 		() =>
@@ -121,8 +130,15 @@ export function TreeCanvas({
 					edge.kind === "descent" ? { borderRadius: CORNER_RADIUS } : undefined,
 				focusable: false,
 				selectable: false,
+				// CSS variables rather than hex, so the theme is resolved by the
+				// browser at paint time. That keeps the one palette in
+				// `globals.css` — and keeps this memo out of the theme's business,
+				// since nothing here changes when the theme does.
 				style: {
-					stroke: edge.kind === "spouse" ? "#94a3b8" : "#cbd5e1",
+					stroke:
+						edge.kind === "spouse"
+							? "var(--edge-spouse)"
+							: "var(--edge-descent)",
 					strokeWidth: edge.kind === "spouse" ? 2 : 1.5,
 					strokeDasharray: edge.dashed ? "4 3" : undefined,
 				},
@@ -235,19 +251,26 @@ export function TreeCanvas({
 			minZoom={0.05}
 			maxZoom={2}
 			proOptions={{ hideAttribution: true }}
-			className="bg-slate-50"
+			colorMode={theme}
+			className="bg-surface"
 		>
-			<Background gap={20} size={1} color="#e2e8f0" />
+			{/* React Flow passes `color` through as a custom property on the SVG's
+			    inline style, and takes minimap fills and edge strokes as inline
+			    styles too — so a `var()` resolves in all three and the canvas
+			    reads from the same palette as the rest of the app. */}
+			<Background gap={20} size={1} color="var(--canvas-dot)" />
 			<Controls showInteractive={false} />
 			<MiniMap
 				pannable
 				zoomable
 				nodeColor={(node) => {
-					if (node.type !== "person") return "#e2e8f0"
+					if (node.type !== "person") return "var(--line)"
 					const person = (node.data as { person?: { sex?: string } }).person
-					return person?.sex === "F" ? "#fda4af" : "#7dd3fc"
+					return person?.sex === "F"
+						? "var(--female-solid)"
+						: "var(--male-solid)"
 				}}
-				className="bg-white!"
+				className="bg-panel!"
 			/>
 		</ReactFlow>
 	)

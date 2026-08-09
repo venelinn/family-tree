@@ -1,8 +1,14 @@
 /**
- * Seed the editable store from a MyHeritage GEDCOM export.
+ * Seed a tree from a MyHeritage GEDCOM export.
  *
- *   pnpm import                     # data/nikolov.ged -> data/tree.json
+ *   pnpm import                          # data/nikolov.ged -> the active tree
  *   pnpm import data/other.ged
+ *   pnpm import data/other.ged <treeId>  # a specific tree
+ *
+ * The target is a registered tree, not a fixed file, because a tree's file can
+ * live anywhere now — see `lib/store/registry.ts`. With no id it fills the
+ * first registered tree; with no trees at all it says so, because creating one
+ * silently would put family data somewhere nobody chose.
  *
  * This is a ONE-WAY import, and running it again replaces the store wholesale.
  * Once you start editing in the app, the store is the system of record and the
@@ -14,12 +20,11 @@
 
 import { existsSync } from "node:fs"
 import { readFile } from "node:fs/promises"
-import path from "node:path"
 import { parseGedcomText } from "../lib/gedcom/parse-ged"
-import { LocalTreeStore } from "../lib/store/local"
+import { getTreeStore, listTrees } from "../lib/store/registry"
 import type {
 	PersonRecord,
-	TreeSnapshot,
+	TreeRows,
 	UnionChildRecord,
 	UnionRecord,
 } from "../lib/store/types"
@@ -68,20 +73,40 @@ async function main() {
 			})),
 	)
 
-	const snapshot: TreeSnapshot = { people, unions, unionChildren }
-	const target = path.join(process.cwd(), "data", "tree.json")
+	const rows: TreeRows = { people, unions, unionChildren }
 
-	if (existsSync(target)) {
-		console.log(`Replacing existing store at ${target}`)
+	const trees = await listTrees()
+	const target = process.argv[3]
+		? trees.find((tree) => tree.id === process.argv[3])
+		: trees[0]
+
+	if (!target) {
+		console.error(
+			process.argv[3]
+				? `No tree with id ${process.argv[3]}. Registered: ${trees.map((tree) => tree.id).join(", ") || "none"}`
+				: "No trees yet — run the app and create one first, so you choose where the file goes.",
+		)
+		process.exit(1)
 	}
-	await new LocalTreeStore(target).replaceAll(snapshot)
+
+	const store = await getTreeStore(target.id)
+	if (!store) process.exit(1)
+
+	console.log(`Replacing the contents of "${target.name}" at ${target.file}`)
+	await store.replaceAll(rows)
+	// The GEDCOM ids are stable, so the person the chart opened on survives a
+	// re-import; if they didn't, `replaceAll` has already cleared the root.
+	const snapshot = await store.read()
+	if (!snapshot.meta.rootPersonId && people[0]) {
+		await store.updateMeta({ rootPersonId: people[0].id })
+	}
 
 	const withPhotos = people.filter((person) => person.photos.length > 0).length
 	console.log(
 		`Imported ${people.length} people, ${unions.length} unions, ` +
 			`${unionChildren.length} parent-child links (${withPhotos} with photos)`,
 	)
-	console.log(`-> ${target}`)
+	console.log(`-> ${target.file}`)
 }
 
 main().catch((error) => {

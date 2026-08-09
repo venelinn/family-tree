@@ -16,23 +16,22 @@
 		"@xyflow/react": "^12.11.2",
 		"clsx": "^2.1.1",
 		"date-fns": "^4.4.0",
-		"lucide-react": "^0.548.0",
-		"next": "16.0.0",
+		"lucide-react": "^1.31.0",
+		"next": "16.3.0",
 		"next-intl": "^4.13.5",
-		"react": "19.2.0",
-		"react-dom": "19.2.0",
+		"react": "19.2.8",
+		"react-dom": "19.2.8",
 		"server-only": "^0.0.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.2.0",
-		"@tailwindcss/postcss": "^4",
-		"@types/node": "^20",
-		"@types/react": "^19",
-		"@types/react-dom": "^19",
+		"@biomejs/biome": "2.5.7",
+		"@tailwindcss/postcss": "^4.3.3",
+		"@types/node": "^22.20.1",
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.4",
 		"baseline-browser-mapping": "^2.11.13",
-		"tailwindcss": "^4",
-		"ts-node": "^10.9.2",
+		"tailwindcss": "^4.3.3",
 		"tsx": "^4.23.11",
-		"typescript": "^5"
+		"typescript": "^7.0.2"
 	}
 }

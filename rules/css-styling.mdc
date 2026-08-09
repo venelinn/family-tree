@@ -1,0 +1,216 @@
+---
+description: CSS/SCSS styling rules and conventions for boats-web
+globs: "**/*.{scss,css,module.scss}"
+alwaysApply: false
+---
+
+# CSS/SCSS Styling Rules
+
+## Absolute Rules
+
+- **Never use `!important`** — fix specificity issues properly
+- **Never use inline styles in components** — use CSS Modules or SCSS classes
+- **TSX structure follows `.cursor/rules/html-rules.mdc`** — use `Heading`, `Button`, `Input`/`Select` from `@/components`, `Modal` for dialogs, and `useTranslations()` for visible copy
+- **Never use hardcoded colors** (`#fff`, `#0b57d0`, `rgba(...)`, `hsl(...)`) — always use design token variables
+- **Prefer semantic tokens over base palette tokens** — surfaces/text/borders/accents must come from the themed semantic layer (`--surface*`, `--on-surface*`, `--outline*`, `--primary*`, `--on-primary*`, `--primary-container`, `--on-primary-container`, `--background`, `--on-background`, `--inverse-surface`, `--inverse-on-surface`, `--error`, `--on-error`, `--cards-info-*`). Base palette (`--color-white`, `--color-black`, `--color-grey-*`, `--color-main`, `--color-blue*`, `--color-grey-border`, etc.) and the `--system-*` family (`--system-error`, `--system-error-light`, `--system-success`, `--system-warning*`, `--system-white/black/inactive/active/...`) are **not** overridden in dark mode and will paint light-mode pixels on a dark background. See **Dark Mode** below for the narrow cases where these are still correct
+- CSS variables use `--_` prefix for private/scoped vars (e.g. `--_btn-color`)
+
+## Design Tokens
+
+- All values come from Style Dictionary (`tokens/*.json` → `styles/_base-variables.scss` + `styles/_css-variables.css`)
+- Use `var(--spacing-*)`, `var(--font-*)` for all spacing and typography. For colors prefer the themed semantic layer (see **Dark Mode**)
+- SCSS breakpoints: `base.$breakpoint-sm` (36rem), `base.$breakpoint-md` (48rem), `base.$breakpoint-lg` (62rem), `base.$breakpoint-xl` (75rem)
+- Each breakpoint has a `-max` variant (e.g. `$breakpoint-md-max: 47.9375rem`)
+
+## Dark Mode
+
+- Activated by `[data-theme="dark"]` on `<html>`. Light mode is the default; dark mode is a hand-maintained override in `styles/_theme-dark.scss` sourced from `docs/dm/dark/DESIGN.md`. Light tokens live in `tokens/semantic.json` → `styles/_css-variables.css`
+- **Only the themed semantic layer adapts.** That layer is the single source of truth for surfaces, text, borders, and accents in regular UI:
+
+  | Use | Token |
+  | --- | --- |
+  | Page / card / panel background | `--surface`, `--surface-container-low/-/-high/-highest`, `--surface-bright`, `--surface-dim` |
+  | Primary text / icon on surface | `--on-surface` |
+  | Secondary text / muted icon | `--on-surface-variant` |
+  | Hairline border / divider | `--outline-variant` |
+  | Stronger border / outline | `--outline` |
+  | Brand accent (links, focus, active tab) | `--primary` |
+  | Text on `--primary` fill | `--on-primary` |
+  | Pale brand-tint background | `--primary-container` (text: `--on-primary-container`) |
+  | Error text or icon | `--error` (text on filled error: `--on-error`) |
+  | Inverted (e.g. tooltip) | `--inverse-surface` / `--inverse-on-surface` |
+  | InfoCard pastels | `--cards-info-{sand,blue,sage,blush,slate,lavender,cloud,eucalyptus}` |
+
+- **Do not use base palette or `--system-*` tokens for theme-driven chrome** — `--color-white`, `--color-black`, `--color-grey*`, `--color-main`, `--color-blue*`, `--color-grey-border`, `--system-white/black/error/error-light/success/warning*/inactive/active/draft/pending/deleted` all keep their light-mode value under `[data-theme="dark"]`. A `background: var(--color-white)` will read as a stark white panel on a dark page
+- **Narrow exceptions where base/system tokens are correct** — these sit on content that is itself fixed across themes, so they should stay:
+  - Image overlays / scrims: `color-mix(in srgb, var(--color-black), transparent X%)`
+  - Text or icon on top of a fixed-color filled badge: `var(--color-white)` on `var(--system-success)` / `var(--system-error)` / `var(--system-warning)` filled chips
+  - Intentional brand-dark backdrops behind light glyphs (e.g. video thumbnail placeholder using `var(--color-main)` with white-tint icon)
+- **`asBox` / `.ui-box` already paints `var(--surface-container)` by default** — when you need a different surface level, override the local var: `--_as-box-bgr: var(--surface-container-high);`. Do not hardcode `var(--color-white)`
+- **Component-local dark overrides go through `--_` private vars**, not duplicated declarations. Same variable-swap pattern used for `:hover`/`:focus` (see Responsive). Keeps light-mode CSS authoritative and dark-mode an additive delta:
+
+  ```scss
+  .spinner {
+    [data-theme="dark"] & {
+      --_spinner-track: var(--outline-variant);
+      --_spinner-accent: var(--primary);
+    }
+
+    border-color: var(--_spinner-track, var(--color-grey-border));
+    border-top-color: var(--_spinner-accent, var(--primary));
+  }
+  ```
+
+- **Native form chrome adapts via `color-scheme: dark`** (already set in `_theme-dark.scss`) — do not restyle scrollbars, autofill, date pickers, or `accent-color` per component
+- **Verifying a change is dark-mode-safe**: open the page with `<html data-theme="dark">`. If text/borders/backgrounds disappear or render at wrong contrast, swap the offending token to its semantic equivalent from the table above
+
+## CSS Modules
+
+- One `.module.scss` per component, colocated with the component
+- Import as `import styles from "./Component.module.scss"`
+- Use `clsx` or `cx` for conditional classes — never string concatenation for multiple classes
+
+## BEM Methodology
+
+- Follow BEM (Block Element Modifier) for all class naming and HTML structure
+- **Block**: the component root (`.search`, `.card`, `.footer`)
+- **Element**: a child part of the block, using `__` (`.search__form`, `.card__title`)
+- **Modifier**: a variation or state, using `--` (`.card--featured`, `.search--sm`)
+- In SCSS modules, use nesting with `&`:
+
+```scss
+.search {
+  &__form { ... }
+  &__input { ... }
+  &--sm { ... }
+}
+```
+
+- In JSX, reference as `styles.search__form`, `styles['search--sm']`
+- Keep nesting flat — max 2 levels (block > element). Never nest elements inside elements (`&__form__input` is wrong)
+- Use data attributes for dynamic states instead of BEM modifiers when toggled by JS: `data-size="sm"`, `data-variant="dark"`
+- **Use `aria-pressed`, `aria-selected`, or `aria-expanded` for interactive toggle states** — style with `&[aria-pressed="true"]` instead of adding/removing a `.selected` class via JS. This keeps accessibility and styling in sync
+
+## Responsive
+
+- Mobile-first: default styles are mobile, use `@media (min-width: base.$breakpoint-md)` to add desktop styles
+- Prefer `@container` queries over `@media` when the component is inside a resizable container
+- Container queries require `container-type: inline-size` on a parent
+- **Never override property values directly inside state changes or media queries** — instead, declare the property once using a scoped CSS variable (`--_` prefix) with a fallback, then reassign only the variable in the alternate state. This applies to `:hover`, `:focus`, `:active`, `aria-*` selectors, and `@media`/`@container` queries alike:
+
+```scss
+// Bad — duplicates property declarations across states
+.card {
+  background: var(--surface-container);
+  box-shadow: 0 4px 8px color-mix(in srgb, var(--color-black) 10%, transparent);
+  scale: 1;
+  &:hover {
+    background: transparent;
+    box-shadow: 0 16px 24px color-mix(in srgb, var(--color-black) 10%, transparent);
+    scale: 1.02;
+  }
+}
+
+// Good — single declaration, variable swap
+.card {
+  --_card-bg: var(--surface-container);
+  --_card-shadow: 0 4px 8px color-mix(in srgb, var(--color-black) 10%, transparent);
+  --_card-scale: 1;
+
+  background: var(--_card-bg);
+  box-shadow: var(--_card-shadow);
+  scale: var(--_card-scale);
+
+  &:hover {
+    --_card-bg: transparent;
+    --_card-shadow: 0 16px 24px color-mix(in srgb, var(--color-black) 10%, transparent);
+    --_card-scale: 1.02;
+  }
+}
+```
+
+This also works for child element properties driven by parent state — declare the `--_` variable on the block, consume it on the element, reassign on the block's `:hover`:
+
+```scss
+.card {
+  --_content-color: inherit;
+  &:hover { --_content-color: var(--on-primary); }
+  &__content { color: var(--_content-color); }
+}
+```
+
+## Layout Patterns
+
+- Use CSS Grid (`content-grid` pattern) for page layout
+- **For single-column stacked layouts, use `display: grid; gap: ...`** — not `display: flex; flex-direction: column; gap: ...`. Grid is simpler when you only need vertical stacking with a gap
+- Use Flexbox for component internals that need horizontal alignment or wrapping
+- When using flex: always set `min-width: 0` on children that need to shrink below content size (inputs, text)
+- Use `flex: 0 0 auto` for fixed-size flex children (icons, buttons)
+
+## Units
+
+- Spacing: `var(--spacing-*)` tokens or `rem`
+- **Typography: prefer typo mixins over raw font-size/line-height tokens** — see **Typography** below
+- Breakpoints: SCSS variables only (`base.$breakpoint-md`), not hardcoded px
+- Icon sizes in components: prefer `rem` or numeric px values, avoid `em` (parent-dependent)
+
+## Typography
+
+- **Use `@include typo.*` mixins instead of setting font-size/line-height tokens directly** — mixins set the full type scale (size, line-height, weight, and related properties) and stay aligned with the design system
+- Import at the top of the module:
+
+```scss
+@use "styles/typo-mixins" as typo;
+```
+
+- Available mixins: `typo.ui-body`, `typo.ui-caption`, `typo.ui-small`, `typo.h1`–`typo.h5`, `typo.hero`. Heading mixins accept an optional `$color` arg where applicable; UI mixins accept an optional `$bold` arg
+
+```scss
+// Bad — only sets font-size; misses line-height, weight, etc.
+.label {
+  font-size: var(--ui-small-font-size);
+}
+
+// Good — full ui-small scale via mixin
+.label {
+  @include typo.ui-small;
+}
+
+// Bold variant
+.label {
+  @include typo.ui-small($bold: true);
+}
+```
+
+- Reserve raw `var(--ui-*-font-size)` / `var(--heading-size-*-font-size)` for one-off overrides (e.g. a local `--_h4-font-size` override on a heading mixin), not as the default way to style text
+
+## Cross-Browser (Safari)
+
+- **Never use `oklch(from var(...))` or relative color syntax with CSS variables** — Safari doesn't support it reliably; use `color-mix(in srgb, ...)` instead
+- **Never rely on `aspect-ratio` alone for square buttons** — set explicit `width` and `height` and zero out padding via custom properties
+- **Always add `-webkit-appearance: none` on inputs** — Safari adds default styling that changes dimensions
+- **Always add `flex-shrink: 0` on icons and fixed-size elements** — prevents Safari from shrinking them in flex containers
+
+## Accordion Booking Variant
+
+- **Use `toggleLabel` prop for text next to the chevron** — renders inside `.accordion__toggle` before `.accordion__chevron`
+- **Closed state**: `.accordion__toggle` is a pill-shaped bordered container (border-radius token `--spacing-8`) showing label + chevron-down
+- **Open state**: `.accordion__toggle` becomes a circle (border-radius `50%`), label is hidden (`display: none`), only chevron-up visible
+- All toggle shape transitions use the `.booking` variant class — never override toggle styles in other variants
+
+## Owner Admin Tabs (BoatTabs)
+
+- **Always use `<BoatTabs>` component for boat edit page navigation** — never inline tab links manually
+- Tab config is centralized in `components/Owner/BoatTabs/BoatTabs.tsx` — add/remove/rename tabs there only
+- Use `activeTab` prop to set the current tab, `badges` prop for counts (e.g. `badges={{ media: 5 }}`)
+- The "Photos" tab is labeled **"Media"** in the UI but routes to `/photos`
+
+## File Structure
+
+```scss
+@use "styles/base-variables" as base;
+@use "styles/typo-mixins" as typo;    // use for typography (ui-body, ui-small, h1–h5, etc.)
+@use "styles/mixins" as shared;        // optional
+
+.component { ... }
+```

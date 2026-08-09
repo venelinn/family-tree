@@ -27,20 +27,20 @@ export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
 				data.onAdd?.(data.anchorId, data.relation, data.sex, data.slot)
 			}}
 			style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
-			className={`nodrag flex flex-col items-center justify-center gap-2 rounded-xl border-2 bg-white shadow-lg transition-transform hover:scale-[1.03] ${
+			className={`nodrag flex flex-col items-center justify-center gap-2 rounded-xl border-2 bg-panel shadow-lg transition-transform hover:scale-[1.03] ${
 				female
-					? "border-rose-300 text-rose-500 hover:bg-rose-50"
-					: "border-sky-300 text-sky-500 hover:bg-sky-50"
+					? "border-female-line text-female-ink hover:bg-female-soft"
+					: "border-male-line text-male-ink hover:bg-male-soft"
 			}`}
 		>
 			<span
 				className={`flex h-11 w-11 items-center justify-center rounded-full ${
-					female ? "bg-rose-100" : "bg-sky-100"
+					female ? "bg-female-soft" : "bg-male-soft"
 				}`}
 			>
 				<UserPlus size={20} strokeWidth={2} />
 			</span>
-			<span className="px-1 text-center font-semibold text-[11px] text-slate-600 leading-tight">
+			<span className="px-1 text-center font-semibold text-[11px] text-ink-soft leading-tight">
 				{t(data.slot)}
 			</span>
 		</button>

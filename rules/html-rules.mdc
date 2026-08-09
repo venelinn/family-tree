@@ -1,0 +1,251 @@
+---
+description: HTML element rules and component usage conventions for boats-web
+globs: "**/*.{tsx,jsx}"
+alwaysApply: false
+---
+
+# HTML & Component Rules
+
+## Headings
+
+- **Never use raw `<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>` elements** — always use the `<Heading>` component from `@/components/Headings`
+- The `<Heading>` component provides consistent typography, styling, and animation support
+- Use `as` for the semantic HTML element and `size` for the visual size (they can differ)
+
+```tsx
+import { Heading } from "@/components/Headings"
+
+// Page title
+<Heading as="h1" size="h2">Page Title</Heading>
+
+// Section headings
+<Heading as="h2" size="h3">Section Title</Heading>
+
+// Subsection headings
+<Heading as="h3" size="h4">Subsection Title</Heading>
+```
+
+### Heading Props Reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `as` | `"h1" \| "h2" \| "h3" \| "h4" \| "h5" \| "div"` | `"h2"` | Semantic HTML element |
+| `size` | `"hero" \| "h1" \| "h2" \| "h3" \| "h4" \| "h5" \| "base"` | `"h2"` | Visual size |
+| `className` | `string` | — | Additional CSS class |
+| `uppercase` | `boolean` | `false` | Uppercase text transform |
+| `center` | `boolean` | `false` | Center-aligned text |
+| `animationID` | `string` | — | Animation identifier |
+| `isHidden` | `boolean` | `false` | Visually hidden |
+
+## Buttons
+
+- **Never use raw `<button>` elements** — always use the `<Button>` component from `@/components/Button`
+- The `<Button>` component handles variants, sizes, icons, links, and accessibility
+
+```tsx
+import { Button } from "@/components/Button"
+
+// Standard action button
+<Button label="Submit" variant="primary" onClick={handleSubmit} />
+
+// Button with icon
+<Button label="Add item" variant="secondary" icon="Plus" />
+
+// Link styled as button
+<Button label="View details" variant="primary" href="/details" />
+
+// Icon-only button (provide aria-label via label prop or wrapper)
+<Button icon="X" variant="secondary" onClick={handleClose} />
+```
+
+### Button Props Reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | `string` | — | Button text (omit for icon-only) |
+| `variant` | `"primary" \| "secondary" \| "success" \| "danger" \| "warning" \| "toggle" \| "request" \| "link"` | `"secondary"` | Visual variant |
+| `href` | `string` | — | Renders as `<Link>` when provided |
+| `type` | `"button" \| "submit" \| "reset"` | `"button"` | HTML button type |
+| `icon` | `string` | — | Lucide icon name (left position by default) |
+| `iconAfter` | `string` | — | Lucide icon name after label |
+| `iconPosition` | `"left" \| "right"` | `"left"` | Icon placement |
+| `size` | `FormElementSize` | `"md"` | Button size |
+| `outlined` | `boolean` | `false` | Outlined variant |
+| `isRounded` | `boolean` | `false` | Rounded corners |
+| `disabled` | `boolean` | `false` | Disabled state |
+
+### Admin & owner UI (lists, forms, wizards)
+
+Owner and admin surfaces should feel consistent: same **variant** roles, same **footer** pattern for save/cancel, and the same **primary** styling rules as everywhere else in the app.
+
+#### Variant roles (this codebase)
+
+In `Button.module.scss`, **primary** reads as blue (update / apply / main commit) and **secondary** reads as green (add / create new entity). Use that split intentionally:
+
+| Use | `variant` | Notes |
+|-----|-----------|--------|
+| Main commit on a form or wizard step (save, continue, generate, apply) | `primary` | Solid, not `outlined` — see below |
+| **Add …** in a page/section header (new boat, trip type, add-on, location, etc.) | `secondary` | Often `icon="Plus"` and `size="sm"` next to a title |
+| Cancel, back, dismiss | `ghost` | Optional `outlined` only when a bordered low-emphasis control is required |
+| Delete, irreversible actions | `danger` | — |
+| Attention / confirm with care | `warning` | Rare; ensure `Button.module.scss` defines `&--warning` if used |
+
+Always import `Button` from `@/components/Button`, not from nested paths like `Button/Button`.
+
+#### `PageBox` and list hubs (owner + admin)
+
+- **`actions` prop** (top-right next to the title): use **`variant="secondary"`** for **Add …** / create CTAs so the green add action is distinct from the page’s primary task and matches other owner list pages (e.g. trip types, add-ons).
+- Typical pattern: `variant="secondary"`, `size="sm"`, `icon="Plus"`, `label={t("add…")}`.
+- **Empty states** that offer a single “add first …” action may use `primary` when that is the only path forward; if the same app also shows a header **Add** with `secondary`, follow the dominant pattern for that feature (see `LocationManager`, add-on list). For hub list pages (owner / renter) follow **`## Empty States`** below — render `<EmptyState>` with a CTA that mirrors the header action (`secondary`).
+
+#### Forms (owner profile, add-ons, locations, admin settings, etc.)
+
+- **Footer row**: **Submit / Save** → `variant="primary"`, `size="md"`, **no `outlined`** on the main submit (solid primary). **Cancel** → `variant="ghost"`.
+- Align labels with shared copy: prefer `saveChanges` / `save` / `saving` (or the feature namespace equivalent) in **all** locales — do not hardcode English.
+- Use **`Input`**, **`Textarea`**, **`Select`** from `@/components/Forms` with the `label` prop; follow **Text & Translations** for every visible string.
+- **Page title / section title**: `Heading` + `PageBox` as elsewhere; avoid raw `<h*>`.
+
+Reference-style examples: `ProfileForm`, `AddOnForm`, owner `LocationForm`, and similar admin forms.
+
+#### Wizard & step footers (availability, pricing, etc.)
+
+Multi-step wizards (e.g. `components/Availability/Wizard/`, `components/Pricing/Wizard/`) use the **same** primary button rules as **forms**:
+
+- **Main step CTA** (Save & continue, Continue, Generate, Save schedule, etc.):
+  - `variant="primary"` — **solid** (do **not** set `outlined` on primary; outline + primary looks like a secondary affordance)
+  - `size="md"` (set explicitly if the file mixes `sm` / `md`)
+  - Do not use `size="sm"` for the main step CTA unless layout forces it; keep steps visually aligned.
+- **Secondary actions** in the same bar (Cancel, stay, low-emphasis): `variant="ghost"`. Add `outlined` on ghost only when you need a visible border (e.g. “Change availability” in read-only summary), not for the main forward action.
+- **Reference implementations**: `BlockDatesStep`, `GenerateStep` (summary row), `ScheduleEditor` (save), Pricing steps `BracketsStep`, `ModifiersStep`, `GuestBasedStep`, `SummaryStep`.
+
+## Empty States
+
+For "no data yet" states on hub list pages (owner / renter / admin), use the **`<EmptyState>`** component from `@/components/Loading` — never a plain `<p>`, a custom flex `<div>`, or a bare message. Props: `icon`, `title`, `description?`, `action?` (`{ label, href?, onClick?, icon?, variant? }`), `bordered?`.
+
+- **Match the page's nav icon.** The `icon` prop should be the same Lucide icon the page uses in the sidebar (`components/Navigation/submenuRegistry.ts`): My Boats = `Sailboat`, Favorites = `Bookmark`, Bookings = `Calendar`, Earnings = `DollarSign`, Transactions = `CreditCard`, Messages = `MessageCircle`, Notifications = `Bell`, Disputes = `AlertTriangle`.
+- **Always `bordered`** in the hub (dashed container) for a consistent look.
+- **CTA after the description**, via the `action` prop, using `variant: "secondary"` + an icon:
+  - If the page has a top-right header action (Add Boat, File New Dispute, …), the empty-state CTA **mirrors it exactly** — same label, same icon, same `href` (e.g. My Boats → `t("addBoat")` / `Plus` / `/{lang}/owner/boats/new`).
+  - Otherwise point at the funnel step that produces data: renter Bookings / Favorites / Messages / Transactions → **"Browse boats"** (`icon: "Search"`, → `/{lang}/search`); owner Earnings → **"Manage boats"** (→ `/{lang}/owner/boats`).
+  - Pages with no sensible action (e.g. Notifications — auto-generated) get **no** `action`.
+- **CTA only when the account is truly empty.** When a status filter / tab yields zero rows but the user *has* data, render the `EmptyState` **without** an `action` (`statusFilter ? undefined : { … }`). Reserve the CTA for the genuinely-empty account.
+- **Hide redundant controls when truly empty.** When the list is empty, drop the header create button and the status-filter tabs (`actions={isEmpty ? undefined : <Button…/>}`, `{!isEmpty && <Tabs/>}`) and the list/calendar **view** toggle. **Keep** toggles that navigate between distinct views (e.g. Earnings' Dashboard / Transactions) — hiding them would trap the user.
+
+Reference implementations: `components/Owner/BoatList/BoatList.tsx` (My Boats), owner + renter `BookingsContent` / `DisputesContent`, `components/Favorites/FavoritesContent.tsx` (shared by both roles), owner `OwnerTransactionsContent` + `OwnerDashboardTab`, renter `TransactionsContent` / `MessagesContent` / `NotificationsContent`.
+
+## Page Structure (`app/` files)
+
+- **Pages should only contain data fetching and wrapper `<div>` elements** — all UI must be delegated to components
+- Never put complex HTML structures (grids, lists, cards, forms) directly in page files
+- Pages fetch data, transform it, and pass it as props to components
+- Wrapper `<div>` elements for layout (e.g., applying a page-level CSS class) are acceptable
+
+```tsx
+// Good: page.tsx passes data to components
+export default async function BoatPage({ params }) {
+  const boat = await fetchBoat(params.id)
+  return (
+    <div className={styles.page}>
+      <BoatHeader name={boat.name} year={boat.year} />
+      <BoatSpecs specs={boat.specifications} />
+      <BoatAmenities specs={boat.specifications} />
+    </div>
+  )
+}
+
+// Bad: page.tsx contains inline HTML structure
+export default async function BoatPage({ params }) {
+  const boat = await fetchBoat(params.id)
+  return (
+    <div>
+      <div className={styles.header}>
+        <h1>{boat.name}</h1>
+        <div className={styles.specGrid}>
+          <div className={styles.spec}>
+            <span>{boat.specs.length}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+## Text & Translations
+
+- **Never hardcode user-facing text strings** — always use `useTranslations()` from `next-intl`
+- This applies to **all** visible text: labels, headings, placeholders, button text, tooltips, error messages, tab names, menu items, badges, and config arrays with display strings
+- When defining config objects/arrays with labels (e.g. tab configs, menu items, filter options), store only keys/IDs and resolve labels via `t()` at render time
+- All three locale files (`messages/en.json`, `messages/fr.json`, `messages/es.json`) must be updated when adding new keys
+
+```tsx
+import { useTranslations } from "next-intl"
+
+// Good: translated text
+const t = useTranslations("Booking")
+<Button label={t("submit")} variant="primary" />
+<Heading as="h2" size="h3">{t("title")}</Heading>
+<p>{t("description")}</p>
+<input placeholder={t("searchPlaceholder")} />
+
+// Bad: hardcoded strings
+<Button label="Submit" variant="primary" />
+<Heading as="h2" size="h3">Booking Details</Heading>
+<p>Select your preferred date</p>
+```
+
+- For strings with dynamic values, use ICU message format in the JSON files and pass parameters:
+
+```tsx
+// messages/en.json: { "Booking": { "pricePerDay": "From {price} per day" } }
+t("pricePerDay", { price: boat.price })
+```
+
+## Form Inputs
+
+- **Never use raw `<input>` elements** — always use the `<Input>` component from `@/components/Forms`
+- **Never use raw `<select>` elements** — always use the `<Select>` component from `@/components/Forms`
+- Both components support a `label` prop — use it instead of rendering a separate `<label>` element
+- Use the `full` prop to make the field fill its container width
+- Use the `id` prop for explicit label association (the component handles `htmlFor` internally)
+
+```tsx
+import { Input, Select } from "@/components/Forms"
+
+// Text input with label
+<Input type="text" id="name" label={t("nameLabel")} placeholder={t("namePlaceholder")} full />
+
+// Number input with label
+<Input type="number" id="price" label={t("priceLabel")} value={price} onChange={handleChange} full />
+
+// Select with label
+<Select id="category" label={t("categoryLabel")} value={category} onChange={handleChange} full>
+  <option value="a">Option A</option>
+  <option value="b">Option B</option>
+</Select>
+
+// Bad: raw elements and external labels
+<label htmlFor="name">Name</label>
+<input type="text" id="name" />
+
+<label htmlFor="category">Category</label>
+<select id="category">
+  <option value="a">Option A</option>
+</select>
+```
+
+## Semantic HTML
+
+- Use `<main>` for the primary content area (already in layout.tsx)
+- Use `<section>` for distinct content sections, prefer the `<Section>` component from `@/components/Section`
+- Use `<nav>` for navigation regions
+- Use `<Button>` for actions, `<Link>` for navigation — never the reverse
+- **Never wrap a block-level component with an inline element** like `<a>` or `<Link>` — if a card needs to be clickable, pass `link` as a prop instead of wrapping it
+- **Always use the `<Modal>` component from `@/components/Modal` for modals, overlays, and confirmation dialogs** — never build dialogs from `<div>` overlays with `onClick` handlers. `<Modal>` wraps the native `<dialog>` element and provides `showModal()`/`close()`, `::backdrop`, Escape key, and outside-click handling out of the box
+- All interactive elements must have accessible names (`aria-label`, visible text, or `aria-labelledby`)
+
+## Storybook
+
+- Every reusable component in `components/` must have a colocated `.stories.tsx` file
+- Stories use `@storybook/nextjs` framework with `Meta` and `StoryObj` types
+- Provide meaningful mock data in story args to demonstrate component states

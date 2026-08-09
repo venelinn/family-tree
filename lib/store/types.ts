@@ -1,10 +1,10 @@
 /**
  * The editable tree, modelled as rows rather than as a nested document.
  *
- * These three shapes are deliberately what Postgres tables would be — flat
- * records, foreign keys by id, no nesting — so moving from the local file store
- * to Supabase is a matter of implementing `TreeStore` against it, not
- * reshaping the data. `FamilyGraph` stays the read model, derived from these.
+ * These shapes are deliberately what Postgres tables would be — flat records,
+ * foreign keys by id, no nesting — so moving from the local file store to
+ * Supabase is a matter of implementing `TreeStore` against it, not reshaping
+ * the data. `FamilyGraph` stays the read model, derived from these.
  */
 
 export type Sex = "M" | "F"
@@ -45,10 +45,34 @@ export interface UnionChildRecord {
 	position: number
 }
 
-export interface TreeSnapshot {
+/**
+ * What the tree knows about itself.
+ *
+ * `rootPersonId` lives here rather than in a constant in `lib/data.ts`, and
+ * that is what makes more than one tree possible: which person a chart opens on
+ * is a property of *that tree*, not of the application. It is also deliberately
+ * not a cookie — a cookie is per-browser, and the root person has to survive
+ * copying the file to another machine.
+ *
+ * Optional because a tree started from scratch genuinely has nobody in it yet.
+ */
+export interface TreeMeta {
+	id: string
+	name: string
+	rootPersonId?: string
+	createdAt: string
+	updatedAt: string
+}
+
+/** The rows alone — what the importer produces and what `replaceAll` takes. */
+export interface TreeRows {
 	people: PersonRecord[]
 	unions: UnionRecord[]
 	unionChildren: UnionChildRecord[]
+}
+
+export interface TreeSnapshot extends TreeRows {
+	meta: TreeMeta
 }
 
 export type PersonInput = Omit<PersonRecord, "id" | "updatedAt"> &
@@ -57,7 +81,7 @@ export type UnionInput = Omit<UnionRecord, "id" | "updatedAt"> &
 	Partial<Pick<UnionRecord, "id">>
 
 /**
- * Everything the app is allowed to do to the tree.
+ * Everything the app is allowed to do to one tree.
  *
  * Deliberately narrow and mutation-shaped rather than "save the whole tree":
  * a Supabase implementation maps each of these onto one statement, and a
@@ -84,6 +108,11 @@ export interface TreeStore {
 	addChild(unionId: string, childId: string, position?: number): Promise<void>
 	removeChild(unionId: string, childId: string): Promise<void>
 
-	/** Replace everything. Used by the importer, not by the UI. */
-	replaceAll(snapshot: TreeSnapshot): Promise<void>
+	/** The tree's name and root person. */
+	updateMeta(
+		patch: Partial<Omit<TreeMeta, "id" | "createdAt" | "updatedAt">>,
+	): Promise<TreeMeta>
+
+	/** Replace every row, keeping the tree's identity. Used by the importer. */
+	replaceAll(rows: TreeRows): Promise<void>
 }
