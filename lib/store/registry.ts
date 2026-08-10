@@ -1,15 +1,17 @@
 import { existsSync } from "node:fs"
-import {
-	copyFile,
-	mkdir,
-	readFile,
-	rename,
-	unlink,
-	writeFile,
-} from "node:fs/promises"
+import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { TreeOpError } from "../errors"
-import { DIR_MODE, FILE_MODE, LocalTreeStore, newId } from "./local"
+import { ingestServedPhotos } from "../photos"
+import {
+	BUNDLE_EXTENSION,
+	bundlePathFor,
+	DIR_MODE,
+	FILE_MODE,
+	isBundleRoot,
+	locate,
+} from "./bundle"
+import { LocalTreeStore, newId } from "./local"
 import type { TreeMeta } from "./types"
 
 /**
@@ -17,11 +19,17 @@ import type { TreeMeta } from "./types"
  *
  * Two ideas here, both of them privacy decisions rather than technical ones.
  *
- * **A tree file may live anywhere.** Not everyone wants a household's names,
- * birth dates and addresses sitting inside a checked-out git repository, or on
- * the same disk as the app. So the registry stores a *path* per tree — an
- * external drive, an encrypted volume, a USB stick — and the app follows it.
- * Nothing is ever uploaded; there is no network call anywhere in this path.
+ * **A tree may live anywhere.** Not everyone wants a household's names, birth
+ * dates and addresses sitting inside a checked-out git repository, or on the
+ * same disk as the app. So the registry stores a *path* per tree — an external
+ * drive, an encrypted volume, a USB stick — and the app follows it. Nothing is
+ * ever uploaded; there is no network call anywhere in this path.
+ *
+ * What that path points at is a **directory** holding the JSON and the photos
+ * together, so moving a tree takes its pictures with it. `.familytree` is the
+ * suffix suggested for it and nothing more — what marks a tree as a folder is
+ * being one. Trees registered before folders existed are loose `.json` files
+ * and stay that way until `convertToBundle` is run on them; see `bundle.ts`.
  *
  * **The index is not a second source of truth.** It records only `id` and
  * `file`. A tree's name and root person live in that file's own `meta`, so
@@ -70,6 +78,12 @@ export interface TreeSummary extends TreeMeta {
 	/** False when the file has been moved or deleted behind the app's back. */
 	available: boolean
 	peopleCount: number
+	/**
+	 * A directory that keeps its photos with it, rather than a loose `.json`
+	 * left over from before bundles. Settings offers to convert the ones that
+	 * aren't, and uploads are refused until they are.
+	 */
+	bundle: boolean
 }
 
 const toStoredPath = (absolute: string) => {
@@ -155,16 +169,20 @@ export async function listTrees(): Promise<TreeSummary[]> {
 
 	return Promise.all(
 		index.trees.map(async (entry) => {
-			const file = toAbsolutePath(entry.file)
-			const store = new LocalTreeStore(file, entry.id)
-			if (!existsSync(file)) {
+			const root = toAbsolutePath(entry.file)
+			const store = new LocalTreeStore(root, entry.id)
+			const bundle = isBundleRoot(root)
+			// For a bundle it is the JSON inside that has to be there: the
+			// directory surviving without it is data loss wearing a hat.
+			if (!existsSync(store.file)) {
 				const timestamp = new Date().toISOString()
 				return {
 					id: entry.id,
 					name: entry.id,
-					file,
+					file: root,
 					available: false,
 					peopleCount: 0,
+					bundle,
 					createdAt: timestamp,
 					updatedAt: timestamp,
 				}
@@ -172,9 +190,10 @@ export async function listTrees(): Promise<TreeSummary[]> {
 			const snapshot = await store.read()
 			return {
 				...snapshot.meta,
-				file,
+				file: root,
 				available: true,
 				peopleCount: snapshot.people.length,
+				bundle,
 			}
 		}),
 	)
@@ -191,17 +210,26 @@ function slugify(name: string, fallback: string): string {
 
 /** Where a tree with this name goes by default. Shown in onboarding. */
 export const defaultFileFor = (name: string, fallback = "family") =>
-	path.join(defaultTreeDir(), `${slugify(name, fallback)}.json`)
+	path.join(defaultTreeDir(), `${slugify(name, fallback)}${BUNDLE_EXTENSION}`)
 
 /**
  * Check a user-supplied destination before anything is written to it.
  *
  * The app writes wherever it's told — it is a local, single-user tool and
  * "somewhere off this disk" is the whole point of the feature. What it will not
- * do is guess: a relative path, or a path without a `.json` name, is a typo far
- * more often than an intention.
+ * do is guess: a relative path, or one whose name says nothing about what it
+ * is, is a typo far more often than an intention.
+ *
+ * `bundleOnly` is the difference between making a tree and opening one. A new
+ * tree is always a folder, because a loose file has nowhere to keep photos —
+ * so the only name refused is one ending `.json`, which would mean the other
+ * thing. The folder itself may be called anything; `.familytree` is what gets
+ * suggested, not what gets required.
  */
-export function resolveTargetFile(input: string): string {
+export function resolveTargetFile(
+	input: string,
+	{ bundleOnly = false }: { bundleOnly?: boolean } = {},
+): string {
 	const trimmed = input.trim()
 	if (!trimmed) throw new TreeOpError("pathRequired")
 
@@ -213,8 +241,9 @@ export function resolveTargetFile(input: string): string {
 		: trimmed
 
 	if (!path.isAbsolute(expanded)) throw new TreeOpError("pathNotAbsolute")
-	if (path.extname(expanded).toLowerCase() !== ".json")
-		throw new TreeOpError("pathNotJson")
+
+	if (bundleOnly && path.extname(expanded).toLowerCase() === ".json")
+		throw new TreeOpError("pathNotBundle", { extension: BUNDLE_EXTENSION })
 
 	return path.normalize(expanded)
 }
@@ -254,7 +283,7 @@ async function register(entry: TreeIndexEntry): Promise<void> {
 
 export interface CreateTreeOptions {
 	name: string
-	/** Absolute path to a `.json` file. Defaults to the data directory. */
+	/** Absolute path to a `.familytree` directory. Defaults to the data directory. */
 	file?: string
 }
 
@@ -267,7 +296,9 @@ export async function createTree({
 	if (!trimmed) throw new TreeOpError("treeNameRequired")
 
 	const id = newId("t")
-	const target = file ? resolveTargetFile(file) : defaultFileFor(trimmed, id)
+	const target = file
+		? resolveTargetFile(file, { bundleOnly: true })
+		: defaultFileFor(trimmed, id)
 
 	if (existsSync(target)) throw new TreeOpError("fileExists", { path: target })
 
@@ -276,7 +307,13 @@ export async function createTree({
 	const meta = await store.updateMeta({ name: trimmed })
 	await register({ id, file: toStoredPath(target) })
 
-	return { ...meta, file: target, available: true, peopleCount: 0 }
+	return {
+		...meta,
+		file: target,
+		available: true,
+		peopleCount: 0,
+		bundle: true,
+	}
 }
 
 /**
@@ -312,7 +349,8 @@ async function assertLooksLikeTree(file: string): Promise<void> {
  */
 export async function adoptTree(file: string): Promise<TreeSummary> {
 	const target = resolveTargetFile(file)
-	if (!existsSync(target))
+	const location = locate(target)
+	if (!existsSync(location.file))
 		throw new TreeOpError("fileNotFound", { path: target })
 
 	const index = await migrateLegacyTree(await readIndex())
@@ -326,7 +364,7 @@ export async function adoptTree(file: string): Promise<TreeSummary> {
 	// the disk would otherwise look like a valid — if empty — family tree. Since
 	// adopting a file means the next edit rewrites it wholesale, pointing this at
 	// somebody's `package.json` has to be refused, not tidied up.
-	await assertLooksLikeTree(target)
+	await assertLooksLikeTree(location.file)
 
 	const id = newId("t")
 	const store = new LocalTreeStore(target, id)
@@ -336,7 +374,7 @@ export async function adoptTree(file: string): Promise<TreeSummary> {
 		// `Object.assign` copies `undefined` over a real value, so only send the
 		// name when the file genuinely hasn't got one.
 		...(snapshot.meta.name === id
-			? { name: path.basename(target, ".json") }
+			? { name: path.basename(target, path.extname(target)) }
 			: {}),
 		rootPersonId: snapshot.meta.rootPersonId ?? snapshot.people[0]?.id,
 	})
@@ -347,7 +385,67 @@ export async function adoptTree(file: string): Promise<TreeSummary> {
 		file: target,
 		available: true,
 		peopleCount: snapshot.people.length,
+		bundle: isBundleRoot(target),
 	}
+}
+
+/**
+ * Turn a loose `.json` tree into a `.familytree` bundle, photos and all.
+ *
+ * **Nothing is moved or deleted.** The original file stays exactly where it is
+ * and so does everything under `public/photos`; what changes is which of them
+ * the registry points at. That leaves the previous copy sitting there as a
+ * backup, and it is the same reasoning as `forgetTree` not deleting: this is
+ * somebody's only record of their family, and an operation that eats it when
+ * misunderstood is not one worth having.
+ *
+ * Photos referenced as `/photos/…` are read out of `public/`, stripped of their
+ * metadata on the way past, and stored by content hash inside the bundle. One
+ * that has gone missing is dropped from that person rather than failing the
+ * conversion — a broken reference is already a broken reference.
+ */
+export async function convertToBundle(
+	id: string,
+	destination?: string,
+): Promise<{ tree: TreeSummary; photosCopied: number; photosMissing: number }> {
+	const index = await migrateLegacyTree(await readIndex())
+	const entry = index.trees.find((tree) => tree.id === id)
+	if (!entry) throw new TreeOpError("noSuchTree")
+
+	const from = toAbsolutePath(entry.file)
+	if (isBundleRoot(from)) throw new TreeOpError("treeAlreadyBundle")
+	if (!existsSync(from)) throw new TreeOpError("fileNotFound", { path: from })
+
+	const target = destination
+		? resolveTargetFile(destination, { bundleOnly: true })
+		: bundlePathFor(from)
+	if (existsSync(target)) throw new TreeOpError("fileExists", { path: target })
+
+	const source = new LocalTreeStore(from, id)
+	const snapshot = await source.read()
+
+	const photoDir = locate(target).photoDir as string
+	await mkdir(photoDir, { recursive: true, mode: DIR_MODE })
+
+	const { copied: photosCopied, missing: photosMissing } =
+		await ingestServedPhotos(photoDir, snapshot.people)
+
+	// Written through a store so the bundle gets the same atomic rename and
+	// owner-only modes as any other write.
+	const destinationStore = new LocalTreeStore(target, id)
+	await destinationStore.replaceAll(snapshot)
+	await destinationStore.updateMeta({
+		name: snapshot.meta.name,
+		rootPersonId: snapshot.meta.rootPersonId,
+	})
+
+	await writeIndex({
+		trees: index.trees.map((tree) =>
+			tree.id === id ? { ...tree, file: toStoredPath(target) } : tree,
+		),
+	})
+
+	return { tree: await summaryOf(id), photosCopied, photosMissing }
 }
 
 /** Move a tree's file somewhere else, keeping its identity and contents. */
@@ -364,15 +462,40 @@ export async function relocateTree(
 	if (from === to) return await summaryOf(id)
 	if (existsSync(to)) throw new TreeOpError("fileExists", { path: to })
 	if (!existsSync(from)) throw new TreeOpError("fileNotFound", { path: from })
+	// Moving is not converting. A `.familytree` renamed to `.json` would stop
+	// being read as a folder — `locate` would take the directory itself for the
+	// store — and its photos would go quiet.
+	if (isBundleRoot(from) && path.extname(to).toLowerCase() === ".json")
+		throw new TreeOpError("pathNotBundle", { extension: BUNDLE_EXTENSION })
+	if (!isBundleRoot(from) && path.extname(to).toLowerCase() !== ".json")
+		throw new TreeOpError("pathNotTree", { extension: ".json" })
 
 	await mkdir(path.dirname(to), { recursive: true, mode: DIR_MODE })
 	try {
 		await rename(from, to)
 	} catch {
-		// Different filesystem — an external disk is the common case here. Copy
-		// first and only unlink once the copy is safely on the other side.
-		await copyFile(from, to)
-		await unlink(from)
+		// Different filesystem — an external disk is the common case here, and
+		// the whole reason the feature exists. `cp` rather than `copyFile`
+		// because a tree is a directory: `copyFile` raises EISDIR on one, which
+		// is precisely the move somebody is most likely to want.
+		try {
+			await cp(from, to, { recursive: true, errorOnExist: true, force: false })
+		} catch (error) {
+			// A stick that filled up halfway leaves a partial tree behind, and
+			// that partial tree would then fail the `fileExists` check on the
+			// retry that fixes the problem. Clear it and re-raise, so the caller
+			// still gets "there isn't enough room on that disk".
+			await rm(to, { recursive: true, force: true }).catch(() => undefined)
+			throw error
+		}
+
+		// Only let go of the original once the copy is demonstrably there. A
+		// half-written destination plus a deleted source is the one outcome this
+		// app must never produce.
+		const landed = locate(to)
+		if (!existsSync(landed.file))
+			throw new TreeOpError("fileNotFound", { path: landed.file })
+		await rm(from, { recursive: true, force: true })
 	}
 
 	await writeIndex({

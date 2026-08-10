@@ -134,7 +134,7 @@ export function PhotoDrop({ personId, photos, name }: PhotoDropProps) {
 			<input
 				ref={inputRef}
 				type="file"
-				accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+				accept="image/jpeg,image/png,image/webp,image/gif"
 				className="hidden"
 				onChange={(event) => {
 					upload(event.target.files)

@@ -7,7 +7,7 @@ export type StartMode = "me" | "empty"
 export interface OnboardingData {
 	treeName: string
 	storageMode: StorageMode
-	/** Absolute path to a `.json` file. Only meaningful when mode is `custom`. */
+	/** Absolute path to a `.familytree` folder. Only used when mode is `custom`. */
 	customPath: string
 	startMode: StartMode
 }

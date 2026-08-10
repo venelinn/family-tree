@@ -1,12 +1,21 @@
 "use client"
 
-import { Check, FolderInput, Plus, TriangleAlert, X } from "lucide-react"
+import {
+	Check,
+	FolderInput,
+	FolderSymlink,
+	Plus,
+	TriangleAlert,
+	X,
+} from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import type { TreeSummary } from "@/lib/store/registry"
 import {
 	adoptTreeAction,
+	type ConvertResult,
+	convertTreeAction,
 	forgetTreeAction,
 	relocateTreeAction,
 	renameTreeAction,
@@ -24,6 +33,10 @@ import {
  * Removing a tree unregisters it and leaves the file alone. There is no delete:
  * this data is unrecoverable and a misread dialog is not a good enough reason
  * to lose it.
+ *
+ * A tree registered before trees became folders is offered a conversion, and
+ * the result says where the previous copy still is — the operation keeps it,
+ * and someone who isn't told will assume otherwise.
  */
 
 interface TreeManagerProps {
@@ -39,6 +52,7 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 	const [error, setError] = useState<string>()
 	const [editing, setEditing] = useState<Editing>()
 	const [openPath, setOpenPath] = useState("")
+	const [converted, setConverted] = useState<ConvertResult>()
 
 	const run = (action: () => Promise<{ ok: boolean; error?: string }>) => {
 		setError(undefined)
@@ -50,6 +64,16 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 			} else {
 				setError(result.error)
 			}
+		})
+	}
+
+	const convert = (id: string) => {
+		setError(undefined)
+		setConverted(undefined)
+		startTransition(async () => {
+			const result = await convertTreeAction(id)
+			if (result.ok) setConverted(result)
+			else setError(result.error)
 		})
 	}
 
@@ -145,6 +169,23 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 								</button>
 							</div>
 
+							{tree.available && !tree.bundle ? (
+								<div className="flex flex-col gap-2 border-line-subtle border-t bg-wash px-4 py-3">
+									<p className="text-ink-muted text-xs leading-relaxed">
+										{t("treeConvertHelp")}
+									</p>
+									<button
+										type="button"
+										onClick={() => convert(tree.id)}
+										disabled={pending}
+										className="flex w-fit items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 font-medium text-ink-soft text-xs hover:bg-wash disabled:opacity-40"
+									>
+										<FolderSymlink size={14} strokeWidth={2} />
+										{t("treeConvert")}
+									</button>
+								</div>
+							) : null}
+
 							{editingThis ? (
 								<form
 									onSubmit={(event) => {
@@ -198,6 +239,23 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
 					{error}
 				</p>
+			) : null}
+
+			{converted ? (
+				<div className="flex flex-col gap-1.5 rounded-lg bg-root-soft px-3 py-2.5 text-sm">
+					<p className="text-ink-soft">
+						{t("treeConvertDone", { count: converted.photosCopied ?? 0 })}
+					</p>
+					{converted.photosMissing ? (
+						<p className="text-ink-muted text-xs">
+							{t("treeConvertMissing", { count: converted.photosMissing })}
+						</p>
+					) : null}
+					<p className="text-ink-muted text-xs">{t("treeConvertKept")}</p>
+					<code className="block max-w-full truncate font-mono text-[11px] text-ink-ghost">
+						{converted.previous}
+					</code>
+				</div>
 			) : null}
 
 			<form

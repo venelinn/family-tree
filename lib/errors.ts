@@ -16,7 +16,13 @@ export type ErrorCode =
 	| "treeAlreadyOpen"
 	| "pathRequired"
 	| "pathNotAbsolute"
-	| "pathNotJson"
+	| "pathNotBundle"
+	| "pathNotTree"
+	| "pathNotPermitted"
+	| "diskFull"
+	| "diskReadOnly"
+	| "treeAlreadyBundle"
+	| "treeNotABundle"
 	| "fileExists"
 	| "fileNotFound"
 	| "fileNotATree"
@@ -32,6 +38,7 @@ export type ErrorCode =
 	| "photoMissing"
 	| "photoType"
 	| "photoTooBig"
+	| "photoMalformed"
 
 export class TreeOpError extends Error {
 	constructor(

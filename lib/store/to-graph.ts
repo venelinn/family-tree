@@ -1,4 +1,5 @@
 import type { FamilyGraph, Person, Union } from "../family-graph"
+import { photoUrl } from "./bundle"
 import type { TreeSnapshot } from "./types"
 
 /**
@@ -7,6 +8,11 @@ import type { TreeSnapshot } from "./types"
  * The back-references (`unionIds`, `childOfUnionId`) are derived here rather
  * than stored, so they cannot drift out of step with the union rows that are
  * the actual truth.
+ *
+ * Photos are turned into URLs here too, which is why no component has to know
+ * that a bundle's photos are served by a route while an unconverted tree's sit
+ * under `public/`. The graph carries `src` values; `photoEntry` in `photos.ts`
+ * maps them back when one is removed.
  */
 
 /** Pulls a year out of either an ISO date or free text like `Jun 1991`. */
@@ -18,6 +24,9 @@ function yearOf(value: string | undefined): number | undefined {
 export function toFamilyGraph(snapshot: TreeSnapshot): FamilyGraph {
 	const people = new Map<string, Person>()
 	for (const record of snapshot.people) {
+		const photos = record.photos.map((entry) =>
+			photoUrl(snapshot.meta.id, entry),
+		)
 		people.set(record.id, {
 			id: record.id,
 			name: record.fullName,
@@ -33,8 +42,8 @@ export function toFamilyGraph(snapshot: TreeSnapshot): FamilyGraph {
 			deathPlace: record.deathPlace,
 			deceased: record.deceased,
 			note: record.note,
-			photoUrl: record.photos[0],
-			photos: record.photos,
+			photoUrl: photos[0],
+			photos,
 			unionIds: [],
 			childOfUnionId: undefined,
 		})

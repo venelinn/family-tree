@@ -15,13 +15,43 @@ letting you decide *where* on disk. A promise you can't verify the location of
 isn't much of a promise, so the location is now a choice, shown as an absolute
 path before anything is written.
 
-## Three files
+## A tree is a folder
 
 ```
-data/trees.json                the index: which trees exist, and where each lives
-data/tree.json                 the original tree (kept where it was)
-data/trees/<slug>.json         new trees, unless you chose somewhere else
+data/trees.json                     the index: which trees exist, and where
+data/trees/<slug>.familytree/       a tree — one item, wherever you put it
+├── tree.json                       the store
+├── photos/8f/3a/8f3a….jpg          content-addressed, metadata stripped
+└── backups/2026-08-10T14-03-11Z.json
 ```
+
+Photos used to live under `public/` on the app's own disk, which meant a tree
+copied to a USB stick arrived without its pictures. Keeping them inside the
+folder is what makes "your data, where you want it" true rather than nearly
+true. See [privacy.md](privacy.md) for the reasoning and `lib/store/bundle.ts`
+for the layout.
+
+**The `.familytree` suffix is a suggestion, not a requirement.** It is worth
+having because it says what the folder is, but it earns nothing from the OS:
+macOS shows a folder as a single opaque item only when an installed app declares
+that extension, and nothing declares this one. Checked, rather than assumed —
+`System Events` reports `package folder: false` for `Test.familytree` and `true`
+for `Real.rtfd`.
+
+So what marks a tree as a folder is **being one**, not being called one. Rename
+it to plain `Nikolov` and it still opens; `isBundleRoot` stats the path instead
+of reading the name. Losing somebody's family history to a suffix they tidied
+up is not a failure mode worth keeping.
+
+**Loose `.json` trees still work.** Anything registered before this keeps
+reading and writing exactly where it did, with its photos where they were, and
+is listed with an offer to convert. Uploads are the one thing they cannot do —
+there is nowhere to put the file — so `savePhoto` raises `treeNotABundle` and
+Settings says why.
+
+Converting **copies**: the old `.json` and everything under `public/photos` are
+left exactly where they are, and the app just stops pointing at them. Same
+reasoning as `forgetTree` not deleting.
 
 The **index** holds only `id` and `file`. A tree's name and root person live in
 that tree's own file, under `meta`:
@@ -109,13 +139,38 @@ path, and offers:
 
 - **switch** — writes the cookie, revalidates `/` as a layout
 - **rename** — writes `meta.name` in the file
-- **move file** — `rename(2)`, falling back to copy-then-unlink across devices
+- **move** — `rename(2)`, falling back to copy-then-unlink across devices
+- **keep photos with this tree** — converts a loose `.json` into a folder,
+  copying its photos in and stripping their metadata; shown only for the trees
+  that need it, and it reports where the previous copy still is
 - **remove from list** — unregisters it and **leaves the file alone**
-- **open an existing tree** — adopt a file from a drive, a stick, a backup
+- **open an existing tree** — adopt a `.familytree` folder, or an older `.json`,
+  from a drive, a stick, a backup
 
 There is deliberately **no delete**. This data is unrecoverable and there is no
 undo in the app; the destructive half stays a deliberate act in your own file
 manager.
+
+**Move from Settings, not from Finder.** The registry stores a path, so a folder
+dragged somewhere else behind the app's back is reported as missing until you
+re-open it. Moving here updates both.
+
+Across filesystems — a USB stick, an external drive — `rename(2)` fails with
+`EXDEV` and it falls back to a recursive copy. The source is only removed once
+the copy is demonstrably there, and a copy that fails partway takes its own
+wreckage with it, so a stick that filled up leaves the original untouched and
+the retry unblocked.
+
+### When macOS says no
+
+This app cannot grant itself access to Desktop, Documents or a removable volume.
+That permission belongs to whatever runs `next dev` — Terminal, iTerm, your
+editor — and macOS prompts *that* process the first time it touches one of those
+places. A denial comes back as `EPERM`.
+
+What the app does is stop calling it "Something went wrong": `lib/action-error.ts`
+maps `EPERM`/`EACCES`, `ENOSPC` and `EROFS` to messages that name the actual
+problem, and the permission one names the System Settings pane to open.
 
 ## Adopting a file safely
 
@@ -141,6 +196,37 @@ automatically:
 
 It is idempotent and additive. Verified against the real store: 252 people, 94
 unions and 176 parent-child links byte-identical afterwards.
+
+## Photos
+
+Stored as `<sha256-of-the-sanitised-bytes>.<ext>`, sharded two directories deep.
+Content addressing pays for itself three times: the same scan attached to four
+siblings is one file, the name carries no person id to leak who is related to
+whom, and "is anyone else using this?" is a count rather than a path comparison.
+
+Every upload has its metadata removed before it is hashed — GPS coordinates,
+timestamps, camera serials. The **pixels are not re-encoded**: these are
+archival scans and metadata lives in discardable envelope structures, so
+`lib/image-metadata.ts` walks the container and drops them. The compressed
+image data comes out byte-identical. AVIF is not accepted, because its metadata
+box isn't parsed yet and passing it through unread would be worse than
+refusing it.
+
+They are served by `app/photo/[tree]/[name]/route.ts`, not from `public/`. The
+route never receives a path: `name` has to match 64 hex characters and a known
+extension before anything is built from it, and it is resolved inside a
+directory the server picked from the tree id.
+
+## Backups
+
+A bundle keeps the last 20 copies of `tree.json` in `backups/`, at most one
+every 15 minutes. The interval is the point — typing a date is half a dozen
+mutations in seconds, and without it those would fill every slot and push out
+the copy from before the mistake. Best-effort: a failure here never fails the
+edit.
+
+They protect against *you*, not against the disk. Losing the drive is what an
+off-machine copy is for.
 
 ## Threat model, honestly
 

@@ -61,6 +61,35 @@ they 403 with or without a `Referer`, and re-exporting just restarts the same
 one-week clock. So `pnpm photos` downloads them once and rewrites the export to
 local paths.
 
+## A tree is a folder, not a file
+
+Photos used to live under `public/` while the tree file lived wherever you put
+it, so copying a tree to a USB stick left its pictures behind — and `public/` is
+served statically, which means no auth check could ever apply to them.
+
+Both are one problem: a tree was two things pretending to be one. It is now a
+`.familytree` directory holding `tree.json`, `photos/` and `backups/`, and
+photos are read by a route handler instead. Rejected alternative: a sidecar
+`<name>.photos/` folder beside the `.json`. Cheaper to build, and it fails the
+moment somebody moves only the file — which is exactly the failure being fixed.
+
+## Photo metadata is stripped, but pixels are never re-encoded
+
+The usual way to remove EXIF is to decode the image and write it back out. That
+works, and it costs a generation of quality on every upload. These are archival
+scans — often the only surviving copy of a photograph — so `lib/image-metadata.ts`
+walks the JPEG segments, PNG chunks, RIFF chunks or GIF blocks and drops the
+ones that carry metadata. The compressed pixel data is copied through untouched,
+verified byte-identical against the 52 real photos in the tree.
+
+It also means no image library. `sharp` would have been the alternative: a
+native dependency, a build step, and lossy output, to do less well what 300
+lines of byte-pushing does exactly.
+
+ICC profiles and Adobe colour transforms are **kept** — they change how the
+picture looks, and dropping them would damage the image to no privacy end.
+AVIF is refused rather than passed through, since its metadata box isn't parsed.
+
 ## Data stays out of git
 
 `/data` and `/public/photos` are gitignored. The tree holds living relatives'

@@ -2,16 +2,18 @@
 
 ```
 data/nikolov.ged            MyHeritage GEDCOM export (import source only)
-  │ pnpm photos             photos → public/photos/, export rewritten to local paths
-  │ pnpm import             one-way, into a registered tree
+  │ pnpm photos             photos → public/photos/ (staging), export rewritten
+  │ pnpm import             one-way, into a registered tree; photos → the bundle
   ▼
-data/trees.json             which trees exist and where each file is
-  │ lib/store/registry.ts   create / adopt / move / forget; the file may be anywhere
+data/trees.json             which trees exist and where each one is
+  │ lib/store/registry.ts   create / adopt / move / convert / forget; anywhere
   │ lib/active-tree.ts      which one this browser is showing (cookie)
   ▼
-<the chosen file>.json      the editable store — system of record for that tree
-  │ lib/store/local.ts      TreeStore implementation (file-backed)
-  │ lib/store/to-graph.ts   rows → read model
+<chosen>.familytree/        the tree — one folder, system of record
+  │ lib/store/bundle.ts     what's inside it and where
+  │ lib/store/local.ts      TreeStore implementation (file-backed) + backups
+  │ lib/photos.ts           content-addressed photos, metadata stripped on entry
+  │ lib/store/to-graph.ts   rows → read model, photo entries → URLs
   ▼
 lib/family-graph.ts         FamilyGraph { people, unions } + relationship queries
   │ lib/layout/family.ts    ─┐

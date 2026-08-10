@@ -7,6 +7,7 @@ Deeper reference than the root [README](../README.md).
 | [getting-started.md](getting-started.md) | Setup, scripts, refreshing data from MyHeritage |
 | [architecture.md](architecture.md) | Modules, data flow, the seams, the store |
 | [storage.md](storage.md) | Trees, where their files live, onboarding, privacy |
+| [privacy.md](privacy.md) | Where data lives, backups, cloud, encryption — the plan |
 | [layout.md](layout.md) | Both layout algorithms, in depth |
 | [i18n.md](i18n.md) | Languages, the message catalogues, date formatting |
 | [theming.md](theming.md) | Light and dark, the colour tokens, how the choice is applied |

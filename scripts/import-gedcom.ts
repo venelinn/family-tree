@@ -19,8 +19,10 @@
  */
 
 import { existsSync } from "node:fs"
-import { readFile } from "node:fs/promises"
+import { mkdir, readFile } from "node:fs/promises"
 import { parseGedcomText } from "../lib/gedcom/parse-ged"
+import { ingestServedPhotos } from "../lib/photos"
+import { DIR_MODE } from "../lib/store/bundle"
 import { getTreeStore, listTrees } from "../lib/store/registry"
 import type {
 	PersonRecord,
@@ -95,6 +97,19 @@ async function main() {
 	if (!store) process.exit(1)
 
 	console.log(`Replacing the contents of "${target.name}" at ${target.file}`)
+
+	// `pnpm photos` leaves the export pointing at `public/photos/…`. A bundle
+	// keeps its pictures with it, so take them in now — stripped of their
+	// metadata on the way — rather than importing paths into somebody else's
+	// directory. A tree that is still a loose file has nowhere to put them and
+	// keeps the served paths, exactly as before.
+	const { photoDir } = store.location
+	let ingested: { copied: number; missing: number } | undefined
+	if (photoDir) {
+		await mkdir(photoDir, { recursive: true, mode: DIR_MODE })
+		ingested = await ingestServedPhotos(photoDir, rows.people)
+	}
+
 	await store.replaceAll(rows)
 	// The GEDCOM ids are stable, so the person the chart opened on survives a
 	// re-import; if they didn't, `replaceAll` has already cleared the root.
@@ -108,6 +123,12 @@ async function main() {
 		`Imported ${people.length} people, ${unions.length} unions, ` +
 			`${unionChildren.length} parent-child links (${withPhotos} with photos)`,
 	)
+	if (ingested) {
+		console.log(
+			`Stored ${ingested.copied} photos in the bundle` +
+				(ingested.missing ? `, skipped ${ingested.missing} not found` : ""),
+		)
+	}
 	console.log(`-> ${target.file}`)
 }
 

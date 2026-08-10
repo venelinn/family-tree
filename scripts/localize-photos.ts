@@ -14,6 +14,11 @@
  * Handles both the raw `.ged` and the JSON export. Safe to re-run: entries
  * already pointing at local files are left alone, files already on disk are not
  * refetched, and a URL that fails is left untouched so a later run can retry it.
+ *
+ * `public/photos/` is a staging area, not where photos end up. This runs before
+ * `pnpm import`, which takes them into the tree's bundle — stripping their
+ * metadata on the way — and after that the copies here are spare. See
+ * `lib/photos.ts`.
  */
 
 import { existsSync } from "node:fs"

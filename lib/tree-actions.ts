@@ -8,6 +8,7 @@ import { TreeOpError } from "./errors"
 import { type PersonFormValues, toPersonInput } from "./person-input"
 import {
 	adoptTree,
+	convertToBundle,
 	createTree,
 	defaultFileFor,
 	defaultTreeDir,
@@ -71,7 +72,7 @@ export async function setActiveTreeAction(
 
 export interface NewTreeInput {
 	name: string
-	/** Absolute path to a `.json` file. Omitted means the default location. */
+	/** Absolute path to a `.familytree` folder. Omitted means the default. */
 	file?: string
 	/** The first person, and the one the chart will open on. Omitted starts empty. */
 	firstPerson?: PersonFormValues
@@ -144,6 +145,47 @@ export async function renameTreeAction(
 	}
 }
 
+export interface ConvertResult extends TreeActionResult {
+	/** Where the bundle was written, for telling the user afterwards. */
+	file?: string
+	/** Where their previous copy still is. */
+	previous?: string
+	photosCopied?: number
+	photosMissing?: number
+}
+
+/**
+ * Turn a loose `.json` tree into a `.familytree` bundle.
+ *
+ * Nothing is deleted: the old file stays where it is, which is why the result
+ * carries its path — the user should be told they still have it rather than
+ * left to assume.
+ */
+export async function convertTreeAction(
+	id: string,
+	destination?: string,
+): Promise<ConvertResult> {
+	try {
+		const trees = await listTrees()
+		const previous = trees.find((tree) => tree.id === id)?.file
+		const { tree, photosCopied, photosMissing } = await convertToBundle(
+			id,
+			destination,
+		)
+		revalidatePath("/", "layout")
+		return {
+			ok: true,
+			treeId: id,
+			file: tree.file,
+			previous,
+			photosCopied,
+			photosMissing,
+		}
+	} catch (error) {
+		return await toActionError(error)
+	}
+}
+
 /** Remove a tree from the list. The file is left exactly where it is. */
 export async function forgetTreeAction(id: string): Promise<TreeActionResult> {
 	try {
@@ -179,7 +221,9 @@ export async function previewStorageAction(
 	file?: string,
 ): Promise<StoragePreview> {
 	try {
-		const target = file ? resolveTargetFile(file) : defaultFileFor(name)
+		const target = file
+			? resolveTargetFile(file, { bundleOnly: true })
+			: defaultFileFor(name)
 		return { ok: true, file: target, cloudSynced: isCloudSyncedPath(target) }
 	} catch (error) {
 		return await toActionError(error)
