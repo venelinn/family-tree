@@ -140,8 +140,18 @@
 	--color-union: var(--union);
 	--color-ribbon: var(--ribbon);
 
-	--font-sans: var(--font-geist-sans);
-	--font-mono: var(--font-geist-mono);
+	/*
+	 * `--font-raleway` is defined by the `next/font` class in `app/layout.tsx`,
+	 * which is on `<html>` — the same element this resolves on. Move that class
+	 * to `<body>` and this silently becomes invalid, taking the body font with
+	 * it. It has happened once.
+	 */
+	--font-sans: var(--font-raleway);
+	/* No webfont for monospace: paths and hashes need to line up, not to be
+	 * branded, and the system stack is already the right shape on every OS. */
+	--font-mono:
+		ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+		monospace;
 }
 
 /**
@@ -196,10 +206,22 @@ html,
 body {
 	height: 100%;
 }
+/**
+ * The body font is set here, not by a `font-sans` class.
+ *
+ * This line used to say `Arial, Helvetica, sans-serif` — the create-next-app
+ * default — which quietly beat the `--font-sans` token for every element in the
+ * app, since nothing opts into the utility. The webfont was downloaded on every
+ * page and then not used. Naming the token here is what makes it real.
+ *
+ * `var(--font-sans)` already carries a metric-matched fallback from
+ * `next/font`; `sans-serif` is only there for the moment before the token is
+ * defined.
+ */
 body {
 	background: var(--surface);
 	color: var(--ink);
-	font-family: Arial, Helvetica, sans-serif;
+	font-family: var(--font-sans), sans-serif;
 	-moz-osx-font-smoothing: grayscale;
 	-webkit-font-smoothing: antialiased;
 	-webkit-text-size-adjust: none;
