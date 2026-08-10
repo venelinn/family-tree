@@ -5,10 +5,15 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import type { Person } from "@/lib/family-graph"
 import type { ViewType } from "@/lib/layout/types"
+import { PersonSearch } from "./PersonSearch"
 
 interface ToolbarProps {
 	/** The tree being viewed, not the person — there can be more than one. */
 	treeName: string
+	/** Everyone in the tree, for the search box. */
+	people: Person[]
+	/** Jump the chart to a search result. */
+	onFocusPerson: (personId: string) => void
 	view: ViewType
 	onViewChange: (view: ViewType) => void
 	focusPerson: Person | undefined
@@ -28,6 +33,8 @@ const VIEWS = [
 
 export function Toolbar({
 	treeName,
+	people,
+	onFocusPerson,
 	view,
 	onViewChange,
 	focusPerson,
@@ -54,6 +61,8 @@ export function Toolbar({
 			</div>
 
 			<div className="ml-auto flex items-center gap-3">
+				<PersonSearch people={people} onPick={onFocusPerson} />
+
 				<label className="flex items-center gap-2 text-ink-muted text-xs">
 					<span>{view === "family" ? t("generations") : t("columns")}</span>
 					<input

@@ -6,9 +6,14 @@ import { useCallback, useMemo, useState, useTransition } from "react"
 import {
 	addRelativeAction,
 	deletePersonAction,
+	linkRelativeAction,
 	type PersonFormValues,
+	type UnionFormValues,
+	unlinkRelativeAction,
 	updatePersonAction,
+	updateUnionAction,
 } from "@/lib/actions"
+import type { RelationKey } from "@/lib/facts"
 import { type Person, reviveFamilyGraph, type Union } from "@/lib/family-graph"
 import { buildAddSlots } from "@/lib/layout/add-slots"
 import { layoutFamily } from "@/lib/layout/family"
@@ -20,10 +25,13 @@ import type {
 	ViewType,
 } from "@/lib/layout/types"
 import type { ThemePreference } from "@/lib/theming"
+import type { Relation } from "@/lib/tree-ops"
+import { LinkPersonForm } from "./LinkPersonForm"
 import { PersonForm } from "./PersonForm"
 import { PersonPanel } from "./PersonPanel"
 import { Toolbar } from "./Toolbar"
 import { TreeCanvas } from "./TreeCanvas"
+import { UnionForm } from "./UnionForm"
 
 import "@xyflow/react/dist/style.css"
 
@@ -52,6 +60,23 @@ type Overrides = ReadonlyMap<string, boolean>
  */
 const EXPANSION_BUDGET = 4
 
+/**
+ * `relationKey` answers "how is this person related to that one" for the family
+ * list; `Relation` is what the write side speaks. Total except for `relative`,
+ * which means the graph couldn't name the connection — so there is no single
+ * link to break.
+ */
+const RELATION_OF: Partial<Record<RelationKey, Relation>> = {
+	husband: "spouse",
+	wife: "spouse",
+	father: "parent",
+	mother: "parent",
+	brother: "sibling",
+	sister: "sibling",
+	son: "child",
+	daughter: "child",
+}
+
 export function TreeApp({
 	graph: serialized,
 	homePersonId,
@@ -62,6 +87,8 @@ export function TreeApp({
 	const tSlots = useTranslations("slots")
 
 	const graph = useMemo(() => reviveFamilyGraph(serialized), [serialized])
+	/** Stable array for the search box; the graph itself is Maps. */
+	const people = useMemo(() => [...graph.people.values()], [graph])
 
 	const [view, setView] = useState<ViewType>("family")
 	const [rootId, setRootId] = useState(homePersonId)
@@ -80,6 +107,8 @@ export function TreeApp({
 	/** What the side panel is showing: details, or a form. */
 	const [editor, setEditor] = useState<
 		| { mode: "edit"; personId: string }
+		| { mode: "union"; unionId: string }
+		| { mode: "link"; personId: string }
 		| {
 				mode: "add"
 				anchorId: string
@@ -87,6 +116,8 @@ export function TreeApp({
 				sex: "M" | "F"
 				/** Which ghost card opened this, so the form can title itself. */
 				slot: SlotKey
+				/** Which marriage a new child joins; only set when there's a choice. */
+				unionId?: string
 		  }
 		| null
 	>(null)
@@ -241,13 +272,18 @@ export function TreeApp({
 
 	const submitEditor = useCallback(
 		(values: PersonFormValues) => {
-			if (!editor) return
+			if (editor?.mode !== "edit" && editor?.mode !== "add") return
 			setSaveError(undefined)
 			startSaving(async () => {
 				const result =
 					editor.mode === "edit"
 						? await updatePersonAction(editor.personId, values)
-						: await addRelativeAction(editor.anchorId, editor.relation, values)
+						: await addRelativeAction(
+								editor.anchorId,
+								editor.relation,
+								values,
+								editor.unionId,
+							)
 
 				if (!result.ok) {
 					setSaveError(result.error)
@@ -260,6 +296,82 @@ export function TreeApp({
 			})
 		},
 		[editor],
+	)
+
+	const submitUnion = useCallback(
+		(values: UnionFormValues) => {
+			if (editor?.mode !== "union") return
+			setSaveError(undefined)
+			startSaving(async () => {
+				const result = await updateUnionAction(editor.unionId, values)
+				if (!result.ok) {
+					setSaveError(result.error)
+					return
+				}
+				setEditor(null)
+			})
+		},
+		[editor],
+	)
+
+	/**
+	 * The marriages a new child could belong to.
+	 *
+	 * Offered only when the parent married more than once. Without this the
+	 * earliest union always won, which quietly filed a second marriage's
+	 * children under the first — wrong data with nothing on screen to show it.
+	 */
+	const childUnionOptions = useMemo(() => {
+		if (editor?.mode !== "add" || editor.relation !== "child") return undefined
+		const anchor = graph.people.get(editor.anchorId)
+		if (!anchor || anchor.unionIds.length < 2) return undefined
+
+		return anchor.unionIds.map((unionId) => {
+			const union = graph.unions.get(unionId)
+			const spouseId =
+				union?.husbandId === anchor.id ? union?.wifeId : union?.husbandId
+			const spouse = spouseId ? graph.people.get(spouseId) : undefined
+			return {
+				id: unionId,
+				label: !spouse
+					? t("childOfAlone")
+					: union?.marriageYear
+						? t("childOfWithYear", {
+								name: spouse.name,
+								year: union.marriageYear,
+							})
+						: t("childOfWith", { name: spouse.name }),
+			}
+		})
+	}, [editor, graph, t])
+
+	const linkExisting = useCallback(
+		(anchorId: string, relation: Relation, otherId: string) => {
+			setSaveError(undefined)
+			startSaving(async () => {
+				const result = await linkRelativeAction(anchorId, relation, otherId)
+				if (!result.ok) {
+					setSaveError(result.error)
+					return
+				}
+				setEditor(null)
+				setSelectedId(otherId)
+			})
+		},
+		[],
+	)
+
+	const unlink = useCallback(
+		(anchorId: string, relationKey: RelationKey, otherId: string) => {
+			const relation = RELATION_OF[relationKey]
+			if (!relation) return
+			setSaveError(undefined)
+			startSaving(async () => {
+				const result = await unlinkRelativeAction(anchorId, relation, otherId)
+				if (!result.ok) setSaveError(result.error)
+			})
+		},
+		[],
 	)
 
 	const removeSelected = useCallback((personId: string) => {
@@ -289,6 +401,8 @@ export function TreeApp({
 		<div className="flex h-screen flex-col">
 			<Toolbar
 				treeName={treeName}
+				people={people}
+				onFocusPerson={focus}
 				view={view}
 				onViewChange={setView}
 				focusPerson={graph.people.get(rootId)}
@@ -325,7 +439,53 @@ export function TreeApp({
 					</ReactFlowProvider>
 				</div>
 
-				{editor ? (
+				{editor?.mode === "link" ? (
+					<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
+						{(() => {
+							const anchor = graph.people.get(editor.personId)
+							if (!anchor) return null
+							return (
+								<LinkPersonForm
+									person={anchor}
+									people={people}
+									pending={saving}
+									error={saveError}
+									onSubmit={(relation, otherId) =>
+										linkExisting(anchor.id, relation, otherId)
+									}
+									onCancel={() => {
+										setEditor(null)
+										setSaveError(undefined)
+									}}
+								/>
+							)
+						})()}
+					</aside>
+				) : editor?.mode === "union" ? (
+					<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
+						{(() => {
+							const union = graph.unions.get(editor.unionId)
+							if (!union) return null
+							const spouses = [union.husbandId, union.wifeId]
+								.map((id) => (id ? graph.people.get(id) : undefined))
+								.filter((person) => person !== undefined)
+							return (
+								<UnionForm
+									union={union}
+									spouses={spouses}
+									submitLabel={t("save")}
+									pending={saving}
+									error={saveError}
+									onSubmit={submitUnion}
+									onCancel={() => {
+										setEditor(null)
+										setSaveError(undefined)
+									}}
+								/>
+							)
+						})()}
+					</aside>
+				) : editor ? (
 					<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
 						<PersonForm
 							title={
@@ -338,6 +498,13 @@ export function TreeApp({
 							}
 							lockedSex={editor.mode === "add" ? editor.sex : undefined}
 							submitLabel={editor.mode === "edit" ? t("save") : t("add")}
+							unionOptions={childUnionOptions}
+							unionId={editor.mode === "add" ? editor.unionId : undefined}
+							onUnionChange={(unionId) =>
+								setEditor((current) =>
+									current?.mode === "add" ? { ...current, unionId } : current,
+								)
+							}
 							pending={saving}
 							error={saveError}
 							onSubmit={submitEditor}
@@ -360,6 +527,15 @@ export function TreeApp({
 						busy={saving}
 						error={saveError}
 						{...(view === "family" ? { onRequestAdd: requestAdd } : {})}
+						onLink={(personId) => {
+							setSaveError(undefined)
+							setEditor({ mode: "link", personId })
+						}}
+						onUnlink={unlink}
+						onEditUnion={(unionId) => {
+							setSaveError(undefined)
+							setEditor({ mode: "union", unionId })
+						}}
 						onEdit={(personId) => {
 							setSaveError(undefined)
 							setEditor({ mode: "edit", personId })

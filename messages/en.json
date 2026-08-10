@@ -37,7 +37,25 @@
 		"born": "{sex, select, other {Born}} {date}",
 		"died": "{sex, select, other {Died}} {date}",
 		"deceased": "{sex, select, other {Deceased}}",
-		"noDates": "No dates recorded"
+		"noDates": "No dates recorded",
+		"editMarriage": "Edit this marriage",
+		"marriedNameLine": "Married name: {name}",
+		"linkExisting": "Link someone already here",
+		"linkTitle": "Link an existing person",
+		"linkHelp": "Connect {name} to somebody already in this tree, instead of entering them twice.",
+		"linkRelation": "As their…",
+		"linkParent": "Parent",
+		"linkSpouse": "Partner",
+		"linkSibling": "Sibling",
+		"linkChild": "Child",
+		"linkWho": "Who",
+		"linkSaving": "Linking…",
+		"linkCancel": "Cancel",
+		"unlink": "Break this link",
+		"unlinkConfirm": "Unlink",
+		"unlinkCancel": "Keep",
+		"sectionPhotos": "Photos",
+		"sectionNote": "Notes"
 	},
 	"form": {
 		"editTitle": "Edit person",
@@ -56,7 +74,21 @@
 		"save": "Save",
 		"add": "Add",
 		"saving": "Saving…",
-		"cancel": "Cancel"
+		"cancel": "Cancel",
+		"marriageTitle": "Marriage",
+		"marriageDate": "Married",
+		"marriagePlace": "Place of marriage",
+		"divorced": "Marriage ended",
+		"divorcedHint": "Drawn as a dashed line between the couple.",
+		"marriedName": "Married name",
+		"marriedNamePlaceholder": "Family name after marriage",
+		"marriedNameHint": "Leave blank if the family name didn't change. The name above stays the one at birth.",
+		"childOf": "Child of which marriage",
+		"childOfWith": "With {name}",
+		"childOfAlone": "No partner on record",
+		"childOfWithYear": "With {name} ({year})",
+		"note": "Notes",
+		"notePlaceholder": "Anything worth remembering — a story, a source, an uncertainty"
 	},
 	"card": {
 		"deceased": "{sex, select, other {Deceased}}",
@@ -148,7 +180,12 @@
 		"fileNotFound": "Nothing found at {path}",
 		"fileNotATree": "{path} is not a family tree file",
 		"treeFileMissing": "The file for “{name}” isn't where it was left. An external drive that isn't plugged in, or a folder that has moved.",
-		"treeFileMissingAction": "Manage trees"
+		"treeFileMissingAction": "Manage trees",
+		"noSuchUnion": "That marriage is no longer in the tree",
+		"notRelated": "They aren't related that way in this tree",
+		"photoMissing": "No photo was received",
+		"photoType": "That file isn't an image this app can show",
+		"photoTooBig": "That photo is larger than 12 MB"
 	},
 	"onboarding": {
 		"appName": "Family tree",
@@ -192,5 +229,21 @@
 		"formTitle": "The first person",
 		"save": "Add",
 		"settings": "Trees and settings"
+	},
+	"search": {
+		"label": "Find a person",
+		"placeholder": "Find a person…",
+		"clear": "Clear",
+		"noResults": "Nobody by that name",
+		"pickPlaceholder": "Search by name…"
+	},
+	"photos": {
+		"drop": "Drop a photo here",
+		"hint": "or click to choose — JPEG, PNG, WebP, GIF or AVIF, up to 12 MB",
+		"uploading": "Uploading…",
+		"of": "Photo of {name}",
+		"primary": "On the card",
+		"makePrimary": "Show this one on the card",
+		"remove": "Remove this photo"
 	}
 }

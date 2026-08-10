@@ -157,6 +157,17 @@ function readPhotos(record: GedNode): string[] {
 	return objects.map((entry) => entry.file)
 }
 
+/** `<p>text</p>` -> `text`, keeping paragraph breaks as newlines. */
+function stripHtml(value: string | undefined): string | undefined {
+	if (!value) return undefined
+	const text = value
+		.replace(/<\/p>\s*<p>/gi, "\n")
+		.replace(/<br\s*\/?>/gi, "\n")
+		.replace(/<[^>]+>/g, "")
+		.trim()
+	return text || undefined
+}
+
 function buildPerson(record: GedNode): Person {
 	const name = child(record, "NAME")
 	const birth = readEvent(child(record, "BIRT"))
@@ -165,6 +176,13 @@ function buildPerson(record: GedNode): Person {
 
 	const given = name ? textOf(name, "GIVN") : undefined
 	const surname = name ? textOf(name, "SURN") : undefined
+	// MyHeritage's own tag: `SURN` is the name at birth, `_MARNM` the one taken
+	// on marriage. Both are worth keeping — see `PersonRecord.marriedName`.
+	const marriedName = name ? textOf(name, "_MARNM") : undefined
+	// MyHeritage wraps notes in HTML (`<p>Загинала в Априлското въстание</p>`).
+	// React escapes markup rather than rendering it, so left alone the tags
+	// would show up as literal text on the page.
+	const note = stripHtml(textOf(record, "NOTE"))
 
 	return {
 		id: record.xref ?? "",
@@ -174,6 +192,8 @@ function buildPerson(record: GedNode): Person {
 			"Unknown",
 		givenName: given,
 		surname,
+		marriedName,
+		note,
 		sex: (record.value === "F" || textOf(record, "SEX") === "F"
 			? "F"
 			: "M") as Sex,

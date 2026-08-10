@@ -12,7 +12,10 @@ export interface Person {
 	id: string
 	name: string
 	givenName?: string
+	/** Surname at birth — the maiden name, where there is a married one too. */
 	surname?: string
+	/** Family name taken on marriage, when it differs from `surname`. */
+	marriedName?: string
 	sex: Sex
 	birthDate?: string
 	birthYear?: number
@@ -22,6 +25,8 @@ export interface Person {
 	deathPlace?: string
 	/** True when the record carries a death event but no usable date. */
 	deceased: boolean
+	/** Free text about them. */
+	note?: string
 	photoUrl?: string
 	photos: string[]
 	/** Unions in which this person is a spouse. */

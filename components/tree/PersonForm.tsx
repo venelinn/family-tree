@@ -21,6 +21,14 @@ interface PersonFormProps {
 	/** Fixed for add-slots ("Add sister" is always female), editable otherwise. */
 	lockedSex?: "M" | "F"
 	submitLabel: string
+	/**
+	 * Which marriage a new child belongs to. Only passed when the parent married
+	 * more than once — with one marriage there is nothing to choose, and with
+	 * none the child gets a single-parent union either way.
+	 */
+	unionOptions?: { id: string; label: string }[]
+	unionId?: string
+	onUnionChange?: (unionId: string) => void
 	pending: boolean
 	error?: string
 	onSubmit: (values: PersonFormValues) => void
@@ -37,6 +45,9 @@ export function PersonForm({
 	person,
 	lockedSex,
 	submitLabel,
+	unionOptions,
+	unionId,
+	onUnionChange,
 	pending,
 	error,
 	onSubmit,
@@ -46,12 +57,14 @@ export function PersonForm({
 
 	const [values, setValues] = useState<PersonFormValues>({
 		fullName: person?.name ?? "",
+		marriedName: person?.marriedName ?? "",
 		sex: lockedSex ?? person?.sex ?? "M",
 		birthDate: person?.birthDate ?? "",
 		birthPlace: person?.birthPlace ?? "",
 		deathDate: person?.deathDate ?? "",
 		deathPlace: person?.deathPlace ?? "",
 		deceased: person?.deceased ?? false,
+		note: person?.note ?? "",
 	})
 
 	const set = <K extends keyof PersonFormValues>(
@@ -69,6 +82,23 @@ export function PersonForm({
 		>
 			<h2 className="font-semibold text-ink">{title}</h2>
 
+			{unionOptions && unionOptions.length > 1 ? (
+				<label className={label}>
+					{t("childOf")}
+					<select
+						value={unionId ?? unionOptions[0].id}
+						onChange={(event) => onUnionChange?.(event.target.value)}
+						className={`${field} mt-1`}
+					>
+						{unionOptions.map((option) => (
+							<option key={option.id} value={option.id}>
+								{option.label}
+							</option>
+						))}
+					</select>
+				</label>
+			) : null}
+
 			<div>
 				<label className={label}>
 					{t("fullName")}
@@ -83,6 +113,27 @@ export function PersonForm({
 					/>
 				</label>
 			</div>
+
+			{/*
+			 * Offered for women, since taking the husband's family name is the
+			 * convention this tree records — but also whenever a value is already
+			 * stored, so an imported `_MARNM` can never become invisible and
+			 * uneditable just because the sex on file says otherwise.
+			 */}
+			{values.sex === "F" || values.marriedName ? (
+				<div>
+					<label className={label}>
+						{t("marriedName")}
+						<input
+							value={values.marriedName}
+							onChange={(event) => set("marriedName", event.target.value)}
+							className={`${field} mt-1`}
+							placeholder={t("marriedNamePlaceholder")}
+						/>
+					</label>
+					<p className="mt-1 text-ink-faint text-xs">{t("marriedNameHint")}</p>
+				</div>
+			) : null}
 
 			{lockedSex ? null : (
 				<fieldset>
@@ -160,6 +211,17 @@ export function PersonForm({
 					</label>
 				</div>
 			) : null}
+
+			<label className={label}>
+				{t("note")}
+				<textarea
+					value={values.note}
+					onChange={(event) => set("note", event.target.value)}
+					rows={3}
+					placeholder={t("notePlaceholder")}
+					className={`${field} mt-1 resize-y`}
+				/>
+			</label>
 
 			{error ? (
 				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">

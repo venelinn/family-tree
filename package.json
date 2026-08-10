@@ -10,7 +10,8 @@
 		"format": "biome format --write",
 		"i18n:check": "tsx scripts/check-messages.ts",
 		"photos": "tsx scripts/localize-photos.ts",
-		"import": "tsx scripts/import-gedcom.ts"
+		"import": "tsx scripts/import-gedcom.ts",
+		"backfill:married": "tsx scripts/backfill-married-names.ts"
 	},
 	"dependencies": {
 		"@xyflow/react": "^12.11.2",

@@ -10,6 +10,7 @@
 export type ErrorCode =
 	| "nameRequired"
 	| "noSuchPerson"
+	| "noSuchUnion"
 	| "treeNameRequired"
 	| "noSuchTree"
 	| "treeAlreadyOpen"
@@ -27,6 +28,10 @@ export type ErrorCode =
 	| "alreadyHasParent"
 	| "alreadyHasParents"
 	| "alreadyMarried"
+	| "notRelated"
+	| "photoMissing"
+	| "photoType"
+	| "photoTooBig"
 
 export class TreeOpError extends Error {
 	constructor(

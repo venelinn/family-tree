@@ -47,6 +47,10 @@ GEDCOM text into a `FamilyGraph`. GEDCOM is a flat, line-oriented format where
 indentation is a leading level number, so parsing is two steps: lines → tree,
 tree → records.
 
+`SURN` is the name at birth and MyHeritage's `_MARNM` the one taken on marriage;
+both are kept, as `surname` and `marriedName`. The primary `NAME` line is left as
+the display name regardless, so nothing downstream has to know which is which.
+
 Date handling is the fiddly part. GEDCOM dates are deliberately loose —
 `23 DEC 1976`, `JUN 1991`, `2012`, `ABT 1910`, `BET 2012 AND 2013`. Only a
 complete day/month/year becomes an ISO date; everything else keeps a readable
@@ -95,7 +99,12 @@ client rebuilds.
 | `UnionCard.tsx` | The couple marker children hang from |
 | `PlaceholderCard.tsx` | "+ Add father" slots in the pedigree view |
 | `PersonPanel.tsx` | Sidebar: action bar, facts timeline, immediate family |
+| `EmptyTree.tsx` | First-person prompt for a tree started empty |
 | `PersonForm.tsx` | Add / edit fields |
+| `UnionForm.tsx` | Marriage date, place and whether it ended |
+| `PersonSearch.tsx` | Find a person by name; also the picker when linking |
+| `LinkPersonForm.tsx` | Relate two people who are both already in the tree |
+| `PhotoDrop.tsx` | Drag-and-drop photos, promote or remove them |
 | `AddSlotCard.tsx` | Ghost "Add sister" cards around the selected person |
 | `Toolbar.tsx` | View switch, depth slider, person count, link to settings |
 | `Avatar.tsx` | Photo with initials fallback |
@@ -136,6 +145,13 @@ ghost card / panel  →  lib/actions.ts (server actions)
                               →  TreeStore     row writes
                        revalidatePath("/")  →  server component re-renders
 ```
+
+`photos.ts` sits under `photo-actions.ts` the same way `tree-ops.ts` sits under
+`actions.ts` — upload validation is exactly the kind of rule that should not
+only be exercised by clicking. Uploaded files go to `public/photos/uploads/`,
+which is the one thing that does *not* follow a tree file to wherever it is
+kept: Next only serves static files from `public/`, and a route handler
+streaming arbitrary disk paths would be a file-read hole.
 
 `tree-ops.ts` is where anything spanning several rows lives — "add a father"
 means find-or-create the birth union, fill the husband seat, then link the

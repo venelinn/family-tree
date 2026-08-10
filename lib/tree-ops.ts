@@ -153,15 +153,22 @@ export async function linkRelative(
 	if (!anchor || !other) throw new TreeOpError("bothMustExist")
 
 	if (relation === "parent") {
-		if (birthUnionOf(snapshot, otherId) === birthUnionOf(snapshot, anchorId)) {
-			// They'd be siblings, not parent and child.
+		const existingId = birthUnionOf(snapshot, anchorId)
+
+		// Sharing a birth family would make them siblings, not parent and child.
+		// Both being *absent* is not sharing one: `undefined === undefined` was
+		// how this refused the commonest case of all — attaching a parent to
+		// someone who hasn't got any yet.
+		if (
+			existingId !== undefined &&
+			existingId === birthUnionOf(snapshot, otherId)
+		) {
 			throw new TreeOpError("alreadySibling", {
 				other: other.fullName,
 				name: anchor.fullName,
 			})
 		}
 		const seat = seatFor(other.sex)
-		const existingId = birthUnionOf(snapshot, anchorId)
 		if (existingId) {
 			const union = snapshot.unions.find((u) => u.id === existingId)
 			if (union?.[seat] && union[seat] !== otherId) {
@@ -216,18 +223,40 @@ export async function linkRelative(
 }
 
 /**
- * Remove a person and tidy up after them.
+ * Drop the union an unlink just emptied out.
  *
- * The store already vacates their seats and drops their child links. What it
- * can't decide is whether the unions they leave behind still mean anything —
- * a marriage with nobody in it and no children is just debris.
+ * A union needs to say *something*: a couple, or at least one child. One spouse
+ * and nobody else is the residue of the marriage you just broke, and leaving it
+ * behind would put a stray marker on the chart.
+ *
+ * Scoped to the union that was actually touched, deliberately. A sweep over the
+ * whole tree under this rule would also delete rows nobody asked about — the
+ * import left two single-wife childless unions in the real store — and silently
+ * discarding somebody's data as a side effect of an unrelated edit is not
+ * something an app with no undo gets to do.
  */
-export async function removePerson(
+async function pruneUnionIfMeaningless(
 	store: TreeStore,
-	personId: string,
+	unionId: string,
 ): Promise<void> {
-	await store.deletePerson(personId)
+	const snapshot = await store.read()
+	const union = snapshot.unions.find((candidate) => candidate.id === unionId)
+	if (!union) return
 
+	const hasChildren = snapshot.unionChildren.some(
+		(link) => link.unionId === unionId,
+	)
+	const isCouple = Boolean(union.husbandId && union.wifeId)
+	if (!hasChildren && !isCouple) await store.deleteUnion(unionId)
+}
+
+/**
+ * Drop unions left completely empty by a deletion.
+ *
+ * Deliberately the weaker rule: deleting a person can touch several unions at
+ * once, and only one with *nobody* in it is unambiguously debris.
+ */
+async function pruneEmptyUnions(store: TreeStore): Promise<void> {
 	const snapshot = await store.read()
 	for (const union of snapshot.unions) {
 		const hasSpouse = Boolean(union.husbandId || union.wifeId)
@@ -236,4 +265,93 @@ export async function removePerson(
 		)
 		if (!hasSpouse && !hasChildren) await store.deleteUnion(union.id)
 	}
+}
+
+/**
+ * Break a relationship without deleting anybody.
+ *
+ * The counterpart to `linkRelative`, and the thing whose absence made every
+ * mistake permanent: attach the wrong father and the only remedy used to be
+ * deleting him, which took his dates, his photo and his own parents with him.
+ *
+ * Both people stay in the tree. Only the row that joined them goes.
+ */
+export async function unlinkRelative(
+	store: TreeStore,
+	anchorId: string,
+	relation: Relation,
+	otherId: string,
+): Promise<void> {
+	if (anchorId === otherId) throw new TreeOpError("ownRelative")
+
+	const snapshot = await store.read()
+	const anchor = snapshot.people.find((person) => person.id === anchorId)
+	const other = snapshot.people.find((person) => person.id === otherId)
+	if (!anchor || !other) throw new TreeOpError("bothMustExist")
+
+	if (relation === "parent" || relation === "sibling") {
+		const unionId = birthUnionOf(snapshot, anchorId)
+		if (!unionId) throw new TreeOpError("notRelated")
+
+		if (relation === "parent") {
+			// Vacate the seat rather than delete the family: the other parent and
+			// the anchor's siblings are still real and still belong together.
+			const union = snapshot.unions.find(
+				(candidate) => candidate.id === unionId,
+			)
+			if (union?.husbandId !== otherId && union?.wifeId !== otherId)
+				throw new TreeOpError("notRelated")
+			await store.updateUnion(unionId, {
+				[seatFor(other.sex)]: undefined,
+			})
+		} else {
+			// A sibling link *is* sharing a birth family, so breaking it means the
+			// other one leaves that family.
+			if (birthUnionOf(snapshot, otherId) !== unionId)
+				throw new TreeOpError("notRelated")
+			await store.removeChild(unionId, otherId)
+		}
+
+		await pruneUnionIfMeaningless(store, unionId)
+		return
+	}
+
+	if (relation === "spouse") {
+		const union = spouseUnionsOf(snapshot, anchorId).find(
+			(candidate) =>
+				candidate.husbandId === otherId || candidate.wifeId === otherId,
+		)
+		if (!union) throw new TreeOpError("notRelated")
+
+		// The marriage's children keep the parent who stays; the one leaving is
+		// simply no longer in that union.
+		await store.updateUnion(union.id, { [seatFor(other.sex)]: undefined })
+		await pruneUnionIfMeaningless(store, union.id)
+		return
+	}
+
+	const unionId = birthUnionOf(snapshot, otherId)
+	const isChildOfAnchor =
+		unionId !== undefined &&
+		spouseUnionsOf(snapshot, anchorId).some(
+			(candidate) => candidate.id === unionId,
+		)
+	if (!unionId || !isChildOfAnchor) throw new TreeOpError("notRelated")
+
+	await store.removeChild(unionId, otherId)
+	await pruneUnionIfMeaningless(store, unionId)
+}
+
+/**
+ * Remove a person and tidy up after them.
+ *
+ * The store already vacates their seats and drops their child links. What it
+ * can't decide is whether the unions they leave behind still mean anything.
+ */
+export async function removePerson(
+	store: TreeStore,
+	personId: string,
+): Promise<void> {
+	await store.deletePerson(personId)
+	await pruneEmptyUnions(store)
 }

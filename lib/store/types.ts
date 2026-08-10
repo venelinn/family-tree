@@ -13,7 +13,17 @@ export interface PersonRecord {
 	id: string
 	fullName: string
 	givenName?: string
+	/** Surname at birth. For a married woman this is the maiden name. */
 	surname?: string
+	/**
+	 * Family name taken on marriage, when it differs from the one at birth.
+	 *
+	 * Kept beside `surname` rather than replacing it, because a family tree has
+	 * to answer both questions: the name someone was born under is how they
+	 * appear in their parents' records, and the name they took is how the rest
+	 * of the family knows them. MyHeritage exports it as `_MARNM`.
+	 */
+	marriedName?: string
 	sex: Sex
 	/** ISO `1976-12-23` when fully known, otherwise free text like `Jun 1991`. */
 	birthDate?: string
@@ -22,6 +32,8 @@ export interface PersonRecord {
 	deathPlace?: string
 	/** True when the person is known to have died, even with no date on file. */
 	deceased: boolean
+	/** Free text about them — the part of a family record that isn't a field. */
+	note?: string
 	/** Served paths, primary first. */
 	photos: string[]
 	updatedAt: string

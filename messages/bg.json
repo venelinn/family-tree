@@ -37,7 +37,25 @@
 		"born": "{sex, select, F {Родена} other {Роден}}: {date}",
 		"died": "{sex, select, F {Починала} other {Починал}}: {date}",
 		"deceased": "{sex, select, F {Починала} other {Починал}}",
-		"noDates": "Няма записани дати"
+		"noDates": "Няма записани дати",
+		"editMarriage": "Редактиране на брака",
+		"marriedNameLine": "Омъжено име: {name}",
+		"linkExisting": "Свързване със съществуващ човек",
+		"linkTitle": "Свързване със съществуващ човек",
+		"linkHelp": "Свържете {name} с човек, който вече е в дървото, вместо да го въвеждате втори път.",
+		"linkRelation": "Като негов/неин…",
+		"linkParent": "Родител",
+		"linkSpouse": "Партньор",
+		"linkSibling": "Брат или сестра",
+		"linkChild": "Дете",
+		"linkWho": "Кой",
+		"linkSaving": "Свързване…",
+		"linkCancel": "Отказ",
+		"unlink": "Премахване на връзката",
+		"unlinkConfirm": "Премахни",
+		"unlinkCancel": "Запази",
+		"sectionPhotos": "Снимки",
+		"sectionNote": "Бележки"
 	},
 	"form": {
 		"editTitle": "Редактиране на човек",
@@ -56,7 +74,21 @@
 		"save": "Запази",
 		"add": "Добави",
 		"saving": "Запазване…",
-		"cancel": "Отказ"
+		"cancel": "Отказ",
+		"marriageTitle": "Брак",
+		"marriageDate": "Дата на брака",
+		"marriagePlace": "Място на сключване",
+		"divorced": "Бракът е прекратен",
+		"divorcedHint": "Показва се с пунктирана линия между двамата.",
+		"marriedName": "Омъжено име",
+		"marriedNamePlaceholder": "Фамилно име след брака",
+		"marriedNameHint": "Оставете празно, ако фамилното име не се е променило. Името по-горе остава това по рождение.",
+		"childOf": "Дете от кой брак",
+		"childOfWith": "С {name}",
+		"childOfAlone": "Без записан партньор",
+		"childOfWithYear": "С {name} ({year})",
+		"note": "Бележки",
+		"notePlaceholder": "Каквото си струва да се запомни — история, източник, неяснота"
 	},
 	"card": {
 		"deceased": "{sex, select, F {Починала} other {Починал}}",
@@ -148,7 +180,12 @@
 		"fileNotFound": "Нищо не е намерено на {path}",
 		"fileNotATree": "{path} не е файл със семейно дърво",
 		"treeFileMissing": "Файлът за „{name}“ не е там, където беше оставен. Възможно е външното устройство да не е включено или папката да е преместена.",
-		"treeFileMissingAction": "Управление на дърветата"
+		"treeFileMissingAction": "Управление на дърветата",
+		"noSuchUnion": "Този брак вече не е в дървото",
+		"notRelated": "Те не са свързани по този начин в това дърво",
+		"photoMissing": "Не е получена снимка",
+		"photoType": "Този файл не е изображение, което приложението може да покаже",
+		"photoTooBig": "Снимката е по-голяма от 12 MB"
 	},
 	"onboarding": {
 		"appName": "Семейно дърво",
@@ -192,5 +229,21 @@
 		"formTitle": "Първият човек",
 		"save": "Добави",
 		"settings": "Дървета и настройки"
+	},
+	"search": {
+		"label": "Търсене на човек",
+		"placeholder": "Търсене на човек…",
+		"clear": "Изчисти",
+		"noResults": "Няма човек с това име",
+		"pickPlaceholder": "Търсене по име…"
+	},
+	"photos": {
+		"drop": "Пуснете снимка тук",
+		"hint": "или щракнете, за да изберете — JPEG, PNG, WebP, GIF или AVIF, до 12 MB",
+		"uploading": "Качване…",
+		"of": "Снимка на {name}",
+		"primary": "На картата",
+		"makePrimary": "Показвай тази на картата",
+		"remove": "Премахване на снимката"
 	}
 }

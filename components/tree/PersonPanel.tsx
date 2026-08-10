@@ -3,11 +3,14 @@
 import {
 	ChevronDown,
 	Crosshair,
+	Link2,
 	MapPin,
 	MoreHorizontal,
 	Pencil,
 	Trash2,
+	Unlink,
 	UserPlus,
+	X,
 } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
@@ -28,6 +31,7 @@ import {
 } from "@/lib/family-graph"
 import type { BranchState } from "@/lib/layout/types"
 import { Avatar } from "./Avatar"
+import { PhotoDrop } from "./PhotoDrop"
 
 interface PersonPanelProps {
 	graph: FamilyGraph
@@ -52,6 +56,12 @@ interface PersonPanelProps {
 	onDelete: (personId: string) => void
 	/** Opens the ghost "Add …" cards on the canvas. Absent in the pedigree view. */
 	onRequestAdd?: (personId: string) => void
+	/** Edit a marriage from its row in the timeline — that fact *is* a union row. */
+	onEditUnion: (unionId: string) => void
+	/** Relate this person to somebody already in the tree. */
+	onLink: (personId: string) => void
+	/** Break a relationship, leaving both people in place. */
+	onUnlink: (personId: string, relation: RelationKey, otherId: string) => void
 }
 
 /** Collapsible section. Open by default — the content is why you clicked. */
@@ -128,13 +138,17 @@ function RelativeRow({
 	person,
 	relation,
 	onFocus,
+	onUnlink,
 }: {
 	person: Person
 	relation: RelationKey
 	onFocus: (personId: string) => void
+	/** Absent for a relative whose link isn't one this panel can break. */
+	onUnlink?: () => void
 }) {
 	const t = useTranslations("panel")
 	const tRelations = useTranslations("relations")
+	const [confirming, setConfirming] = useState(false)
 
 	const years =
 		person.birthYear && person.deathYear
@@ -149,11 +163,11 @@ function RelativeRow({
 					: ""
 
 	return (
-		<li>
+		<li className="group flex items-center gap-1">
 			<button
 				type="button"
 				onClick={() => onFocus(person.id)}
-				className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-muted"
+				className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-muted"
 			>
 				<Avatar person={person} size={34} />
 				<span className="min-w-0 flex-1">
@@ -168,6 +182,46 @@ function RelativeRow({
 					) : null}
 				</span>
 			</button>
+
+			{/*
+			 * Two clicks, deliberately. Breaking a link is not destructive — both
+			 * people stay — but it is invisible once done, and an accidental
+			 * detach on a 253-person tree could go unnoticed for a long time.
+			 */}
+			{onUnlink ? (
+				confirming ? (
+					<span className="flex shrink-0 items-center gap-1">
+						<button
+							type="button"
+							onClick={() => {
+								setConfirming(false)
+								onUnlink()
+							}}
+							className="rounded-md bg-danger-soft px-2 py-1 font-medium text-danger-ink text-xs"
+						>
+							{t("unlinkConfirm")}
+						</button>
+						<button
+							type="button"
+							onClick={() => setConfirming(false)}
+							aria-label={t("unlinkCancel")}
+							className="rounded-md p-1 text-ink-faint hover:text-ink"
+						>
+							<X size={13} strokeWidth={2} />
+						</button>
+					</span>
+				) : (
+					<button
+						type="button"
+						onClick={() => setConfirming(true)}
+						aria-label={t("unlink")}
+						title={t("unlink")}
+						className="shrink-0 rounded-md p-1.5 text-ink-ghost opacity-0 hover:bg-muted hover:text-danger-text focus-visible:opacity-100 group-hover:opacity-100"
+					>
+						<Unlink size={13} strokeWidth={2} />
+					</button>
+				)
+			) : null}
 		</li>
 	)
 }
@@ -245,6 +299,9 @@ export function PersonPanel({
 	onEdit,
 	onDelete,
 	onRequestAdd,
+	onEditUnion,
+	onLink,
+	onUnlink,
 }: PersonPanelProps) {
 	const t = useTranslations("panel")
 	const tFacts = useTranslations("facts")
@@ -282,6 +339,14 @@ export function PersonPanel({
 						<p className="mt-1 text-ink-muted text-sm">
 							<Lifespan person={person} />
 						</p>
+						{/* Both names matter: the one she was born under is how she
+						    appears in her parents' records, the one she took is how the
+						    rest of the family knows her. */}
+						{person.marriedName && person.marriedName !== person.surname ? (
+							<p className="mt-0.5 text-ink-muted text-xs">
+								{t("marriedNameLine", { name: person.marriedName })}
+							</p>
+						) : null}
 						{person.birthPlace ? (
 							<p className="mt-0.5 text-ink-faint text-xs">
 								{person.birthPlace}
@@ -342,6 +407,17 @@ export function PersonPanel({
 								onClick={() => setMenuOpen(false)}
 							/>
 							<div className="absolute top-12 right-0 z-20 w-56 overflow-hidden rounded-lg border border-line bg-panel py-1 shadow-lg">
+								<MenuItem
+									onClick={() => {
+										onLink(person.id)
+										setMenuOpen(false)
+									}}
+								>
+									<span className="flex items-center gap-2">
+										<Link2 size={14} strokeWidth={2} />
+										{t("linkExisting")}
+									</span>
+								</MenuItem>
 								{branches?.ancestors !== "none" && branches ? (
 									<MenuItem
 										onClick={() => {
@@ -404,8 +480,10 @@ export function PersonPanel({
 							const related = fact.relatedId
 								? graph.people.get(fact.relatedId)
 								: undefined
+							// Bound outside the callback so it stays narrowed to a string.
+							const { unionId } = fact
 							return (
-								<li key={fact.id} className="flex gap-3">
+								<li key={fact.id} className="group flex gap-3">
 									<div className="w-11 shrink-0 pt-0.5 text-right">
 										<div className="font-semibold text-ink-soft text-sm tabular-nums">
 											{fact.year ?? "—"}
@@ -417,8 +495,24 @@ export function PersonPanel({
 										) : null}
 									</div>
 									<div className="min-w-0 flex-1 border-line-subtle border-l pl-3">
-										<div className="font-medium text-ink text-sm">
-											{tFacts(fact.titleKey)}
+										<div className="flex items-start gap-1.5">
+											<div className="min-w-0 flex-1 font-medium text-ink text-sm">
+												{tFacts(fact.titleKey)}
+											</div>
+											{/* Only marriages carry a union id, and a marriage is the
+											    one fact here that isn't derived from somebody's dates
+											    — so it is the only one that can be edited in place. */}
+											{unionId ? (
+												<button
+													type="button"
+													onClick={() => onEditUnion(unionId)}
+													aria-label={t("editMarriage")}
+													title={t("editMarriage")}
+													className="-mr-1 shrink-0 rounded p-1 text-ink-ghost opacity-0 transition-opacity hover:bg-muted hover:text-ink-soft focus-visible:opacity-100 group-hover:opacity-100"
+												>
+													<Pencil size={12} strokeWidth={2} />
+												</button>
+											) : null}
 										</div>
 										{related ? (
 											<button
@@ -449,19 +543,47 @@ export function PersonPanel({
 				)}
 			</Section>
 
+			{person.note ? (
+				<Section title={t("sectionNote")}>
+					{/* `whitespace-pre-line` so the paragraph breaks the parser turned
+					    MyHeritage's HTML into survive to the screen. */}
+					<p className="whitespace-pre-line text-ink-soft text-sm leading-relaxed">
+						{person.note}
+					</p>
+				</Section>
+			) : null}
+
+			<Section title={t("sectionPhotos")} count={person.photos.length}>
+				<PhotoDrop
+					personId={person.id}
+					photos={person.photos}
+					name={person.name}
+				/>
+			</Section>
+
 			<Section title={t("sectionFamily")} count={family.length}>
 				{family.length === 0 ? (
 					<p className="text-ink-faint text-sm">{t("noRelatives")}</p>
 				) : (
 					<ul className="space-y-0.5">
-						{family.map((relative) => (
-							<RelativeRow
-								key={relative.id}
-								person={relative}
-								relation={relationKeyFor(graph, person, relative)}
-								onFocus={onFocus}
-							/>
-						))}
+						{family.map((relative) => {
+							const relation = relationKeyFor(graph, person, relative)
+							return (
+								<RelativeRow
+									key={relative.id}
+									person={relative}
+									relation={relation}
+									onFocus={onFocus}
+									// "relative" means the graph couldn't name the connection,
+									// so there is no single row to remove.
+									onUnlink={
+										relation === "relative"
+											? undefined
+											: () => onUnlink(person.id, relation, relative.id)
+									}
+								/>
+							)
+						})}
 					</ul>
 				)}
 			</Section>

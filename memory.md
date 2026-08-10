@@ -25,6 +25,30 @@ daughter / father / mother" cards appear around it, MyHeritage style; the panel
 has Edit and Delete. Writes go through server actions → `lib/tree-ops.ts` →
 `TreeStore`, then `revalidatePath("/")`.
 
+Marriages are editable too — date, place, and whether it ended — from the pencil
+on the marriage row in the Facts timeline. That row is the only editable fact,
+because it is the only one that *is* a stored row rather than a derivation.
+
+**Relationships are fully editable now.** Link two people who are already in
+the tree (More → Link someone already here, then search), and break any named
+link from the Immediate family rows without deleting anybody. `unlinkRelative`
+in `tree-ops.ts` is the counterpart to `linkRelative`.
+
+**Search is in the toolbar**, and the same `PersonSearch` component is the
+picker for linking — one interaction, one implementation.
+
+**Photos can be dropped onto the panel.** `lib/photos.ts` holds the rules,
+`photo-actions.ts` is the thin wrapper. Files go to `public/photos/uploads/`,
+owner-only, and imported photos are never deleted from disk — only detached.
+
+**Two surnames per person.** `surname` is the name at birth (the maiden name);
+`marriedName` is the one taken on marriage. MyHeritage exports the second as
+`_MARNM` and there are 36 of them. `fullName` was deliberately left alone — it
+is what every card, sort and search uses, so redefining it to mean the married
+name would have rippled everywhere for no gain. The panel shows the married name
+under the name; the form offers the field for women, and for anyone who already
+has one stored so an imported value can't become uneditable.
+
 Localised: English and Bulgarian via `next-intl`, picked on `/settings` and kept
 in a cookie (no `/en` `/bg` prefix, no middleware). Adding a language is three
 files — see [docs/i18n.md](docs/i18n.md).
@@ -38,9 +62,13 @@ external drive, encrypted volume, off the repo entirely. First run goes through
 `/welcome` (name → where to store it → language/theme → start from me or empty).
 Settings switches, renames, moves, adopts. See [docs/storage.md](docs/storage.md).
 
-Not built: Supabase, photo upload for people added in-app, linking two people who
-are *already* in the tree (`linkRelative` exists in `tree-ops.ts` but nothing
-calls it).
+Not built: Supabase, merging duplicate people, birth-order editing (the
+`position` column exists, no UI), adoption / step-parents (`unionChildren` has
+no qualifier), and **events other than birth / marriage / death**. The GEDCOM has
+`RESI` ×13, `BURI` ×5, `CAUS` ×4, `EVEN` ×2 and the parser drops them all; that
+needs a stored `events` row type merged into `buildFacts`, plus a decision on
+fixed vocabulary vs free text (facts return message *keys*, so a user-typed type
+can never be translated).
 
 ## Traps
 
@@ -51,6 +79,12 @@ the images are gone until you export again.
 **Don't commit `data/` or `public/photos/`.** Living relatives' names, birth
 dates, birthplaces, email addresses. Both are gitignored — keep it that way. Same
 reason: don't paste the export into online GEDCOM converters.
+
+**Backfill, don't re-import, when a field is added late.** `marriedName` landed
+after the first import, so the values were in the `.ged` and not in the store.
+`pnpm backfill:married` copies just that one field across, fills blanks only, and
+is a dry run unless given `--write`. Re-importing would have cost every in-app
+edit.
 
 **`pnpm import` wipes the store.** Once you edit in the app, the tree file is
 the system of record. Re-importing discards your edits. There is no two-way sync
@@ -66,6 +100,21 @@ during development this overwrote `package.json`. `assertLooksLikeTree` requires
 **Expand must grant the slider depth, not a fixed step.** `max(budget, 1)` looks
 harmless but the root already has the full budget while a spouse's is zeroed, so
 one button silently did two different things. Symmetry is the requirement.
+
+**`linkRelative` had a bug that only unused code can keep.** Its parent branch
+read `birthUnionOf(other) === birthUnionOf(anchor)` and threw "they'd be
+siblings" — but both are `undefined` when neither has parents on record, so it
+refused the commonest case of all. Nothing had ever called it.
+
+**Pruning empty unions must be scoped to the union you touched.** A sweep over
+the whole tree under the stricter rule ("a union needs a couple or a child")
+would also delete rows nobody asked about — the import left two single-wife
+childless unions in the real store. `pruneUnionIfMeaningless` takes an id;
+`pruneEmptyUnions` keeps the weaker "nobody in it at all" rule for deletions.
+
+**A child added to someone married twice needs an explicit union.** `addRelative`
+always took a `unionId`; nothing passed it, so the earliest marriage silently
+won. The add-child form now offers the choice when there is one.
 
 **Don't reach for dagre/ELK for the family view.** It was tried and produced
 tangles; generic layered layouters can't express "these two are married". The

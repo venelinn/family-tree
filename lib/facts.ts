@@ -30,6 +30,12 @@ export interface Fact {
 	titleKey: FactKey
 	/** A second person involved — spouse, child — for the avatar and name. */
 	relatedId?: string
+	/**
+	 * Set on marriage facts, because that fact *is* a union row and so it is the
+	 * one thing in this timeline that can be edited in place. Carried explicitly
+	 * rather than parsed back out of `id` — the id is an identity, not an API.
+	 */
+	unionId?: string
 	date?: string
 	place?: string
 }
@@ -69,6 +75,7 @@ export function buildFacts(graph: FamilyGraph, person: Person): Fact[] {
 				age: ageAt(person, union.marriageYear),
 				titleKey: union.divorced ? "marriageDivorced" : "marriage",
 				relatedId: spouseId,
+				unionId,
 				date: union.marriageDate,
 				place: union.marriagePlace,
 			})
