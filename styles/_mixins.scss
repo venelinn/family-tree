@@ -1,0 +1,269 @@
+@mixin resetList {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+@mixin sr-only {
+  position: absolute;
+  z-index: -1;
+
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+
+  border: 0;
+
+  clip: rect(0, 0, 0, 0);
+  color: #000000;
+  background: #ffffff;
+}
+
+@mixin closeButton {
+  --close-size: 36px;
+  position: var(--_close-position, absolute);
+  color: var(--_close-color, inherit);
+  right: 1rem;
+  top: 0.5rem;
+  z-index: 1;
+  width: var(--close-size);
+  height: var(--close-size);
+  background-color: transparent;
+
+  &:before,
+  &:after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 65%;
+    height: 2px;
+    @media (prefers-reduced-motion: no-preference) {
+      background: currentColor;
+      transition: all 0.35s var(--ease-in);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      background: currentColor;
+    }
+  }
+
+  &:before {
+    transform: translate3d(-50%, -50%, 0) rotate(-45deg);
+  }
+
+  &:after {
+    transform: translate3d(-50%, -50%, 0) rotate(45deg);
+  }
+  &:hover {
+    @media (prefers-reduced-motion: no-preference) {
+      &:before {
+        transform: translate3d(-50%, -50%, 0) rotate(45deg);
+      }
+
+      &:after {
+        transform: translate3d(-50%, -50%, 0) rotate(-45deg);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      color: currentColor;
+    }
+  }
+}
+
+/* ==========================================================================
+    Tools / Mixins / Typography
+========================================================================== */
+
+@mixin truncate($lines: 3) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: $lines;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/**
+ * Generates a converted font-size into REM
+ * @param font-size in pixel
+ */
+
+@mixin chevron($size: "lg") {
+  --_chevron-size-sm: 12px;
+  --_chevron-size-md: 14px;
+  --_chevron-size-lg: 24px;
+  --_chevron-hight-sm: 1px;
+  --_chevron-hight-md: 2px;
+  --_chevron-hight-lg: 2px;
+  --_chevron-ba-sm: 8px;
+  --_chevron-ba-md: 12px;
+  --_chevron-ba-lg: 16px;
+  --_chevron-gap-sm: 5px;
+  --_chevron-gap-md: 8px;
+  --_chevron-gap-lg: 10px;
+  z-index: 0;
+
+  display: var(--_accordion-chevron-display, block);
+  height: var(--_chevron-size-#{$size});
+  width: var(--_chevron-size-#{$size});
+  color: var(--_chevron-color, inherit);
+  -webkit-font-smoothing: antialiased;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+
+    height: var(--_chevron-hight-#{$size});
+
+    background-color: currentColor;
+    backface-visibility: hidden;
+    @media (prefers-reduced-motion: no-preference) {
+      transition-duration: 0.2s;
+      transition-property: transform, background;
+    }
+  }
+
+  &::before {
+    border-top-left-radius: 1px;
+    border-bottom-left-radius: 1px;
+    transform: var(--_chevron-before-transform, rotate(45deg));
+  }
+
+  &::after {
+    border-top-right-radius: 1px;
+    border-bottom-right-radius: 1px;
+    transform: var(--_chevron-after-transform, rotate(-45deg));
+  }
+
+  &::before,
+  &::after {
+    width: var(--_chevron-ba-#{$size});
+  }
+
+  &::after {
+    margin-left: var(--_chevron-gap-#{$size});
+  }
+}
+
+@mixin chevron-active {
+  &::before {
+    --_chevron-before-transform: rotate(-45deg);
+  }
+
+  &::after {
+    --_chevron-after-transform: rotate(45deg);
+  }
+}
+
+@mixin ellipsis($width: false) {
+  @if $width {
+    width: $width;
+  }
+
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@mixin truncate($lines: 2) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: $lines;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+@mixin card-clickable-base {
+  &:after {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: 0;
+    cursor: pointer;
+    content: "";
+  }
+}
+
+@mixin card-clickable-base {
+  &::after {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: 0;
+    cursor: pointer;
+    content: "";
+  }
+}
+
+@mixin border-shadow($asHover: false) {
+  box-shadow: var(--card-shadow);
+  @if $asHover {
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        box-shadow 0.3s ease-in-out,
+        border 0.3s ease-in-out;
+    }
+
+    &:hover {
+      --card-shadow: 0 0 0 1px var(--color-grey), 0 8px 16px 0 hsl(from var(--color-grey-light) h s l / 0.16);
+    }
+  }
+}
+
+@mixin card-clickable($link: var(--color-grey-light), $hover: var(--color-grey)) {
+  --_card-link-color: #{$link};
+  position: relative;
+
+  &:is(:hover, :focus) {
+    --_card-link-color: #{$hover};
+  }
+
+  .cardLink {
+    @include card-clickable-base;
+  }
+}
+
+@mixin card-link($zIndex: 1) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: $zIndex;
+
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  // Make sure the parent is relative
+
+  @media (any-hover: hover) {
+    &:hover {
+      text-decoration: none;
+    }
+  }
+}
+
+@mixin swiperPagination {
+  --swiper-pagination-bottom: auto;
+  .swiper-pagination-bullet {
+    --swiper-custom-pagination-color: var(--color-gray-100);
+    --swiper-pagination-bullet-width: var(--spacing-3);
+    --swiper-pagination-bullet-height: var(--spacing-3);
+    --swiper-pagination-bullet-inactive-color: transparent;
+    --swiper-pagination-bullet-inactive-opacity: 1;
+    border: 1px solid var(--swiper-custom-pagination-color);
+  }
+  .swiper-pagination-bullet-active {
+    --swiper-pagination-color: var(--color-grey);
+    --swiper-custom-pagination-color: var(--color-grey);
+  }
+}
+
+@mixin asBox {
+  box-shadow: var(--box-shadow-size) var(--box-shadow-color);
+  background-color: var(--_as-box-bgr, var(--surface-container));
+  padding: var(--_card-padding, var(--spacing-6));
+  border-radius: var(--_card-border-radius, var(--border-radius));
+  color: var(--_as-box-color);
+}

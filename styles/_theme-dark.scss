@@ -1,0 +1,103 @@
+// Midnight Blue — bgmtl dark theme
+//
+// Hand-maintained companion to the generated `_css-variables.css`. Activated by
+// `[data-theme="dark"]` on the `<html>` element (set pre-paint by the inline
+// script in `app/layout.tsx`). Light mode stays in the generated tokens and is
+// untouched.
+//
+// Strategy (pragmatic palette-override, see docs/dark-mode-implementation-plan):
+//   1. Re-map the SEMANTIC tokens (--surface, --on-surface, --primary, …).
+//   2. Re-map the SAFE raw palette (greys, accents, containers) directly — they
+//      are only ever borders / accents / muted text, never a literal that must
+//      survive (unlike --color-white as button text or --color-main as nav bg).
+//   3. The two conflicting raw tokens — --color-white and --color-main — are NOT
+//      overridden here; their background-vs-text split is handled per-component
+//      (white bg → --surface-container, main text → --on-surface).
+//
+// SMART KNOBS — tune one value and the whole theme re-tints:
+//   --dark-h re-tints everything · --dark-l brightens/darkens · --dark-s saturation
+// The 8 surface steps derive from these via calc(), so there's one anchor to edit.
+
+:root {
+	color-scheme: light;
+}
+
+[data-theme="dark"] {
+	--dark-h: 209; // brand hue (matches --color-main)
+	--dark-s: 42%;
+	--dark-l: 12%; // anchor lightness
+
+	// Native chrome + page surface.
+	color-scheme: dark;
+	background-color: var(--surface);
+	color: var(--on-surface);
+	accent-color: var(--primary);
+
+	// Surfaces — Material-3 luminance ladder derived from the knobs.
+	--surface: hsl(var(--dark-h) var(--dark-s) var(--dark-l)); // 12%
+	--surface-dim: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) - 2%)); // 10%
+	--surface-bright: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) + 9%)); // 21%
+	--surface-container-lowest: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) - 6%)); // 6%
+	--surface-container-low: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) - 2%)); // 10%
+	--surface-container: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) + 2%)); // 14%
+	--surface-container-high: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) + 5%)); // 17%
+	--surface-container-highest: hsl(var(--dark-h) var(--dark-s) calc(var(--dark-l) + 8%)); // 20%
+
+	// Text — muted off-whites, never pure white (low-light luxury).
+	--on-surface: hsl(210, 25%, 93%);
+	--on-surface-variant: hsl(212, 16%, 76%);
+	--inverse-surface: hsl(210, 25%, 93%);
+	--inverse-on-surface: hsl(var(--dark-h), var(--dark-s), var(--dark-l));
+
+	// Outline — hue-tinted so borders read blue, not grey, on blue surfaces.
+	--outline: hsl(var(--dark-h), 12%, 58%);
+	--outline-variant: hsla(210, 25%, 80%, 0.16);
+
+	// Accent + containers.
+	--primary: hsl(203, 85%, 66%);
+	--on-primary: hsl(209, 60%, 12%);
+	--primary-container: hsl(209, 50%, 24%);
+	--on-primary-container: hsl(203, 70%, 80%);
+	--secondary: hsl(162, 55%, 58%);
+	--on-secondary: hsl(162, 80%, 10%);
+	--error: hsl(354, 80%, 70%);
+	--on-error: hsl(354, 90%, 16%);
+	--background: var(--surface);
+	--on-background: var(--on-surface);
+
+	// ── Safe raw-palette overrides ──────────────────────────────────────────
+	// Borders / subtle backgrounds.
+	--color-grey-light: hsl(var(--dark-h), 38%, 16%); // subtle raised bg (was #f3f3f3)
+	--color-grey-mid: hsl(var(--dark-h), 38%, 18%); // (was #f2f2f2)
+	--color-grey-border: hsla(210, 25%, 80%, 0.16); // hairline (was #cccccc)
+	--color-grey: hsl(210, 12%, 62%); // mid grey, border + muted text (was #65675e)
+	--color-grey-dark: hsl(212, 16%, 78%); // muted text (was #444444)
+
+	// Accents.
+	--color-blue: hsl(203, 85%, 66%); // (was #0284d4)
+	--color-blue-light: hsl(203, 45%, 24%); // tint bg → dark blue (was #a7e1f4)
+	--color-green: hsl(162, 55%, 58%); // (was #00A674)
+	--color-highlight: hsl(0, 72%, 62%); // brand red, lifted so it doesn't vibrate (was #c62828)
+
+	// Elevation — on dark, the faint light-mode shadow vanishes; deepen it.
+	--box-shadow-color: hsla(var(--dark-h), 60%, 2%, 0.55);
+
+	// System — lifted off their dark light-mode values so they read on dark.
+	// --system-error is deliberately NOT lifted: it stays the brand crimson so
+	// the danger button renders identically to light mode. Error TEXT uses the
+	// theme-aware semantic --error (lifted, below) for legibility instead.
+	--system-success: hsl(154, 55%, 55%); // was 20% L
+	--system-warning: hsl(41, 85%, 60%);
+
+	// Body weight — Raleway 300 sub-pixel renders thin on dark surfaces.
+	--ui-body-font-weight: var(--font-weight-normal); // 300 → 400
+}
+
+// The header is permanent navy chrome in both themes, so its accent must not
+// flip with the page. Keep the active-page pill (`[data-highlight]`) the exact
+// brand red from light mode — the page keeps the lifted --color-highlight for
+// red-text contrast on dark, but inside the nav the original red reads fine
+// (white text on it stays legible, same as light).
+[data-theme="dark"] [data-header] {
+	--color-highlight: hsl(0, 66%, 47%); // light-mode --color-highlight (#c62828)
+}

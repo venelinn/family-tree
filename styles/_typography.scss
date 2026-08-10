@@ -1,0 +1,49 @@
+@use "styles/typo-mixins" as typo;
+
+// @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+@mixin typography {
+  // h1 {
+  // 	@include h1;
+  // }
+
+  // h2 {
+  // 	@include h2;
+  // }
+
+  // h3 {
+  // 	@include h3;
+  // }
+
+  // h4 {
+  // 	@include h4;
+  // }
+
+  .ui-body {
+    @include typo.ui-body;
+  }
+
+  .ui-caption {
+    @include typo.ui-caption;
+  }
+
+  .ui-small {
+    @include typo.ui-small;
+  }
+
+  .align-left {
+    text-align: left;
+  }
+
+  .align-right {
+    text-align: right;
+  }
+
+  .align-center {
+    text-align: center;
+  }
+
+  .uppercase {
+    text-transform: uppercase;
+  }
+}

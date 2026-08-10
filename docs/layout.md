@@ -54,6 +54,7 @@ Three rules keep a root-centred chart from becoming the whole file:
 | **Crossing a marriage ends the walk** (spouse gets 0/0) | The slot above a couple belongs to one of them; a second set of parents can only go sideways with a long line stretching back. MyHeritage collapses these too. |
 | **Descendants inherit no climb** | Both a child's parents are already on screen by construction, so leftover up-budget could only climb back out through an in-law. Without this, a spouse's whole ancestral line sneaks in via a shared child and defeats the rule above. |
 | **Collateral descent is capped** (`MAX_COLLATERAL_DESCENT`) | Climbing buys one more level back down so grandparents bring cousins — uncapped, each extra ancestor generation multiplies the clan back down again. |
+| **A hand-opened branch caps it harder** (`EXPANDED_COLLATERAL_DESCENT`) | The default chart wants some width; an expansion does not. See below. |
 
 A person reachable by several paths keeps the **generation from first sight**
 (cousin marriages make a person reachable at two depths, and flip-flopping would
@@ -128,8 +129,33 @@ a spouse's — whose budget is zeroed by the marriage-crossing rule — by a sin
 generation. One button, two behaviours, depending on whose card it sat on.
 
 The promise is "show this branch the way the main line is shown", so expanding a
-spouse brings their parents, both sets of grandparents and their collateral
-families, exactly as the root's own line arrives.
+spouse brings their parents and both sets of grandparents, exactly as the root's
+own line arrives.
+
+### Expansions don't fan
+
+What an expansion does *not* inherit is the full collateral allowance. Climbing
+buys descent so the default chart has some width to it — grandparents arriving
+with your cousins is most of what makes a family view feel like one — but
+applying that to an expansion is a different thing entirely. Opening one ancestor
+granted his parents three levels back down, and every generation above them the
+same again, so asking for one man's parents answered with sixty-five of his
+cousins:
+
+| Ceiling above a hand-opened branch | People | Chart width | Longest descent line |
+| --- | --- | --- | --- |
+| 3 (the default allowance) | 89 | 7,058px | 2,770px |
+| 1 (`EXPANDED_COLLATERAL_DESCENT`) | 34 | 3,078px | 940px |
+
+Measured on the real tree, expanding one great-grandparent from a 21-person
+chart. Of the 68 people the old ceiling added, **3 were the ancestors asked for
+and 65 were the fan.**
+
+The narrowed ceiling travels *with* the climb rather than being applied once —
+the generation above would otherwise widen it again and the fan would come
+straight back. The default view is untouched at 21 people; only branches opened
+by hand are affected, and the cousins are still one click away on their own
+cards, where the cost is visible before it is paid.
 
 ## Geometry
 

@@ -19,8 +19,34 @@ export const SIBLING_GAP = 48
 /** Gap between unrelated top-level subtrees. */
 export const SUBTREE_GAP = 84
 
-/** Vertical distance between generations in the family view. */
-export const GENERATION_GAP = 76
+/**
+ * Vertical distance between generations in the family view.
+ *
+ * This has to hold the sibling bars, not just separate the rows. At 76 the
+ * midpoint of the drop landed about 5px under the cards, so every horizontal run
+ * hugged the row above it and two families' runs were told apart only by which
+ * pixel they were on. The gap now has room for a band of bars beneath the cards
+ * with clear air on both sides.
+ */
+export const GENERATION_GAP = 116
+
+/**
+ * Where a union's sibling bar sits, measured up from the top of the children's
+ * row, and how far apart two bars are stacked when they would otherwise overlap.
+ *
+ * Anchoring to the children rather than to the midpoint is what keeps the bars
+ * in a consistent band: a reader following a line down finds every bar at the
+ * same height above the cards it feeds, whatever the generation.
+ */
+export const DESCENT_BUS_INSET = 46
+export const DESCENT_LANE_STEP = 15
+
+/**
+ * Corner radius where a descent line turns into the sibling bar. Lives here
+ * rather than in the canvas because the custom descent edge needs it too, and
+ * two copies would drift.
+ */
+export const CORNER_RADIUS = 14
 
 /** The union marker is a small dot the couple and their children connect through. */
 export const UNION_SIZE = 10

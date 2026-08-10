@@ -2,6 +2,8 @@ import { byBirthYear, type FamilyGraph } from "../family-graph"
 import {
 	CARD_HEIGHT,
 	CARD_WIDTH,
+	DESCENT_BUS_INSET,
+	DESCENT_LANE_STEP,
 	ROW_HEIGHT,
 	SIBLING_GAP,
 	SPOUSE_GAP,
@@ -74,10 +76,30 @@ interface Reach {
 	generation: number
 	up: number
 	down: number
+	/** Ceiling this person's climb passes on; see `EXPANDED_COLLATERAL_DESCENT`. */
+	collateralCap: number
 }
 
 /** Ceiling on how far an ancestor's own descendants are followed back down. */
 const MAX_COLLATERAL_DESCENT = 3
+
+/**
+ * The same ceiling, for a branch the user opened by hand.
+ *
+ * Climbing buys collateral descent so that the *default* chart has some width to
+ * it — grandparents arriving with your cousins is most of what makes a family
+ * view feel like one. Applying that to an expansion is a different thing
+ * entirely: opening one ancestor granted his parents a full three levels back
+ * down, and each generation above them the same again, so asking for one man's
+ * parents answered with sixty-five of his cousins. Measured on this tree,
+ * expanding a single great-grandparent went 21 → 89 people and 7,058px wide, of
+ * which 3 were the ancestors asked for and 65 were the fan.
+ *
+ * At one level you get the ancestors, their siblings, and stop — "show me who
+ * these people were", which is the question the button asks. Their children are
+ * another click away, on their own cards, where the cost is visible.
+ */
+const EXPANDED_COLLATERAL_DESCENT = 1
 
 /**
  * Turn a budget plus a user override into an actual allowance.
@@ -130,12 +152,13 @@ function selectNeighborhood(
 		generation: number,
 		up: number,
 		down: number,
+		collateralCap: number,
 	) => {
 		if (!graph.people.has(id)) return
 
 		const existing = reach.get(id)
 		if (!existing) {
-			reach.set(id, { generation, up, down })
+			reach.set(id, { generation, up, down, collateralCap })
 			order.set(id, order.size)
 			queue.push(id)
 			return
@@ -145,13 +168,19 @@ function selectNeighborhood(
 		// reachable at two different depths and flip-flopping would destabilise
 		// the rows. Budgets, though, upgrade: the most generous path should win,
 		// otherwise reach depends on BFS order rather than on the data.
-		if (up <= existing.up && down <= existing.down) return
+		if (
+			up <= existing.up &&
+			down <= existing.down &&
+			collateralCap <= existing.collateralCap
+		)
+			return
 		existing.up = Math.max(existing.up, up)
 		existing.down = Math.max(existing.down, down)
+		existing.collateralCap = Math.max(existing.collateralCap, collateralCap)
 		queue.push(id)
 	}
 
-	consider(rootId, 0, ancestorDepth, descendantDepth)
+	consider(rootId, 0, ancestorDepth, descendantDepth, MAX_COLLATERAL_DESCENT)
 
 	while (queue.length > 0) {
 		const personId = queue.shift() as string
@@ -185,10 +214,17 @@ function selectNeighborhood(
 				// level of descent, which is what brings a spouse's siblings onto
 				// the chart alongside their parents. It stops there — the siblings'
 				// own children need another click.
-				const collateral = Math.min(down + 1, MAX_COLLATERAL_DESCENT)
+				// A branch opened by hand narrows the ceiling from here upward, and
+				// the narrower value travels with the climb — otherwise the very
+				// next generation would widen it again and the fan would return.
+				const cap =
+					ancestorOverrides.get(personId) === true
+						? EXPANDED_COLLATERAL_DESCENT
+						: current.collateralCap
+				const collateral = Math.min(down + 1, cap)
 				for (const parentId of [birthUnion.husbandId, birthUnion.wifeId]) {
 					if (parentId) {
-						consider(parentId, generation - 1, upAllowance - 1, collateral)
+						consider(parentId, generation - 1, upAllowance - 1, collateral, cap)
 					}
 				}
 			}
@@ -208,7 +244,7 @@ function selectNeighborhood(
 			// back, since `consider` keeps the most generous path.
 			const spouseId =
 				union.husbandId === personId ? union.wifeId : union.husbandId
-			if (spouseId) consider(spouseId, generation, 0, 0)
+			if (spouseId) consider(spouseId, generation, 0, 0, current.collateralCap)
 
 			// Descendants inherit no climb. Both their parents are already on screen
 			// by construction, so any remaining up-budget could only be spent
@@ -217,7 +253,13 @@ function selectNeighborhood(
 			// rule above.
 			if (downAllowance > 0) {
 				for (const childId of union.childIds) {
-					consider(childId, generation + 1, 0, downAllowance - 1)
+					consider(
+						childId,
+						generation + 1,
+						0,
+						downAllowance - 1,
+						current.collateralCap,
+					)
 				}
 			}
 		}
@@ -776,5 +818,90 @@ export function layoutFamily(
 		}
 	}
 
+	assignDescentLanes(nodes, edges)
+
 	return { nodes, edges, visibleCount: neighborhood.generations.size }
+}
+
+/**
+ * Give every union's sibling bar a height, stacking the ones that would collide.
+ *
+ * All the descent edges leaving a union overlay into a single horizontal run —
+ * that's the sibling bar, and it is the whole reason for union nodes. What the
+ * bar can't do on its own is stay distinguishable: every union on a row put its
+ * run at the same y, so two families whose spans crossed drew one line and there
+ * was no way to see which end belonged to which parents. A couple whose child
+ * married in sits far from that child, so the crossings are not rare — on the
+ * real tree, three pairs of bars shared a line, one of them for 1,696px.
+ *
+ * So bars are lanes, assigned per row by interval colouring: sort by left edge,
+ * and take the first lane whose previous occupant has already ended. Bars that
+ * do not overlap keep lane 0 and the common case looks exactly as before; only
+ * the ones that would have been drawn on top of each other move.
+ *
+ * Greedy is optimal here — this is interval-graph colouring, where sorting by
+ * left endpoint is exact rather than approximate — so no arrangement of the same
+ * bars would use fewer lanes.
+ */
+function assignDescentLanes(nodes: LayoutNode[], edges: LayoutEdge[]): void {
+	const positions = new Map(nodes.map((node) => [node.id, node]))
+
+	/** One entry per union that has children drawn: its row and horizontal reach. */
+	const bars = new Map<
+		string,
+		{ childTop: number; left: number; right: number }
+	>()
+
+	for (const edge of edges) {
+		if (edge.kind !== "descent") continue
+		const union = positions.get(edge.source)
+		const child = positions.get(edge.target)
+		if (!union || !child) continue
+
+		const unionCenter = union.x + UNION_SIZE / 2
+		const childCenter = child.x + CARD_WIDTH / 2
+		const bar = bars.get(edge.source) ?? {
+			childTop: child.y,
+			left: unionCenter,
+			right: unionCenter,
+		}
+		bar.left = Math.min(bar.left, unionCenter, childCenter)
+		bar.right = Math.max(bar.right, unionCenter, childCenter)
+		bars.set(edge.source, bar)
+	}
+
+	// Colour each row independently: bars on different rows can never collide.
+	type Bar = { childTop: number; left: number; right: number }
+	const rows = new Map<number, Array<[string, Bar]>>()
+	for (const [unionId, bar] of bars) {
+		const row = rows.get(bar.childTop) ?? []
+		row.push([unionId, bar])
+		rows.set(bar.childTop, row)
+	}
+
+	const lanes = new Map<string, number>()
+	for (const row of rows.values()) {
+		row.sort((a, b) => a[1].left - b[1].left)
+		/** Rightmost point reached so far in each lane. */
+		const occupied: number[] = []
+		for (const [unionId, bar] of row) {
+			let lane = occupied.findIndex((end) => end <= bar.left)
+			if (lane === -1) lane = occupied.length
+			occupied[lane] = bar.right
+			lanes.set(unionId, lane)
+		}
+	}
+
+	for (const edge of edges) {
+		if (edge.kind !== "descent") continue
+		const bar = bars.get(edge.source)
+		if (!bar) continue
+		// Measured up from the children, so the band sits a fixed distance above
+		// the cards it feeds. Extra lanes stack towards the parents, into the gap
+		// that `GENERATION_GAP` exists to provide.
+		edge.busY =
+			bar.childTop -
+			DESCENT_BUS_INSET -
+			(lanes.get(edge.source) ?? 0) * DESCENT_LANE_STEP
+	}
 }

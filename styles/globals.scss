@@ -1,0 +1,312 @@
+@use 'base-variables' as base;
+@use 'mixins' as shared;
+@use 'typo-mixins' as typo;
+@use 'normalize' as normalize;
+@use 'typography';
+@use 'css-variables';
+@use 'theme-dark';
+@use 'layout' as layout;
+
+@layer frameworks, reset, base, theme, layouts, components, utilities;
+
+@layer base {
+  @include layout.content;
+  @include normalize.styles;
+}
+
+@layer theme {
+  @include typography.typography;
+}
+
+@layer utilities {
+  @import 'tailwindcss/theme.css';
+  @import 'tailwindcss/utilities.css';
+}
+
+:root {
+  --swiper-navigation-color: var(--color-blue);
+  --swiper-pagination-color: var(--color-blue);
+
+  --page-max-width: 1120px;
+  --padding-desktop: 1.5rem;
+  --padding-mobile: 1rem;
+
+  --link-line-space: 3px;
+
+  // Animations
+  --anim-line-speed: 300ms;
+  --anim-line: cubic-bezier(0.42, 0.63, 0.13, 0.99);
+  --ease-in: cubic-bezier(0.43, 0.045, 0.1, 0.95);
+  --text-in: cubic-bezier(0.31, 0.11, 0.12, 0.99);
+}
+
+
+/* Master kill switch: NEXT_PUBLIC_VIEW_TRANSITIONS=false sets data-vt="off" on
+   <html> (app/layout.tsx). Collapse every view-transition group to an instant
+   swap so disabling the env var fully removes the animation even if the browser
+   would otherwise apply a default. */
+html[data-vt="off"]::view-transition-group(*),
+html[data-vt="off"]::view-transition-old(*),
+html[data-vt="off"]::view-transition-new(*) {
+  animation: none !important;
+}
+
+/* View Transitions — activated on App Router navigations via React's
+   <ViewTransition> (experimental.viewTransition in next.config.js). */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  /* Gentle cross-fade for the page as a whole, so the shared-element hero morph
+     (see `.morph` below) is the focal motion rather than competing with a
+     full-viewport slide. */
+  ::view-transition-old(root) {
+    animation: vt-fade-out 300ms var(--ease-in) both;
+  }
+  ::view-transition-new(root) {
+    animation: vt-fade-in 300ms var(--ease-in) both;
+  }
+
+  @keyframes vt-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes vt-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* Shared-element morph: event card cover → event detail hero.
+   Both <Image>s are wrapped in React's <ViewTransition share="morph"> with a
+   matching `name` (Event.tsx + Hero.tsx). `share="morph"` adds the `morph`
+   class to the resulting transition group, so we can tune it here regardless of
+   the per-event name. */
+@media (prefers-reduced-motion: no-preference) {
+  /* Animate the box from the card rect to the hero rect. */
+  ::view-transition-group(.morph) {
+    animation-duration: 450ms;
+    animation-timing-function: var(--ease-in);
+  }
+  /* The smoothness fix: the card cover (4:3) and the hero (wide, full-bleed)
+     have very different aspect ratios. By default the two snapshots cross-fade
+     at their own shapes and visibly squish. Forcing both to cover-fill the
+     morphing box keeps them the same shape every frame, so the crop glides
+     instead of distorting. */
+  ::view-transition-old(.morph),
+  ::view-transition-new(.morph) {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+  /* A faint blur over the cross-fade hides any residual pixel interpolation. */
+  ::view-transition-image-pair(.morph) {
+    animation-name: morph-blur;
+  }
+  @keyframes morph-blur {
+    35% {
+      filter: blur(2px);
+    }
+  }
+}
+
+/* Homepage load choreography — staggered fade + rise.
+   Gated by `html[data-home-intro]`, set pre-paint by the inline script in
+   app/layout.tsx (homepage only, once per session, skipped for reduced motion).
+   Keyed off the existing `data-anim` hooks (driven by `animationID` in
+   Contentful). We animate the hero IMAGE layer only — the hero title/content
+   reveal is owned by the Hero itself (`hero__content--animate`, on by default),
+   so animating it here too would double up.
+   Order: hero image → navigation → the rest. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-home-intro] {
+    /* 1 — hero image layer (opacity only; Hero owns its transform/Ken Burns).
+       Targeted via the stable data hook, not the hashed CSS-module class. */
+    [data-hero-background] {
+      animation: home-intro-fade 800ms var(--ease-in) 0ms both;
+    }
+    /* 2 — site navigation (drops in from the top). */
+    [data-anim="navigation"] {
+      animation: home-intro-drop 600ms var(--ease-in) 550ms both;
+    }
+    /* 3 — the rest: every section after the hero (hero is the first child). */
+    .page .content-grid > :nth-child(n + 2) {
+      animation: home-intro-rise 700ms var(--ease-in) 750ms both;
+    }
+  }
+}
+
+@keyframes home-intro-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes home-intro-rise {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+  }
+}
+@keyframes home-intro-drop {
+  from {
+    opacity: 0;
+    translate: 0 -16px;
+  }
+}
+
+/* Document
+========================================================================== */
+html {
+  height: 100%;
+  width: 100%;
+}
+
+html {
+  -moz-osx-font-smoothing: grayscale;
+  -ms-overflow-style: scrollbar;
+  -ms-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: rgba(var(--color-ocean), 0.15);
+  -webkit-text-size-adjust: 100%;
+  padding: 0;
+  margin: 0;
+	container-type: scroll-state;
+  container-name: page;
+	scrollbar-gutter: stable;
+  scroll-padding-top: var(--navigation-height);
+  // color-scheme: light dark;
+  // @media (prefers-reduced-motion: no-preference) {
+  //   scroll-behavior: smooth;
+  // }
+}
+
+body {
+  @include typo.ui-body;
+  margin: 0;
+  min-height: 100dvh;
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  &:has(.page .content-grid > .full-max) {
+    --_nav-mb: 0;
+  }
+	 &:has([data-modal][open]) {
+    overflow: hidden;
+  }
+  &:has([data-hero]) {
+    --_navigation-bgr: linear-gradient(rgba(0, 0, 0, .9), transparent);
+		--_header-bgr: transparent;
+		--_navigation-mbe: calc(-1 * var(--_header-height, 80px));
+  }
+}
+
+/* Light-green text selection site-wide, echoing the brand accent. */
+::selection {
+  background: color-mix(in srgb, var(--color-green) 15%, transparent);
+}
+
+/* Consistent, smoothly-fading focus ring on every form field. The transparent
+   outline sits up front so it can transition (outline can't animate from
+   `none`). Wrapped in :where() for ZERO specificity, so it's only a baseline —
+   any component with its own focus styling (Forms/Input's blue ring, Search's
+   intentional `outline: none`, the Join card's green) overrides it cleanly. */
+:where(input, textarea, select) {
+  outline: 2px solid transparent;
+  transition: outline-color 0.5s ease, border-color 0.5s ease;
+
+  &:focus-visible {
+    outline-color: color-mix(in srgb, var(--color-green) 50%, transparent);
+  }
+}
+/* ==========================================================================
+    Global
+========================================================================== */
+
+@layer utilities {
+  .page {
+    flex: 1 0 auto;
+    display: grid;
+    align-content: start;
+    &__with-sidebar {
+      display: grid;
+      margin-top: var(--spacing-6);
+      @media (width > base.$breakpoint-md) {
+        grid-template-columns: 1fr auto;
+      }
+      gap: 2rem;
+      padding-bottom: 2rem;
+    }
+    &__main {
+      container-type: inline-size;
+      container-name: page__main;
+    }
+  }
+  .rel {
+    position: relative;
+  }
+
+  .logo-brand {
+    fill: #00c2f4;
+  }
+
+  .u-visuallyHidden {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+  }
+
+  .u-overflow--hidden {
+    overflow: hidden;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .hidden-visible {
+    visibility: hidden;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  small {
+    @include typo.ui-small;
+  }
+  strong,
+  b {
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+// LINK
+.link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: var(--link-color, inherit);
+  transition: font-weight 0.3s ease;
+  text-shadow: var(--_link-text-shadow);
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// logo

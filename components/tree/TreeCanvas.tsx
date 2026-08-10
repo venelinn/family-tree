@@ -24,6 +24,7 @@ import {
 import type { LayoutNode, LayoutResult, ViewType } from "@/lib/layout/types"
 import type { ThemePreference } from "@/lib/theming"
 import { AddSlotCard } from "./AddSlotCard"
+import { DescentEdge } from "./DescentEdge"
 import { PersonCard } from "./PersonCard"
 import { PlaceholderCard } from "./PlaceholderCard"
 import { UnionCard } from "./UnionCard"
@@ -37,11 +38,13 @@ const nodeTypes = {
 	addSlot: AddSlotCard,
 }
 
+/** Same reason as `nodeTypes`: module scope, or React Flow remounts every edge. */
+const edgeTypes = {
+	descent: DescentEdge,
+}
+
 /** Below this, card text stops being legible — pan instead of shrinking further. */
 const MIN_READABLE_ZOOM = 0.6
-
-/** Corner radius where a descent line turns into the sibling bar. */
-const CORNER_RADIUS = 14
 
 /** Breathing room around the chart when it does fit, as a multiplier. */
 const FIT_PADDING = 1.15
@@ -121,13 +124,13 @@ export function TreeCanvas({
 				target: edge.target,
 				sourceHandle: edge.sourceHandle,
 				targetHandle: edge.targetHandle,
-				type: edge.kind === "spouse" ? "straight" : "smoothstep",
+				type: edge.kind === "spouse" ? "straight" : "descent",
 				// Descent lines drop from the union, run along a shared sibling bar
-				// and turn down into each child. `smoothstep` rounds those two
-				// corners; the default 5px barely reads once the chart is zoomed
-				// out, so open it up to match the softer genealogy-chart look.
-				pathOptions:
-					edge.kind === "descent" ? { borderRadius: CORNER_RADIUS } : undefined,
+				// and turn down into each child. `DescentEdge` rounds those two
+				// corners — the default 5px barely reads once the chart is zoomed
+				// out — and puts the bar at the height the layout assigned it, so
+				// two families' bars never land on the same line.
+				data: edge.kind === "descent" ? { busY: edge.busY } : undefined,
 				focusable: false,
 				selectable: false,
 				// CSS variables rather than hex, so the theme is resolved by the
@@ -241,6 +244,7 @@ export function TreeCanvas({
 			onNodesChange={onNodesChange}
 			onEdgesChange={onEdgesChange}
 			nodeTypes={nodeTypes}
+			edgeTypes={edgeTypes}
 			onNodeClick={(_, node) => {
 				if (node.type === "person") onSelect(node.id)
 			}}

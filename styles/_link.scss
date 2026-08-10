@@ -1,0 +1,38 @@
+
+// Links
+
+@mixin linkHoverCommon {
+	position: relative;
+
+  &:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--link-width, 0);
+    height: 100%;
+    border-bottom: var(--link-line, 1px) solid var(--link-line-color, currentColor);
+		@media (prefers-reduced-motion: no-preference) {
+			transition: width var(--anim-line-speed) var(--anim-line);
+		}
+	}
+}
+
+@mixin linkHover {
+	@include linkHoverCommon;
+  position: relative;
+
+  &:before {
+    .active>& {
+      --link-width: 100%;
+    }
+		:hover > &,
+		:focus > & {
+			--link-width: 100%;
+		}
+  }
+}
+
+@mixin link-hover-anim() {
+  animation: activeLink var(--anim-line-speed) var(--anim-line);
+}

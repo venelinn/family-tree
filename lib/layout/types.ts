@@ -117,6 +117,16 @@ export interface LayoutEdge {
 	targetHandle: "left" | "top"
 	/** Rendered dashed, for divorced couples. */
 	dashed?: boolean
+	/**
+	 * Absolute y for a descent edge's horizontal run — its sibling bar.
+	 *
+	 * The layout decides this rather than the renderer, for the same reason it
+	 * decides handles: only the layout can see that two families' bars would
+	 * land on the same line, which is the thing that makes a chart unreadable.
+	 * Every edge out of one union carries the same value, so they still overlay
+	 * into a single bar.
+	 */
+	busY?: number
 }
 
 export interface LayoutResult {

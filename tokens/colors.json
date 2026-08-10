@@ -1,0 +1,27 @@
+{
+	"system": {
+		"error": { "value": "#b3002f" },
+		"error-light": { "value": "#fff2f2" },
+		"success": { "value": "#046239" },
+		"warning": { "value": "#f4ae11" },
+		"warning-light": { "value": "#fff8e6" },
+		"white": { "value": "#ffffff" },
+		"black": { "value": "#000000" }
+	},
+	"color": {
+		"main": { "value": "#022443" },
+		"highlight": { "value": "#c62828" },
+		"blue": { "value": "#0284d4" },
+		"green": { "value": "#00A674" },
+		"blue-dark": { "value": "#0f2541" },
+		"blue-light": { "value": "#a7e1f4" },
+		"lime": { "value": "#bef564" },
+		"grey": { "value": "#65675e" },
+		"grey-light": { "value": "#f3f3f3" },
+		"grey-dark": { "value": "#444444" },
+		"grey-mid": { "value": "#f2f2f2" },
+		"grey-border": { "value": "#cccccc" },
+		"white": { "value": "{system.white}" },
+		"black": { "value": "{system.black}" }
+	}
+}

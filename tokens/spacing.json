@@ -1,0 +1,24 @@
+{
+	"spacing": {
+		"0-5": { "value": "2px", "comment": "2px" },
+		"1": { "value": "4px", "comment": "4px" },
+		"1-5": { "value": "6px", "comment": "6px" },
+		"2": { "value": "8px", "comment": "8px" },
+		"2-5": { "value": "10px", "comment": "10px" },
+		"3": { "value": "12px", "comment": "12px" },
+		"4": { "value": "16px", "comment": "16px" },
+		"4-5": { "value": "18px", "comment": "18px" },
+		"5": { "value": "20px", "comment": "20px" },
+		"5-5": { "value": "22px", "comment": "22px" },
+		"6": { "value": "24px", "comment": "24px" },
+		"6-5": { "value": "26px", "comment": "26px" },
+		"7": { "value": "28px", "comment": "28px" },
+		"7-5": { "value": "30px", "comment": "30px" },
+		"8": { "value": "32px", "comment": "32px" },
+		"8-5": { "value": "34px", "comment": "34px" },
+		"10": { "value": "40px", "comment": "40px" },
+		"12": { "value": "48px", "comment": "48px" },
+		"14": { "value": "60px", "comment": "60px" },
+		"18": { "value": "72px", "comment": "72px" }
+	}
+}

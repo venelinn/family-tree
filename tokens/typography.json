@@ -1,0 +1,89 @@
+{
+	"font": {
+		"size": {
+			"base": { "value": "16px" }
+		},
+		"weight": {
+			"light": { "value": 300 },
+			"normal": { "value": 400 },
+			"medium": { "value": 500 },
+			"semibold": { "value": 600 },
+			"bold": { "value": 600 },
+			"extrabold": { "value": 700 },
+			"black": { "value": 800 },
+			"base": { "value": "{font.weight.normal}" }
+		}
+	},
+	"heading": {
+		"margin": {
+			"top": { "value": "0" },
+			"bottom": { "value": "0.5rem" }
+		},
+		"size": {
+			"hero": {
+				"font-size": { "value": "54px" },
+				"line-height": { "value": "70px" },
+				"font-weight": { "value": "{font.weight.medium}" }
+			},
+			"h1": {
+				"font-size": { "value": "54px" },
+				"line-height": { "value": "70px" },
+				"font-weight": { "value": "{font.weight.black}" }
+			},
+			"h2": {
+				"font-size": { "value": "32px" },
+				"line-height": { "value": "38px" },
+				"font-weight": { "value": "{font.weight.medium}" }
+			},
+			"h3": {
+				"font-size": { "value": "24px" },
+				"line-height": { "value": "30px" },
+				"font-weight": { "value": "{font.weight.medium}" }
+			},
+			"h4": {
+				"font-size": { "value": "20px" },
+				"line-height": { "value": "26px" },
+				"font-weight": { "value": "{font.weight.medium}" }
+			}
+		}
+	},
+	"ui": {
+		"body": {
+			"font-size": { "value": "16px" },
+			"line-height": { "value": "24px" },
+			"font-weight": { "value": "{font.weight.light}" },
+			"color": { "value": "{color.grey-dark}" },
+			"bg-color": { "value": "{color.white}" }
+		},
+		"caption": {
+			"font-size": { "value": "14px" },
+			"line-height": { "value": "18px" },
+			"font-weight": { "value": "{font.weight.normal}" },
+			"font-style": { "value": "normal" }
+		},
+		"small": {
+			"font-size": { "value": "12px" },
+			"line-height": { "value": "16px" },
+			"font-weight": { "value": "{font.weight.light}" },
+			"font-style": { "value": "normal" }
+		}
+	},
+	"body": {
+		"font": {
+			"size": { "value": "{font.size.base}" },
+			"weight": { "value": "{font.weight.base}" },
+			"line-height": { "value": "1.3" },
+			"letter-spacing": { "value": "normal" }
+		}
+	},
+	"paragraph": {
+		"margin": {
+			"bottom": { "value": "1rem" }
+		}
+	},
+	"label": {
+		"margin": {
+			"bottom": { "value": "0.5rem" }
+		}
+	}
+}
