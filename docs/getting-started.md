@@ -2,22 +2,44 @@
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:3022
+pnpm dev          # web, http://localhost:3022
+pnpm app          # desktop, a native window
 ```
 
 If `data/tree.json` doesn't exist yet, the app renders an empty tree. See
 **Refreshing data** below.
 
+## The desktop app
+
+`pnpm app` runs the same UI inside a [Tauri](https://v2.tauri.app) window. It
+needs the Rust toolchain, which is a one-time install and after which you do not
+write any Rust:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Xcode Command Line Tools are also required (`xcode-select --install`). The first
+`pnpm app` compiles the Rust side and takes a couple of minutes; every one after
+that is seconds.
+
+In dev, Tauri points the window at the running `next dev` server, so hot reload
+works exactly as it does in the browser. `pnpm app:build` produces a `.dmg`.
+
+macOS only for now — see [decisions.md](decisions.md#a-desktop-app-as-well-as-a-web-app).
+
 ## Scripts
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Dev server on port 3022 |
-| `pnpm build` | Production build |
+| `pnpm dev` | Web dev server on port 3022 |
+| `pnpm app` | Desktop app in a native window (starts `pnpm dev` for you) |
+| `pnpm build` | Production build of the web target |
+| `pnpm app:build` | Desktop `.dmg` |
 | `pnpm lint` | Biome check (lint + format + import order) |
 | `pnpm format` | Biome format, writing changes |
 | `pnpm photos` | Download photos from an export into `public/photos/`, rewrite the export to local paths |
-| `pnpm import` | One-way import of a `.ged` into `data/tree.json` |
+| `pnpm import` | One-way import of a `.ged` into the active tree |
 
 ## Refreshing data from MyHeritage
 

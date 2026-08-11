@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation"
 import { getLocale } from "next-intl/server"
 import { Onboarding } from "@/components/Onboarding"
+// Side effect only: installs the `node:fs` backend under the store.
+import "@/lib/store/fs.server"
 import { defaultTreeDir, listTrees } from "@/lib/store/registry"
 import { getUserTheme } from "@/lib/theme"
 
@@ -27,7 +29,7 @@ export default async function WelcomePage({
 
 	return (
 		<Onboarding
-			defaultDir={defaultTreeDir()}
+			defaultDir={await defaultTreeDir()}
 			locale={await getLocale()}
 			theme={await getUserTheme()}
 			hasTrees={trees.length > 0}

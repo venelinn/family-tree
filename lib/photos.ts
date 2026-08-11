@@ -1,7 +1,3 @@
-import { createHash } from "node:crypto"
-import { existsSync } from "node:fs"
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises"
-import path from "node:path"
 import { TreeOpError } from "./errors"
 import {
 	EXTENSIONS,
@@ -16,7 +12,9 @@ import {
 	photoEntry,
 	photoFile,
 } from "./store/bundle"
+import { dataDir, exists, mkdir, readFile, remove, writeFile } from "./store/fs"
 import type { LocalTreeStore } from "./store/local"
+import * as path from "./store/path"
 
 /**
  * Photo operations, kept below the server-action boundary.
@@ -41,6 +39,20 @@ import type { LocalTreeStore } from "./store/local"
 
 /** 12 MB — a phone photo of a photo, without inviting a video. */
 export const MAX_BYTES = 12 * 1024 * 1024
+
+/**
+ * SHA-256 of the sanitised bytes, hex — what a stored photo is named after.
+ *
+ * WebCrypto rather than `node:crypto` so the same code hashes in the webview and
+ * under `tsx`; `crypto.subtle` is standard in both. It needs a secure context,
+ * which `tauri://` and `http://localhost` both are.
+ */
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+	const digest = await crypto.subtle.digest("SHA-256", bytes as BufferSource)
+	return Array.from(new Uint8Array(digest))
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("")
+}
 
 async function personOrThrow(store: LocalTreeStore, personId: string) {
 	const snapshot = await store.read()
@@ -82,13 +94,13 @@ export async function savePhoto(
 
 	const { person } = await personOrThrow(store, personId)
 
-	const hash = createHash("sha256").update(sanitised).digest("hex")
+	const hash = await sha256Hex(sanitised)
 	const entry = `${hash}.${EXTENSIONS[format]}`
 	const target = photoFile(photoDir, entry)
 	if (!target) throw new TreeOpError("photoType")
 
 	// Same bytes, same name: an identical photo added twice is already there.
-	if (!existsSync(target)) {
+	if (!(await exists(target))) {
 		await mkdir(path.dirname(target), { recursive: true, mode: DIR_MODE })
 		await writeFile(target, sanitised, { mode: FILE_MODE })
 	}
@@ -123,7 +135,7 @@ export async function removePhoto(
 			candidate.id !== personId && candidate.photos.includes(entry),
 	)
 	const file = photoFile(photoDir, entry)
-	if (!stillUsed && file && existsSync(file)) await unlink(file)
+	if (!stillUsed && file && (await exists(file))) await remove(file)
 
 	return photos
 }
@@ -154,7 +166,7 @@ const CONTENT_TYPES: Record<string, string> = {
 }
 
 export interface StoredPhoto {
-	bytes: Buffer
+	bytes: Uint8Array
 	contentType: string
 }
 
@@ -176,7 +188,7 @@ export async function readPhoto(
 	if (!photoDir) return undefined
 
 	const file = photoFile(photoDir, entry)
-	if (!file || !existsSync(file)) return undefined
+	if (!file || !(await exists(file))) return undefined
 
 	const extension = path.extname(entry).slice(1)
 	const contentType = CONTENT_TYPES[extension]
@@ -199,8 +211,14 @@ export async function readPhoto(
 export async function ingestServedPhotos(
 	photoDir: string,
 	people: { photos: string[] }[],
-	publicDir = path.join(process.cwd(), "public"),
+	publicDir?: string,
 ): Promise<{ copied: number; missing: number }> {
+	// `public/` sits beside the data directory in a checkout, which is where the
+	// `/photos/…` references left by `pnpm photos` resolve against. The desktop
+	// app has no `public/` on disk at all, so nothing resolves and every such
+	// reference is reported missing — correct, since those files genuinely are
+	// not there, and only reachable from a tree predating bundles anyway.
+	const root = publicDir ?? path.join(path.dirname(await dataDir()), "public")
 	let copied = 0
 	let missing = 0
 	// The same photo is attached to several siblings, and adopting means a read
@@ -220,7 +238,7 @@ export async function ingestServedPhotos(
 				// Served paths are rooted at `public/`. Anything else — a remote URL
 				// in a tree that was never localised — has no local file to take.
 				const file = original.startsWith("/")
-					? path.join(publicDir, original)
+					? path.join(root, original)
 					: undefined
 				seen.set(
 					original,
@@ -251,9 +269,9 @@ export async function adoptPhotoFile(
 	photoDir: string,
 	source: string,
 ): Promise<string | undefined> {
-	if (!existsSync(source)) return undefined
+	if (!(await exists(source))) return undefined
 
-	const bytes = new Uint8Array(await readFile(source))
+	const bytes = await readFile(source)
 	const format = sniff(bytes)
 	if (!format) return undefined
 
@@ -265,12 +283,12 @@ export async function adoptPhotoFile(
 		throw error
 	}
 
-	const hash = createHash("sha256").update(sanitised).digest("hex")
+	const hash = await sha256Hex(sanitised)
 	const entry = `${hash}.${EXTENSIONS[format]}`
 	const target = photoFile(photoDir, entry)
 	if (!target) return undefined
 
-	if (!existsSync(target)) {
+	if (!(await exists(target))) {
 		await mkdir(path.dirname(target), { recursive: true, mode: DIR_MODE })
 		await writeFile(target, sanitised, { mode: FILE_MODE })
 	}

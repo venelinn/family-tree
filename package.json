@@ -4,6 +4,9 @@
 	"private": true,
 	"scripts": {
 		"dev": "pnpm run build-dictionary && next dev -p 3022",
+		"app": "tauri dev",
+		"app:build": "tauri build",
+		"tauri": "tauri",
 		"clean": "rm -rf .next",
 		"build": "pnpm run clean && pnpm run build-dictionary && next build",
 		"build:ci": "pnpm run build-dictionary && next build",
@@ -17,6 +20,9 @@
 		"build-dictionary": "style-dictionary build -c ./tokens/config.js"
 	},
 	"dependencies": {
+		"@tauri-apps/api": "^2.11.1",
+		"@tauri-apps/plugin-dialog": "~2.7.2",
+		"@tauri-apps/plugin-fs": "~2.5.1",
 		"@xyflow/react": "^12.11.2",
 		"clsx": "^2.1.1",
 		"date-fns": "^4.4.0",
@@ -30,6 +36,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.7",
 		"@tailwindcss/postcss": "^4.3.3",
+		"@tauri-apps/cli": "^2.11.4",
 		"@types/node": "^22.20.1",
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.4",

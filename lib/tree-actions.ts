@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+// Side effect only: installs the `node:fs` backend under the store.
+import "./store/fs.server"
 import { toActionError } from "./action-error"
 import { TREE_COOKIE } from "./active-tree"
 import { TreeOpError } from "./errors"
@@ -222,8 +224,8 @@ export async function previewStorageAction(
 ): Promise<StoragePreview> {
 	try {
 		const target = file
-			? resolveTargetFile(file, { bundleOnly: true })
-			: defaultFileFor(name)
+			? await resolveTargetFile(file, { bundleOnly: true })
+			: await defaultFileFor(name)
 		return { ok: true, file: target, cloudSynced: isCloudSyncedPath(target) }
 	} catch (error) {
 		return await toActionError(error)

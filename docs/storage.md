@@ -15,6 +15,25 @@ letting you decide *where* on disk. A promise you can't verify the location of
 isn't much of a promise, so the location is now a choice, shown as an absolute
 path before anything is written.
 
+**The desktop app makes this structural rather than promised.** Shipped as a
+Tauri window there is no server to send anything to and no host to trust — the
+app opens your file directly and works with the network cable out. That is the
+point of the target; see [decisions.md](decisions.md#a-desktop-app-as-well-as-a-web-app).
+
+## Where the data directory is
+
+Both targets keep the same layout; only the root differs, and the backend
+decides it.
+
+| Target | Data directory |
+| --- | --- |
+| Web / CLI scripts | `FAMILY_TREE_DATA_DIR`, else `<repo>/data` |
+| Desktop | `~/Library/Application Support/com.venelinnikolov.familytree` |
+
+An installed app has no repo to sit inside, which is why it cannot be `data/`.
+Either way this is only the *default* and the index — a tree itself may be
+anywhere, and paths outside the data directory are stored absolute.
+
 ## A tree is a folder
 
 ```

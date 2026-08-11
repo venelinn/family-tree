@@ -1,6 +1,3 @@
-import { existsSync } from "node:fs"
-import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
-import path from "node:path"
 import { TreeOpError } from "../errors"
 import { ingestServedPhotos } from "../photos"
 import {
@@ -11,7 +8,20 @@ import {
 	isBundleRoot,
 	locate,
 } from "./bundle"
+import {
+	dataDir as backendDataDir,
+	copyDir,
+	copyFile,
+	exists,
+	homeDir,
+	mkdir,
+	readTextFile,
+	remove,
+	rename,
+	writeTextFile,
+} from "./fs"
 import { LocalTreeStore, newId } from "./local"
+import * as path from "./path"
 import type { TreeMeta } from "./types"
 
 /**
@@ -40,16 +50,21 @@ import type { TreeMeta } from "./types"
  * cloned or moved without every tree breaking; paths outside it are absolute.
  */
 
-/** Overridable so the whole data directory can sit outside the repo. */
-export const dataDir = () =>
-	process.env.FAMILY_TREE_DATA_DIR
-		? path.resolve(process.env.FAMILY_TREE_DATA_DIR)
-		: path.join(process.cwd(), "data")
+/**
+ * Where the index lives, and where trees go when the user hasn't chosen.
+ *
+ * The backend decides: `FAMILY_TREE_DATA_DIR` or the repo's `data/` under Node,
+ * `~/Library/Application Support/<identifier>` in the desktop app, which has no
+ * repo to sit inside. Async only because Tauri's path API is — the value never
+ * changes within a run, so it is resolved once and kept.
+ */
+let cachedDataDir: string | undefined
+export const dataDir = async () => (cachedDataDir ??= await backendDataDir())
 
-const indexFile = () => path.join(dataDir(), "trees.json")
+const indexFile = async () => path.join(await dataDir(), "trees.json")
 
 /** Where a new tree goes unless the user picks somewhere else. */
-export const defaultTreeDir = () => path.join(dataDir(), "trees")
+export const defaultTreeDir = async () => path.join(await dataDir(), "trees")
 
 /**
  * The pre-multi-tree store. It stays exactly where it is rather than being
@@ -57,7 +72,7 @@ export const defaultTreeDir = () => path.join(dataDir(), "trees")
  * and a migration that relocates someone's only copy is not a migration worth
  * having.
  */
-const LEGACY_FILE = () => path.join(dataDir(), "tree.json")
+const LEGACY_FILE = async () => path.join(await dataDir(), "tree.json")
 /** The root person that used to be a constant in `lib/data.ts`. */
 const LEGACY_ROOT_PERSON_ID = "@I85@"
 
@@ -86,28 +101,28 @@ export interface TreeSummary extends TreeMeta {
 	bundle: boolean
 }
 
-const toStoredPath = (absolute: string) => {
-	const relative = path.relative(dataDir(), absolute)
+const toStoredPath = async (absolute: string) => {
+	const relative = path.relative(await dataDir(), absolute)
 	return relative.startsWith("..") || path.isAbsolute(relative)
 		? absolute
 		: relative
 }
 
-const toAbsolutePath = (stored: string) =>
-	path.isAbsolute(stored) ? stored : path.resolve(dataDir(), stored)
+const toAbsolutePath = async (stored: string) =>
+	path.isAbsolute(stored) ? stored : path.join(await dataDir(), stored)
 
 async function readIndex(): Promise<TreeIndex> {
-	const file = indexFile()
-	if (!existsSync(file)) return { trees: [] }
-	const parsed = JSON.parse(await readFile(file, "utf8")) as Partial<TreeIndex>
+	const file = await indexFile()
+	if (!(await exists(file))) return { trees: [] }
+	const parsed = JSON.parse(await readTextFile(file)) as Partial<TreeIndex>
 	return { trees: parsed.trees ?? [] }
 }
 
 async function writeIndex(index: TreeIndex): Promise<void> {
-	const file = indexFile()
+	const file = await indexFile()
 	await mkdir(path.dirname(file), { recursive: true, mode: DIR_MODE })
 	const temp = `${file}.tmp`
-	await writeFile(temp, `${JSON.stringify(index, null, 2)}\n`, {
+	await writeTextFile(temp, `${JSON.stringify(index, null, 2)}\n`, {
 		mode: FILE_MODE,
 	})
 	await rename(temp, file)
@@ -121,10 +136,10 @@ async function writeIndex(index: TreeIndex): Promise<void> {
  * appear to have lost 252 people.
  */
 async function migrateLegacyTree(index: TreeIndex): Promise<TreeIndex> {
-	const legacy = LEGACY_FILE()
-	if (index.trees.length > 0 || !existsSync(legacy)) return index
+	const legacy = await LEGACY_FILE()
+	if (index.trees.length > 0 || !(await exists(legacy))) return index
 
-	const store = new LocalTreeStore(legacy, "main")
+	const store = await LocalTreeStore.open(legacy, "main")
 	const snapshot = await store.read()
 	const root =
 		snapshot.people.find((person) => person.id === LEGACY_ROOT_PERSON_ID) ??
@@ -140,7 +155,7 @@ async function migrateLegacyTree(index: TreeIndex): Promise<TreeIndex> {
 	})
 
 	const migrated: TreeIndex = {
-		trees: [{ id: "main", file: toStoredPath(legacy) }],
+		trees: [{ id: "main", file: await toStoredPath(legacy) }],
 	}
 	await writeIndex(migrated)
 	return migrated
@@ -153,7 +168,7 @@ export async function getTreeStore(
 	const index = await migrateLegacyTree(await readIndex())
 	const entry = index.trees.find((tree) => tree.id === id)
 	return entry
-		? new LocalTreeStore(toAbsolutePath(entry.file), entry.id)
+		? await LocalTreeStore.open(await toAbsolutePath(entry.file), entry.id)
 		: undefined
 }
 
@@ -169,12 +184,12 @@ export async function listTrees(): Promise<TreeSummary[]> {
 
 	return Promise.all(
 		index.trees.map(async (entry) => {
-			const root = toAbsolutePath(entry.file)
-			const store = new LocalTreeStore(root, entry.id)
-			const bundle = isBundleRoot(root)
+			const root = await toAbsolutePath(entry.file)
+			const store = await LocalTreeStore.open(root, entry.id)
+			const bundle = await isBundleRoot(root)
 			// For a bundle it is the JSON inside that has to be there: the
 			// directory surviving without it is data loss wearing a hat.
-			if (!existsSync(store.file)) {
+			if (!(await exists(store.file))) {
 				const timestamp = new Date().toISOString()
 				return {
 					id: entry.id,
@@ -209,8 +224,11 @@ function slugify(name: string, fallback: string): string {
 }
 
 /** Where a tree with this name goes by default. Shown in onboarding. */
-export const defaultFileFor = (name: string, fallback = "family") =>
-	path.join(defaultTreeDir(), `${slugify(name, fallback)}${BUNDLE_EXTENSION}`)
+export const defaultFileFor = async (name: string, fallback = "family") =>
+	path.join(
+		await defaultTreeDir(),
+		`${slugify(name, fallback)}${BUNDLE_EXTENSION}`,
+	)
 
 /**
  * Check a user-supplied destination before anything is written to it.
@@ -226,18 +244,15 @@ export const defaultFileFor = (name: string, fallback = "family") =>
  * thing. The folder itself may be called anything; `.familytree` is what gets
  * suggested, not what gets required.
  */
-export function resolveTargetFile(
+export async function resolveTargetFile(
 	input: string,
 	{ bundleOnly = false }: { bundleOnly?: boolean } = {},
-): string {
+): Promise<string> {
 	const trimmed = input.trim()
 	if (!trimmed) throw new TreeOpError("pathRequired")
 
 	const expanded = trimmed.startsWith("~")
-		? path.join(
-				process.env.HOME ?? process.env.USERPROFILE ?? "",
-				trimmed.slice(1),
-			)
+		? path.join(await homeDir(), trimmed.slice(1))
 		: trimmed
 
 	if (!path.isAbsolute(expanded)) throw new TreeOpError("pathNotAbsolute")
@@ -297,15 +312,16 @@ export async function createTree({
 
 	const id = newId("t")
 	const target = file
-		? resolveTargetFile(file, { bundleOnly: true })
-		: defaultFileFor(trimmed, id)
+		? await resolveTargetFile(file, { bundleOnly: true })
+		: await defaultFileFor(trimmed, id)
 
-	if (existsSync(target)) throw new TreeOpError("fileExists", { path: target })
+	if (await exists(target))
+		throw new TreeOpError("fileExists", { path: target })
 
-	const store = new LocalTreeStore(target, id)
+	const store = await LocalTreeStore.open(target, id)
 	// `updateMeta` writes the file, creating any missing directories owner-only.
 	const meta = await store.updateMeta({ name: trimmed })
-	await register({ id, file: toStoredPath(target) })
+	await register({ id, file: await toStoredPath(target) })
 
 	return {
 		...meta,
@@ -326,7 +342,7 @@ export async function createTree({
 async function assertLooksLikeTree(file: string): Promise<void> {
 	let parsed: unknown
 	try {
-		parsed = JSON.parse(await readFile(file, "utf8"))
+		parsed = JSON.parse(await readTextFile(file))
 	} catch {
 		throw new TreeOpError("fileNotATree", { path: file })
 	}
@@ -348,16 +364,16 @@ async function assertLooksLikeTree(file: string): Promise<void> {
  * open one from a USB stick.
  */
 export async function adoptTree(file: string): Promise<TreeSummary> {
-	const target = resolveTargetFile(file)
-	const location = locate(target)
-	if (!existsSync(location.file))
+	const target = await resolveTargetFile(file)
+	const location = await locate(target)
+	if (!(await exists(location.file)))
 		throw new TreeOpError("fileNotFound", { path: target })
 
 	const index = await migrateLegacyTree(await readIndex())
-	const already = index.trees.find(
-		(tree) => toAbsolutePath(tree.file) === target,
+	const registered = await Promise.all(
+		index.trees.map((tree) => toAbsolutePath(tree.file)),
 	)
-	if (already) throw new TreeOpError("treeAlreadyOpen")
+	if (registered.includes(target)) throw new TreeOpError("treeAlreadyOpen")
 
 	// Checked against the *raw* file rather than a loaded snapshot: `read()`
 	// fills in missing rows with empty arrays, so every well-formed JSON file on
@@ -367,7 +383,7 @@ export async function adoptTree(file: string): Promise<TreeSummary> {
 	await assertLooksLikeTree(location.file)
 
 	const id = newId("t")
-	const store = new LocalTreeStore(target, id)
+	const store = await LocalTreeStore.open(target, id)
 	const snapshot = await store.read()
 
 	const meta = await store.updateMeta({
@@ -378,14 +394,14 @@ export async function adoptTree(file: string): Promise<TreeSummary> {
 			: {}),
 		rootPersonId: snapshot.meta.rootPersonId ?? snapshot.people[0]?.id,
 	})
-	await register({ id, file: toStoredPath(target) })
+	await register({ id, file: await toStoredPath(target) })
 
 	return {
 		...meta,
 		file: target,
 		available: true,
 		peopleCount: snapshot.people.length,
-		bundle: isBundleRoot(target),
+		bundle: await isBundleRoot(target),
 	}
 }
 
@@ -412,19 +428,21 @@ export async function convertToBundle(
 	const entry = index.trees.find((tree) => tree.id === id)
 	if (!entry) throw new TreeOpError("noSuchTree")
 
-	const from = toAbsolutePath(entry.file)
-	if (isBundleRoot(from)) throw new TreeOpError("treeAlreadyBundle")
-	if (!existsSync(from)) throw new TreeOpError("fileNotFound", { path: from })
+	const from = await toAbsolutePath(entry.file)
+	if (await isBundleRoot(from)) throw new TreeOpError("treeAlreadyBundle")
+	if (!(await exists(from)))
+		throw new TreeOpError("fileNotFound", { path: from })
 
 	const target = destination
-		? resolveTargetFile(destination, { bundleOnly: true })
-		: bundlePathFor(from)
-	if (existsSync(target)) throw new TreeOpError("fileExists", { path: target })
+		? await resolveTargetFile(destination, { bundleOnly: true })
+		: await bundlePathFor(from)
+	if (await exists(target))
+		throw new TreeOpError("fileExists", { path: target })
 
-	const source = new LocalTreeStore(from, id)
+	const source = await LocalTreeStore.open(from, id)
 	const snapshot = await source.read()
 
-	const photoDir = locate(target).photoDir as string
+	const photoDir = (await locate(target)).photoDir as string
 	await mkdir(photoDir, { recursive: true, mode: DIR_MODE })
 
 	const { copied: photosCopied, missing: photosMissing } =
@@ -432,16 +450,17 @@ export async function convertToBundle(
 
 	// Written through a store so the bundle gets the same atomic rename and
 	// owner-only modes as any other write.
-	const destinationStore = new LocalTreeStore(target, id)
+	const destinationStore = await LocalTreeStore.open(target, id)
 	await destinationStore.replaceAll(snapshot)
 	await destinationStore.updateMeta({
 		name: snapshot.meta.name,
 		rootPersonId: snapshot.meta.rootPersonId,
 	})
 
+	const stored = await toStoredPath(target)
 	await writeIndex({
 		trees: index.trees.map((tree) =>
-			tree.id === id ? { ...tree, file: toStoredPath(target) } : tree,
+			tree.id === id ? { ...tree, file: stored } : tree,
 		),
 	})
 
@@ -457,17 +476,19 @@ export async function relocateTree(
 	const entry = index.trees.find((tree) => tree.id === id)
 	if (!entry) throw new TreeOpError("noSuchTree")
 
-	const from = toAbsolutePath(entry.file)
-	const to = resolveTargetFile(destination)
+	const from = await toAbsolutePath(entry.file)
+	const to = await resolveTargetFile(destination)
 	if (from === to) return await summaryOf(id)
-	if (existsSync(to)) throw new TreeOpError("fileExists", { path: to })
-	if (!existsSync(from)) throw new TreeOpError("fileNotFound", { path: from })
+	if (await exists(to)) throw new TreeOpError("fileExists", { path: to })
+	if (!(await exists(from)))
+		throw new TreeOpError("fileNotFound", { path: from })
 	// Moving is not converting. A `.familytree` renamed to `.json` would stop
 	// being read as a folder — `locate` would take the directory itself for the
 	// store — and its photos would go quiet.
-	if (isBundleRoot(from) && path.extname(to).toLowerCase() === ".json")
+	const bundle = await isBundleRoot(from)
+	if (bundle && path.extname(to).toLowerCase() === ".json")
 		throw new TreeOpError("pathNotBundle", { extension: BUNDLE_EXTENSION })
-	if (!isBundleRoot(from) && path.extname(to).toLowerCase() !== ".json")
+	if (!bundle && path.extname(to).toLowerCase() !== ".json")
 		throw new TreeOpError("pathNotTree", { extension: ".json" })
 
 	await mkdir(path.dirname(to), { recursive: true, mode: DIR_MODE })
@@ -475,32 +496,34 @@ export async function relocateTree(
 		await rename(from, to)
 	} catch {
 		// Different filesystem — an external disk is the common case here, and
-		// the whole reason the feature exists. `cp` rather than `copyFile`
-		// because a tree is a directory: `copyFile` raises EISDIR on one, which
-		// is precisely the move somebody is most likely to want.
+		// the whole reason the feature exists. A tree is usually a directory, so
+		// this needs the recursive copy rather than a single-file one; `copyDir`
+		// is in `fs.ts` because Tauri's plugin has nothing like Node's `cp`.
 		try {
-			await cp(from, to, { recursive: true, errorOnExist: true, force: false })
+			if (bundle) await copyDir(from, to)
+			else await copyFile(from, to)
 		} catch (error) {
 			// A stick that filled up halfway leaves a partial tree behind, and
 			// that partial tree would then fail the `fileExists` check on the
 			// retry that fixes the problem. Clear it and re-raise, so the caller
 			// still gets "there isn't enough room on that disk".
-			await rm(to, { recursive: true, force: true }).catch(() => undefined)
+			await remove(to, { recursive: true }).catch(() => undefined)
 			throw error
 		}
 
 		// Only let go of the original once the copy is demonstrably there. A
 		// half-written destination plus a deleted source is the one outcome this
 		// app must never produce.
-		const landed = locate(to)
-		if (!existsSync(landed.file))
+		const landed = await locate(to)
+		if (!(await exists(landed.file)))
 			throw new TreeOpError("fileNotFound", { path: landed.file })
-		await rm(from, { recursive: true, force: true })
+		await remove(from, { recursive: true })
 	}
 
+	const stored = await toStoredPath(to)
 	await writeIndex({
 		trees: index.trees.map((tree) =>
-			tree.id === id ? { ...tree, file: toStoredPath(to) } : tree,
+			tree.id === id ? { ...tree, file: stored } : tree,
 		),
 	})
 	return await summaryOf(id)

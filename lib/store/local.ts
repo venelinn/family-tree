@@ -1,16 +1,16 @@
-import { existsSync } from "node:fs"
+import { DIR_MODE, FILE_MODE, locate, type TreeLocation } from "./bundle"
 import {
 	copyFile,
+	exists,
 	mkdir,
-	readdir,
-	readFile,
+	readDir,
+	readTextFile,
+	remove,
 	rename,
 	stat,
-	unlink,
-	writeFile,
-} from "node:fs/promises"
-import path from "node:path"
-import { DIR_MODE, FILE_MODE, locate, type TreeLocation } from "./bundle"
+	writeTextFile,
+} from "./fs"
+import * as path from "./path"
 import type {
 	PersonInput,
 	PersonRecord,
@@ -25,8 +25,11 @@ import type {
 /**
  * File-backed `TreeStore` for local, single-user editing.
  *
- * No `server-only` guard here on purpose: the import script drives this store
- * from the CLI, and `lib/data.ts` already marks the app-facing surface.
+ * No `server-only` guard here on purpose, and now three callers depend on that:
+ * the import script drives this store from the CLI, the web build drives it from
+ * a server action, and the desktop build drives it from inside the webview.
+ * Which filesystem it gets is `lib/store/fs.ts`'s problem, not this file's —
+ * everything below is the same code in all three.
  *
  * Deliberately not clever: the whole tree is a few hundred rows, so each
  * mutation reads, edits and rewrites the file. What it does take seriously is
@@ -73,10 +76,23 @@ export class LocalTreeStore implements TreeStore {
 	/** Serialises mutations so two writes can't interleave. */
 	private queue: Promise<unknown> = Promise.resolve()
 
-	constructor(root: string, id?: string) {
-		this.root = root
-		this.location = locate(root)
-		this.id = id ?? path.basename(root, path.extname(root))
+	/**
+	 * Open the tree at `root`.
+	 *
+	 * A factory rather than a constructor because deciding whether the path is a
+	 * bundle or a loose file is a `stat`, and Tauri has no synchronous one to
+	 * offer. Resolving it here, once, is what keeps `location` and `file` plain
+	 * synchronous properties for everything downstream — the alternative was an
+	 * `await` on every `store.file`.
+	 */
+	static async open(root: string, id?: string): Promise<LocalTreeStore> {
+		return new LocalTreeStore(await locate(root), id)
+	}
+
+	private constructor(location: TreeLocation, id?: string) {
+		this.root = location.root
+		this.location = location
+		this.id = id ?? path.basename(location.root, path.extname(location.root))
 	}
 
 	/** The JSON this store reads and writes. */
@@ -85,10 +101,10 @@ export class LocalTreeStore implements TreeStore {
 	}
 
 	async read(): Promise<TreeSnapshot> {
-		if (!existsSync(this.file)) return this.empty()
+		if (!(await exists(this.file))) return this.empty()
 
 		const parsed = JSON.parse(
-			await readFile(this.file, "utf8"),
+			await readTextFile(this.file),
 		) as Partial<TreeSnapshot>
 
 		return {
@@ -137,7 +153,7 @@ export class LocalTreeStore implements TreeStore {
 		await mkdir(path.dirname(this.file), { recursive: true, mode: DIR_MODE })
 		await this.snapshotPrevious()
 		const temp = `${this.file}.tmp`
-		await writeFile(temp, `${JSON.stringify(snapshot, null, 2)}\n`, {
+		await writeTextFile(temp, `${JSON.stringify(snapshot, null, 2)}\n`, {
 			mode: FILE_MODE,
 		})
 		// Rename is atomic on the same filesystem, so a crash mid-write leaves
@@ -162,12 +178,13 @@ export class LocalTreeStore implements TreeStore {
 	 */
 	private async snapshotPrevious(): Promise<void> {
 		const { backupDir } = this.location
-		if (!backupDir || !existsSync(this.file)) return
+		if (!backupDir || !(await exists(this.file))) return
 
 		try {
 			await mkdir(backupDir, { recursive: true, mode: DIR_MODE })
-			const existing = (await readdir(backupDir))
-				.filter((name) => name.endsWith(".json"))
+			const existing = (await readDir(backupDir))
+				.filter((entry) => !entry.isDirectory && entry.name.endsWith(".json"))
+				.map((entry) => entry.name)
 				.sort()
 
 			const newest = existing.at(-1)
@@ -185,7 +202,7 @@ export class LocalTreeStore implements TreeStore {
 			await Promise.all(
 				existing
 					.slice(0, Math.max(0, surplus))
-					.map((name) => unlink(path.join(backupDir, name))),
+					.map((name) => remove(path.join(backupDir, name))),
 			)
 		} catch {
 			// Deliberately silent: the edit itself is what matters.

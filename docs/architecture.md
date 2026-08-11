@@ -22,9 +22,37 @@ lib/family-graph.ts         FamilyGraph { people, unions } + relationship querie
 components/*                React Flow canvas, cards, side panel
 ```
 
-## The two seams
+## Two targets
 
-Almost all the flexibility in this codebase comes from two boundaries.
+The same UI ships twice.
+
+| | Web | Desktop |
+| --- | --- | --- |
+| Runs as | `next dev` / `next build`, a server | Tauri v2 window, `src-tauri/` |
+| Reaches the disk via | `node:fs`, on the server | Tauri's `fs` plugin, in the webview |
+| Store backend | `lib/store/fs.node.ts` | `lib/store/fs.tauri.ts` |
+| Mutations | server actions | direct calls |
+| Start it with | `pnpm dev` | `pnpm app` |
+
+Neither is a fork: `lib/store/`, `lib/layout/`, `lib/facts.ts` and every
+component are the same files on both. What differs is which filesystem is
+installed underneath and how a click reaches it.
+
+## The three seams
+
+Almost all the flexibility in this codebase comes from three boundaries.
+
+**`lib/store/fs.ts`** is which filesystem the store gets. A `TreeFs` interface,
+two implementations, and a `setFs()` the entry point calls: `fs.server.ts` for
+the web build, `components/TauriBootstrap` for the desktop one, and each CLI
+script for itself. The store above it — atomic renames, backups, the
+"never delete the user's only copy" ordering in `relocateTree` — is one
+implementation serving all three.
+
+This is also why `lib/store/path.ts` exists rather than `node:path`: Tauri's
+path API is entirely async, and adopting it would have turned every synchronous
+path helper into a promise for no gain. It is POSIX-only, and the one file
+Windows support would have to revisit.
 
 **`lib/data.ts`** is the only module that knows where data lives. Everything
 downstream consumes `FamilyGraph`. Moving to Supabase means implementing
@@ -68,6 +96,14 @@ The tree modelled as **rows, not a document**: `people`, `unions`, and a
 mutations through a promise chain. Both matter: Next.js runs route handlers
 concurrently, and read-modify-write on a whole file is exactly the shape that
 loses data. (Tested: 10 concurrent `createPerson` calls, all 10 persisted.)
+
+It is opened with **`LocalTreeStore.open()`, not `new`**. Deciding whether a path
+is a bundle or a loose `.json` is a `stat`, and Tauri has no synchronous one, so
+the location is resolved once in a factory — which is what keeps `store.file` and
+`store.location` plain synchronous properties everywhere downstream.
+
+`DIR_MODE` and `FILE_MODE` are honoured by the Node backend only; Tauri's plugin
+takes no mode. They stay at every call site because the intent still holds.
 
 `to-graph.ts` derives the read model. Back-references — `unionIds`,
 `childOfUnionId` — are **computed, never stored**, so they cannot drift from the

@@ -20,7 +20,12 @@
 import { existsSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { parseGedcomText } from "../lib/gedcom/parse-ged"
+import { setFs } from "../lib/store/fs"
+import { nodeFs } from "../lib/store/fs.node"
 import { getTreeStore, listTrees } from "../lib/store/registry"
+
+// The store has no filesystem of its own — see `lib/store/fs.ts`.
+setFs(nodeFs)
 
 async function main() {
 	const args = process.argv.slice(2)

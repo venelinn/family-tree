@@ -23,6 +23,8 @@ import { mkdir, readFile } from "node:fs/promises"
 import { parseGedcomText } from "../lib/gedcom/parse-ged"
 import { ingestServedPhotos } from "../lib/photos"
 import { DIR_MODE } from "../lib/store/bundle"
+import { setFs } from "../lib/store/fs"
+import { nodeFs } from "../lib/store/fs.node"
 import { getTreeStore, listTrees } from "../lib/store/registry"
 import type {
 	PersonRecord,
@@ -30,6 +32,11 @@ import type {
 	UnionChildRecord,
 	UnionRecord,
 } from "../lib/store/types"
+
+// The store has no filesystem of its own — the app installs Tauri's, and a
+// script installs Node's. Must happen before anything touches the registry.
+// See `lib/store/fs.ts`.
+setFs(nodeFs)
 
 async function main() {
 	const input = process.argv[2] ?? "data/nikolov.ged"

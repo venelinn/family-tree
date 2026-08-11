@@ -1,4 +1,6 @@
 import { cookies } from "next/headers"
+// Side effect only: installs the `node:fs` backend under the store.
+import "./store/fs.server"
 import { listTrees, type TreeSummary } from "./store/registry"
 
 /**

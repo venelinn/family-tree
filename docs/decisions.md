@@ -99,6 +99,34 @@ For the same reason: **don't paste the export into online GEDCOM converters.**
 Writing a parser locally was the same amount of work as writing a mapper for a
 converter's output, with none of the exposure.
 
+## A desktop app, as well as a web app
+
+The store writes to the local filesystem, and a hosted Next.js server cannot:
+on Netlify or Vercel every request gets an ephemeral container where only `/tmp`
+is writable and nothing persists. Hosting the app as it stood would have meant
+every save silently vanishing.
+
+The alternative — keep hosting it and reach the user's disk from the browser via
+the File System Access API — was rejected because it is Chromium-only, absent
+from Safari, Firefox and every mobile browser, and it re-prompts for permission
+on each visit unless installed as a PWA.
+
+Tauri resolves it without any of that. The UI is unchanged; a Rust process owns
+file access; the whole thing runs offline. There were no outbound calls in the
+app to begin with and `next/font` self-hosts Raleway at build time, so nothing
+had to be severed.
+
+**The web target stays.** It is not replaced, because a family tree you can open
+from a link is worth keeping and because Supabase is still the likely path to
+sharing one. The two are kept honest by `lib/store/fs.ts`: one store, one set of
+rules, two filesystems underneath.
+
+Costs, stated plainly: Rust in the toolchain, per-OS builds (you cannot build a
+Windows `.exe` on a Mac), `git push` no longer ships to everyone, and unsigned
+builds warn on first open until there is an Apple Developer account. macOS is the
+only target for now — Windows needs `lib/store/path.ts` to learn about
+backslashes and drive letters, and nothing else.
+
 ## Local store before Supabase
 
 Chosen because schema churn is free locally while the editing UX is still being

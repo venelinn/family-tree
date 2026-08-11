@@ -1,4 +1,6 @@
 import "server-only"
+// Side effect only: installs the `node:fs` backend under the store. See the file.
+import "./store/fs.server"
 import { getActiveTree } from "./active-tree"
 import { TreeOpError } from "./errors"
 import type { FamilyGraph } from "./family-graph"

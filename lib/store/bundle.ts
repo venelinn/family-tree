@@ -1,5 +1,5 @@
-import { statSync } from "node:fs"
-import path from "node:path"
+import { exists, isDirectory } from "./fs"
+import * as path from "./path"
 
 /**
  * Where the pieces of one tree sit on disk.
@@ -35,7 +35,15 @@ import path from "node:path"
  * never asks which kind it has.
  */
 
-/** Owner read/write only. Directories need the execute bit to be traversable. */
+/**
+ * Owner read/write only. Directories need the execute bit to be traversable.
+ *
+ * **Enforced on the Node backend only.** Tauri's filesystem plugin takes no
+ * mode, so in the desktop app these are an intention rather than a guarantee and
+ * the umask decides — see `lib/store/fs.tauri.ts`. They stay in every call site
+ * because the reasoning still holds and because the day the plugin grows a
+ * `mode` option, there is nothing to go back and add.
+ */
 export const FILE_MODE = 0o600
 export const DIR_MODE = 0o700
 
@@ -56,26 +64,30 @@ export interface TreeLocation {
 /**
  * Is this tree a folder?
  *
- * What it *is* beats what it is called: `statSync` rather than a suffix check,
- * so renaming `Nikolov.familytree` to `Nikolov` in Finder changes nothing. The
- * call is on the hot path only once per store construction, and a `stat` is
- * cheaper than the read that follows it.
+ * What it *is* beats what it is called: a `stat` rather than a suffix check, so
+ * renaming `Nikolov.familytree` to `Nikolov` in Finder changes nothing.
  *
  * Nothing there yet means somebody is choosing where to put a new one, and only
  * the name can answer. `.json` is the one extension that means a loose file;
  * anything else — including no extension at all — is a folder.
+ *
+ * **Async, unlike the `statSync` this replaced.** Tauri has no synchronous
+ * filesystem call to offer — every one is a round trip into Rust — so `locate`
+ * and the store's constructor had to follow. That is what `LocalTreeStore.open`
+ * exists for: the location is resolved once, up front, and everything downstream
+ * still sees the plain synchronous `TreeLocation` it always did.
  */
-export function isBundleRoot(root: string): boolean {
-	try {
-		return statSync(root).isDirectory()
-	} catch {
-		return path.extname(root).toLowerCase() !== ".json"
-	}
+export async function isBundleRoot(root: string): Promise<boolean> {
+	return (
+		(await isDirectory(root)) ||
+		// Not there yet: fall back to what the name says.
+		(!(await exists(root)) && path.extname(root).toLowerCase() !== ".json")
+	)
 }
 
 /** Resolve a stored path into the set of places this tree keeps things. */
-export function locate(root: string): TreeLocation {
-	if (!isBundleRoot(root)) return { root, file: root }
+export async function locate(root: string): Promise<TreeLocation> {
+	if (!(await isBundleRoot(root))) return { root, file: root }
 	return {
 		root,
 		file: path.join(root, TREE_FILE),
@@ -85,8 +97,8 @@ export function locate(root: string): TreeLocation {
 }
 
 /** The folder a loose `<name>.json` becomes, beside it. Suggestion only. */
-export const bundlePathFor = (file: string) =>
-	isBundleRoot(file)
+export const bundlePathFor = async (file: string) =>
+	(await isBundleRoot(file))
 		? file
 		: path.join(
 				path.dirname(file),

@@ -1,4 +1,6 @@
 import { readPhoto } from "@/lib/photos"
+// Side effect only: installs the `node:fs` backend under the store.
+import "@/lib/store/fs.server"
 import { isStoredPhoto } from "@/lib/store/bundle"
 import { getTreeStore } from "@/lib/store/registry"
 

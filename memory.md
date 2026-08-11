@@ -63,6 +63,18 @@ external drive, encrypted volume, off the repo entirely. First run goes through
 `/welcome` (name → where to store it → language/theme → start from me or empty).
 Settings switches, renames, moves, adopts. See [docs/storage.md](docs/storage.md).
 
+**It ships twice now — web and a Tauri desktop app.** `pnpm dev` is the web
+target (server, server actions, `node:fs`); `pnpm app` is the same UI in a native
+macOS window, reaching the disk through Tauri's `fs` plugin and working offline.
+Neither is a fork: `lib/store/fs.ts` is a `TreeFs` interface with two backends,
+installed by whichever entry point is running — `fs.server.ts` on the web, a
+bootstrap component in the desktop app, and each CLI script for itself. Needs the
+Rust toolchain; see [docs/getting-started.md](docs/getting-started.md).
+
+The desktop app exists because a hosted Next.js server *cannot* write to the
+user's disk — Netlify and Vercel give every request an ephemeral container. See
+[docs/decisions.md](docs/decisions.md#a-desktop-app-as-well-as-a-web-app).
+
 Not built: Supabase, merging duplicate people, birth-order editing (the
 `position` column exists, no UI), adoption / step-parents (`unionChildren` has
 no qualifier), and **events other than birth / marriage / death**. The GEDCOM has
@@ -72,6 +84,32 @@ fixed vocabulary vs free text (facts return message *keys*, so a user-typed type
 can never be translated).
 
 ## Traps
+
+**Nothing under `lib/store/` may import `node:fs` or `node:path`.** Both targets
+share those files, and the desktop one bundles them for a webview where neither
+exists. Use `lib/store/fs.ts` and `lib/store/path.ts`. The Node backend lives in
+`fs.node.ts` and is reachable only from `fs.server.ts` (which is `server-only`,
+so a leak into the client bundle is a build error) and from `scripts/`.
+
+**`tauri add` registers plugins in the wrong order.** It *prepends*, and
+`persisted-scope` must be initialised **after** `fs` or it silently does nothing
+— meaning every folder the user granted is forgotten on restart, which looks
+exactly like losing their tree. Check `src-tauri/src/lib.rs` after every
+`tauri add`.
+
+**Open a store with `LocalTreeStore.open()`, never `new`.** The constructor is
+private. Deciding bundle-vs-loose-file is a `stat` and Tauri has no synchronous
+one, so the location is resolved in an async factory; that is what keeps
+`store.file` a plain property everywhere else.
+
+**`lib/store/path.ts` is POSIX-only.** Deliberate, and correct on macOS for both
+backends. It is the one file Windows support has to revisit — Tauri's own path
+API was rejected because every function in it is async, which would have turned
+`resolveTargetFile`, `defaultFileFor` and `isCloudSyncedPath` into promises.
+
+**`FILE_MODE`/`DIR_MODE` are Node-only.** Tauri's fs plugin takes no mode, so in
+the desktop app the umask decides and owner-only is an intention rather than a
+guarantee. The constants stay at every call site anyway.
 
 **Photo URLs expire in ~7 days.** They're HMAC-signed by MyHeritage; there is no
 token or session to refresh. After every export, run `pnpm photos` *promptly* or

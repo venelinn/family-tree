@@ -16,6 +16,7 @@
 			"!build",
 			"!.claude",
 			"!public",
+			"!src-tauri",
 			"!styles/_css-variables.css",
 			"!styles/_base-variables.scss",
 			"!styles/variables.js"
