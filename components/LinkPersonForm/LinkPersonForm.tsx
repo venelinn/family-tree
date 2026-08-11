@@ -1,5 +1,6 @@
 "use client"
 
+import { X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { Button } from "@/components/Button"
@@ -98,6 +99,7 @@ export function LinkPersonForm({
 				label={pending ? t("linkSaving") : t("linkCancel")}
 				variant="secondary"
 				disabled={pending}
+				icon={<X size={15} strokeWidth={2} />}
 				onClick={onCancel}
 			/>
 		</div>

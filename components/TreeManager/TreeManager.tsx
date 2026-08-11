@@ -203,6 +203,7 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 											label={t("treeSave")}
 											variant="primary"
 											disabled={pending}
+											icon={<Check size={15} strokeWidth={2.5} />}
 										/>
 										<Button
 											variant="secondary"

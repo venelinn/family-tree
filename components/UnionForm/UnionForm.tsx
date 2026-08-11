@@ -1,5 +1,6 @@
 "use client"
 
+import { Check, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { Avatar } from "@/components/Avatar"
@@ -110,9 +111,15 @@ export function UnionForm({
 					label={pending ? t("saving") : submitLabel}
 					variant="primary"
 					disabled={pending}
+					icon={<Check size={15} strokeWidth={2.5} />}
 					className={styles.unionForm__submit}
 				/>
-				<Button label={t("cancel")} variant="secondary" onClick={onCancel} />
+				<Button
+					label={t("cancel")}
+					variant="secondary"
+					icon={<X size={15} strokeWidth={2} />}
+					onClick={onCancel}
+				/>
 			</div>
 		</form>
 	)

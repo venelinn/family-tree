@@ -86,11 +86,17 @@
 	video,
 	canvas {
 		display: block;
-		max-width: 100%;
 	}
 
+	// `max-width` is for `img` and `video` only, exactly as preflight has it —
+	// **never `svg`**. React Flow draws each edge as its own `<svg>` inside a
+	// zero-width absolutely-positioned container and relies on `overflow:
+	// visible` to paint outside it. `max-width: 100%` resolves to `0` there, and
+	// a zero width disables rendering of an `<svg>` outright, so every line
+	// between two people silently disappears.
 	img,
 	video {
+		max-width: 100%;
 		height: auto;
 	}
 

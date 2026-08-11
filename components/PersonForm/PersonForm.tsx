@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, X } from "lucide-react"
+import { Check, Mars, Plus, Venus, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { Button } from "@/components/Button"
@@ -207,6 +207,15 @@ export function PersonForm({
 								key={sex}
 								label={sex === "M" ? t("male") : t("female")}
 								variant="secondary"
+								// The astronomical symbols, which is what these are: the same
+								// glyphs the sex tints on the cards stand for.
+								icon={
+									sex === "M" ? (
+										<Mars size={15} strokeWidth={2} />
+									) : (
+										<Venus size={15} strokeWidth={2} />
+									)
+								}
 								aria-pressed={values.sex === sex}
 								data-sex={sex === "F" ? "female" : "male"}
 								className={styles.personForm__sex}
@@ -272,9 +281,15 @@ export function PersonForm({
 					label={pending ? t("saving") : submitLabel}
 					variant="primary"
 					disabled={pending}
+					icon={<Check size={15} strokeWidth={2.5} />}
 					className={styles.personForm__submit}
 				/>
-				<Button label={t("cancel")} variant="secondary" onClick={onCancel} />
+				<Button
+					label={t("cancel")}
+					variant="secondary"
+					icon={<X size={15} strokeWidth={2} />}
+					onClick={onCancel}
+				/>
 			</div>
 		</form>
 	)
