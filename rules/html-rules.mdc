@@ -182,23 +182,25 @@ t("pricePerDay", { price: boat.price })
 
 ## Form Inputs
 
-- **Never use raw `<input>` elements** — always use the `<Input>` component from `@/components/Forms`
-- **Never use raw `<select>` elements** — always use the `<Select>` component from `@/components/Forms`
-- Both components support a `label` prop — use it instead of rendering a separate `<label>` element
-- Use the `full` prop to make the field fill its container width
-- Use the `id` prop for explicit label association (the component handles `htmlFor` internally)
+- **Never use raw `<input>`, `<select>` or `<textarea>` elements** — use `Input`, `Select`, `Textarea` and `Checkbox` from `@/components/Forms`
+- All of them take a `label` prop; do not render a separate `<label>`. An `id` is generated if you don't pass one, so a form can render a list of fields without minting ids
+- `full` makes the field fill its container; `hint` adds a help line; `error` replaces the hint and marks the control `aria-invalid`
+- A **whole-form** failure — a write that came back with a reason — is `<FormError>`, not a per-field `error`
+- `Checkbox` nests its control inside the label on purpose: a checkbox label is the thing you click, so the two are one target
+- The one raw control still in use is `<input type="range">` in `Toolbar`; a slider has no shared component yet
 
 ```tsx
 import { Input, Select } from "@/components/Forms"
 
 // Text input with label
-<Input type="text" id="name" label={t("nameLabel")} placeholder={t("namePlaceholder")} full />
+<Input label={t("nameLabel")} placeholder={t("namePlaceholder")} full />
 
-// Number input with label
-<Input type="number" id="price" label={t("priceLabel")} value={price} onChange={handleChange} full />
+// With a help line, and the same field reporting a problem
+<Input label={t("pathLabel")} hint={t("pathHint")} value={path} onChange={handleChange} full />
+<Input label={t("pathLabel")} error={t("pathInvalid")} value={path} onChange={handleChange} full />
 
 // Select with label
-<Select id="category" label={t("categoryLabel")} value={category} onChange={handleChange} full>
+<Select label={t("categoryLabel")} value={category} onChange={handleChange} full>
   <option value="a">Option A</option>
   <option value="b">Option B</option>
 </Select>

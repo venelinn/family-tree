@@ -145,19 +145,14 @@ Two things to avoid:
   you no way to decide what it should become in dark; `var(--surface-dim)` does.
 - **Don't name a token after its colour.** Same reason, one level up.
 
-## The migration
+## Tailwind
 
-Components are still styled with Tailwind utilities — `bg-panel`,
-`text-ink-muted` — and are moving to `.module.scss` one at a time. Those utility
-names come from the pre-token era, and `styles/_compat.scss` keeps them alive by
-aliasing the old role names onto the new ones:
+Tailwind is still installed, but only for its utilities — `theme.css` and
+`utilities.css`, imported into the `utilities` layer, with **no preflight**.
+`styles/_reset.scss` does the reset instead.
 
-```scss
---panel: var(--surface-container);
---ink-muted: var(--on-surface-variant);
-```
-
-So a converted component and an unconverted one sitting side by side read the
-same colour and re-theme together. **New work uses the semantic names**; each
-alias is deleted along with the last component that needed it, and the file goes
-when Tailwind does. See `rules/css-styling.mdc` for how to write the modules.
+No component uses a utility class; every one is a `.module.scss`. The
+`@theme inline` block in `globals.scss` exposes the semantic tokens as utilities
+(`bg-surface-container`, `text-on-surface-variant`) purely as an escape hatch.
+Removing Tailwind altogether is a two-line change to `globals.scss` plus the
+dependency.
