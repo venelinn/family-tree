@@ -4,9 +4,11 @@ import { Search, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useId, useMemo, useRef, useState } from "react"
 import { Avatar } from "@/components/Avatar"
+import { Button } from "@/components/Button"
 import { usePersonName } from "@/components/PersonNames"
 import type { Person } from "@/lib/family-graph"
 import { nameVariants } from "@/lib/person-name"
+import styles from "./PersonSearch.module.scss"
 
 /**
  * Find a person by name.
@@ -96,13 +98,16 @@ export function PersonSearch({
 			? `${person.birthYear ?? ""}–${person.deathYear ?? ""}`
 			: undefined
 
+	/**
+	 * Each option needs a stable id so `aria-activedescendant` can point at it:
+	 * that is how a combobox tells a screen reader which row Enter would take,
+	 * without moving focus off the input the user is still typing in.
+	 */
+	const optionId = (index: number) => `${listId}-option-${index}`
+
 	return (
-		<div className="relative">
-			<Search
-				size={14}
-				strokeWidth={2}
-				className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-ink-faint"
-			/>
+		<div className={styles.search}>
+			<Search size={14} strokeWidth={2} className={styles.search__icon} />
 			<input
 				ref={inputRef}
 				// biome-ignore lint/a11y/noAutofocus: only set by the link picker, which opens on a click
@@ -111,6 +116,8 @@ export function PersonSearch({
 				role="combobox"
 				aria-expanded={results.length > 0}
 				aria-controls={listId}
+				aria-autocomplete="list"
+				aria-activedescendant={results[active] ? optionId(active) : undefined}
 				aria-label={t("label")}
 				value={query}
 				placeholder={placeholder ?? t("placeholder")}
@@ -133,36 +140,46 @@ export function PersonSearch({
 						inputRef.current?.blur()
 					}
 				}}
-				className="w-56 rounded-lg border border-line bg-panel py-1.5 pr-7 pl-8 text-ink text-sm outline-none placeholder:text-ink-faint focus:border-line-strong"
+				className={styles.search__input}
 			/>
 			{query ? (
-				<button
-					type="button"
+				<Button
+					variant="ghost"
+					size="sm"
+					className={styles.search__clear}
+					aria-label={t("clear")}
+					icon={<X size={13} strokeWidth={2} />}
 					onClick={() => {
 						setQuery("")
 						inputRef.current?.focus()
 					}}
-					aria-label={t("clear")}
-					className="-translate-y-1/2 absolute top-1/2 right-2 rounded p-0.5 text-ink-faint hover:text-ink"
-				>
-					<X size={13} strokeWidth={2} />
-				</button>
+				/>
 			) : null}
 
 			{query.trim() ? (
 				<ul
 					id={listId}
-					className="absolute top-full right-0 left-0 z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-line bg-panel py-1 shadow-lg"
+					// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: `ul[role=listbox]` + `li[role=option]` is the structure the WAI-ARIA combobox pattern specifies
+					role="listbox"
+					className={styles.search__results}
 				>
 					{results.length === 0 ? (
-						<li className="px-3 py-2 text-ink-faint text-sm">
+						// Not an option — there is nothing here to choose.
+						<li role="presentation" className={styles.search__empty}>
 							{t("noResults")}
 						</li>
 					) : (
-						results.map((person, index) => (
-							<li key={person.id}>
-								<button
-									type="button"
+						results.map((person, index) => {
+							const lifespan = years(person)
+							return (
+								// biome-ignore lint/a11y/useFocusableInteractive: focus stays in the input by design — `aria-activedescendant` is what moves the selection, which is the whole point of the pattern
+								<li
+									key={person.id}
+									id={optionId(index)}
+									// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: see the listbox above
+									role="option"
+									aria-selected={index === active}
+									className={styles.search__option}
 									// The list is driven by the keyboard, so hovering has to move
 									// the selection too or the two disagree about what Enter does.
 									onMouseEnter={() => setActive(index)}
@@ -172,30 +189,25 @@ export function PersonSearch({
 										event.preventDefault()
 										choose(person)
 									}}
-									className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left ${
-										index === active ? "bg-muted" : ""
-									}`}
 								>
 									<Avatar person={person} size={26} />
-									<span className="min-w-0 flex-1">
-										<span className="block truncate text-ink text-sm">
+									<span className={styles.search__names}>
+										<span className={styles.search__name}>
 											{nameOf(person)}
 										</span>
 										{person.marriedName &&
 										person.marriedName !== person.surname ? (
-											<span className="block truncate text-ink-faint text-xs">
+											<span className={styles.search__married}>
 												{person.marriedName}
 											</span>
 										) : null}
 									</span>
-									{years(person) ? (
-										<span className="shrink-0 text-ink-faint text-xs tabular-nums">
-											{years(person)}
-										</span>
+									{lifespan ? (
+										<span className={styles.search__years}>{lifespan}</span>
 									) : null}
-								</button>
-							</li>
-						))
+								</li>
+							)
+						})
 					)}
 				</ul>
 			) : null}

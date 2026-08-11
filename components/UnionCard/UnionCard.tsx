@@ -2,6 +2,7 @@
 
 import { Handle, Position } from "@xyflow/react"
 import { UNION_SIZE } from "@/lib/layout/constants"
+import styles from "./UnionCard.module.scss"
 
 /**
  * The couple marker. Visually it is just the small joint where the two spouse
@@ -11,26 +12,26 @@ import { UNION_SIZE } from "@/lib/layout/constants"
 export function UnionCard() {
 	return (
 		<div
-			className="rounded-full bg-union"
-			style={{ width: UNION_SIZE, height: UNION_SIZE }}
+			className={styles.union}
+			style={{ "--_union-size": `${UNION_SIZE}px` } as React.CSSProperties}
 		>
 			<Handle
 				type="target"
 				id="left"
 				position={Position.Left}
-				className="!opacity-0"
+				className={styles.union__handle}
 			/>
 			<Handle
 				type="source"
 				id="right"
 				position={Position.Right}
-				className="!opacity-0"
+				className={styles.union__handle}
 			/>
 			<Handle
 				type="source"
 				id="bottom"
 				position={Position.Bottom}
-				className="!opacity-0"
+				className={styles.union__handle}
 			/>
 		</div>
 	)

@@ -1,0 +1,240 @@
+@use "styles/functions" as fn;
+@use "styles/mixins" as shared;
+
+// The card is the densest thing in the app: a whole person in 132×140. Its type
+// runs below the UI scale on purpose, so the two sizes here are `fn.rem`
+// one-offs rather than tokens — see the Typography note in
+// `rules/css-styling.mdc`.
+$card-name-size: fn.rem(11px);
+$card-meta-size: fn.rem(10px);
+
+.card {
+	// Width and height come from `lib/layout/constants.ts` — the layout maths
+	// needs the same numbers, so JS owns them and passes them in.
+	--_card-radius: var(--border-radius-lg);
+	--_card-accent: var(--male-line);
+	--_card-bg: var(--male-soft);
+	// A ring the card doesn't have still paints its 1px offset, which is why the
+	// offset is the page colour: invisible until a ring colour arrives.
+	--_card-ring-color: transparent;
+	--_card-shadow: 0 1px 2px var(--box-shadow-color);
+
+	position: relative;
+	display: flex;
+	width: var(--_card-width);
+	height: var(--_card-height);
+	border: 2px solid var(--_card-accent);
+	border-radius: var(--_card-radius);
+	background-color: var(--_card-bg);
+	box-shadow:
+		0 0 0 1px var(--surface),
+		0 0 0 3px var(--_card-ring-color),
+		var(--_card-shadow);
+
+	@media (prefers-reduced-motion: no-preference) {
+		transition: box-shadow var(--animation-duration-fast) ease;
+	}
+
+	&:hover {
+		--_card-shadow: 0 4px 8px var(--box-shadow-color);
+		// Consumed by `&__add` below — a parent state driving a child's property
+		// through a variable, rather than a `.card:hover .card__add` rule.
+		--_card-add-opacity: 1;
+	}
+
+	&[data-sex="female"] {
+		--_card-accent: var(--female-line);
+		--_card-bg: var(--female-soft);
+	}
+
+	// Order matters and only here: a card can be both the root and the selection,
+	// and then the selection is what the user is looking for.
+	&[data-root="true"] {
+		--_card-ring-color: var(--root-ring);
+	}
+
+	&[data-selected="true"] {
+		--_card-ring-color: var(--branch-ring);
+	}
+
+	// Portrait in the family view, where the chart sprawls sideways and height is
+	// cheap. Landscape in the pedigree, where a generation stacks in one column.
+	&[data-variant="portrait"] {
+		flex-direction: column;
+		align-items: center;
+		padding: var(--spacing-2-5) var(--spacing-1-5) var(--spacing-2);
+	}
+
+	&[data-variant="landscape"] {
+		align-items: center;
+		gap: var(--spacing-2-5);
+		padding-inline: var(--spacing-2-5);
+	}
+
+	// React Flow ships styles for `.react-flow__handle`. Matching the block as
+	// well as the element outranks them without `!important`, whichever
+	// stylesheet the bundler happens to emit first.
+	& &__handle {
+		opacity: 0;
+	}
+
+	// Mourning ribbon across the top-left corner. Deliberately a neutral, not
+	// `--on-surface`: inverted it would be a near-white corner on a dark card,
+	// which reads as a highlight — the opposite of what it means.
+	&__ribbon {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: var(--spacing-5);
+		height: var(--spacing-5);
+		overflow: hidden;
+		// Inside a 2px border, so slightly tighter than the card itself.
+		border-top-left-radius: calc(var(--_card-radius) - 3px);
+		pointer-events: none;
+
+		&::before {
+			display: block;
+			width: 100%;
+			height: 100%;
+			background-color: var(--ribbon);
+			clip-path: polygon(0 0, 100% 0, 0 100%);
+			content: "";
+		}
+	}
+
+	// Add relatives. Always on for the selected card, on hover otherwise — 20
+	// permanent buttons would be noise, but hover-only would be undiscoverable,
+	// so the selected card carries it openly.
+	& &__add {
+		--_btn-size: var(--spacing-5);
+		--_btn-radius: 50%;
+		// `--_btn-opacity` is the variable `Button` already declares `opacity`
+		// from, so reveal rides on it instead of re-declaring the property here.
+		--_btn-opacity: var(--_card-add-opacity, 0);
+
+		position: absolute;
+		top: var(--spacing-1);
+		right: var(--spacing-1);
+		z-index: 1;
+		box-shadow: 0 1px 2px var(--box-shadow-color);
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: opacity var(--animation-duration-fast) ease;
+		}
+
+		// Shown outright when this card is the one being acted on. `:focus-visible`
+		// is what keeps it reachable by keyboard, where there is no hover.
+		&[data-visible="true"],
+		&:focus-visible {
+			--_btn-opacity: 1;
+		}
+	}
+
+	// The reveal bar above or below a card.
+	//
+	// A raw `<button>` rather than `Button`: this is canvas chrome below the UI
+	// type scale, and it needs React Flow's `nodrag`. Forcing it through the
+	// shared component would mean overriding its size, padding, radius, type and
+	// colour — everything the component contributes. See `rules/html-rules.mdc`.
+	&__reveal {
+		--_reveal-bg: var(--surface-veil);
+		--_reveal-border: var(--outline);
+		--_reveal-color: var(--on-surface-variant);
+		--_reveal-border-style: dashed;
+
+		position: absolute;
+		left: 0;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--spacing-1);
+		width: 100%;
+		padding-block: var(--spacing-0-5);
+		border: 1px var(--_reveal-border-style) var(--_reveal-border);
+		border-radius: var(--border-radius-sm);
+		background-color: var(--_reveal-bg);
+		box-shadow: 0 1px 2px var(--box-shadow-color);
+		color: var(--_reveal-color);
+		font-size: $card-meta-size;
+		font-weight: var(--font-weight-medium);
+		line-height: 1.4;
+		cursor: pointer;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				background-color var(--animation-duration-fast) ease,
+				border-color var(--animation-duration-fast) ease,
+				color var(--animation-duration-fast) ease;
+		}
+
+		&:hover {
+			--_reveal-border: var(--on-surface-faint);
+			--_reveal-bg: var(--surface-container-high);
+			--_reveal-color: var(--on-surface-soft);
+		}
+
+		&:focus-visible {
+			@include shared.focus-ring;
+		}
+
+		// Collapsing is the branch's own colour: it is an action on something
+		// already on screen, not an offer of more.
+		&[data-mode="collapse"] {
+			--_reveal-bg: var(--branch-soft);
+			--_reveal-border: var(--branch-line);
+			--_reveal-color: var(--branch-ink);
+			--_reveal-border-style: solid;
+
+			&:hover {
+				--_reveal-bg: var(--branch-soft-hover);
+			}
+		}
+
+		&[data-direction="up"] {
+			top: calc(var(--spacing-4) * -1);
+		}
+
+		&[data-direction="down"] {
+			bottom: calc(var(--spacing-4) * -1);
+		}
+	}
+
+	&__body {
+		&[data-variant="portrait"] {
+			width: 100%;
+			margin-top: var(--spacing-1-5);
+			text-align: center;
+		}
+
+		&[data-variant="landscape"] {
+			min-width: 0;
+			flex: 1;
+			text-align: left;
+		}
+	}
+
+	&__name {
+		@include shared.truncate(2);
+		color: var(--on-surface);
+		font-size: $card-name-size;
+		font-weight: var(--font-weight-semibold);
+		line-height: 1.25;
+	}
+
+	&__facts {
+		margin-top: var(--spacing-1);
+		color: var(--on-surface-variant);
+		font-size: $card-meta-size;
+		line-height: 1.4;
+	}
+
+	&__fact {
+		@include shared.ellipsis;
+	}
+
+	// The ✳ and † glyphs, quieter than the dates they introduce.
+	&__glyph {
+		color: var(--on-surface-faint);
+	}
+}

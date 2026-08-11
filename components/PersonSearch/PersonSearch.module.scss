@@ -1,0 +1,132 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.search {
+	position: relative;
+
+	&__icon {
+		position: absolute;
+		top: 50%;
+		left: var(--spacing-2-5);
+		translate: 0 -50%;
+		color: var(--on-surface-faint);
+		// The icon is decoration sitting on top of the field; without this it
+		// swallows the click that should focus the input.
+		pointer-events: none;
+	}
+
+	&__input {
+		--_search-border: var(--outline-variant);
+
+		@include typo.ui-caption;
+		width: 14rem;
+		// Room for the icon on the left and the clear button on the right.
+		padding: var(--spacing-1-5) var(--spacing-7) var(--spacing-1-5)
+			var(--spacing-8);
+		border: 1px solid var(--_search-border);
+		border-radius: var(--border-radius);
+		background-color: var(--surface-container);
+		color: var(--on-surface);
+		// Safari gives search inputs a rounded native look and its own metrics.
+		-webkit-appearance: none;
+		appearance: none;
+		outline: none;
+
+		&:focus {
+			--_search-border: var(--outline);
+		}
+
+		&::placeholder {
+			color: var(--on-surface-faint);
+		}
+
+		// WebKit's own clear affordance, which would sit on top of ours.
+		&::-webkit-search-cancel-button,
+		&::-webkit-search-decoration {
+			-webkit-appearance: none;
+			appearance: none;
+		}
+	}
+
+	// Small enough to sit inside the field — `--_btn-size` is Button's hook for
+	// exactly this. See `rules/css-styling.mdc`.
+	&__clear {
+		--_btn-size: 1.25rem;
+		--_btn-radius: var(--border-radius-sm);
+		--_btn-color: var(--on-surface-faint);
+
+		position: absolute;
+		top: 50%;
+		right: var(--spacing-2);
+		translate: 0 -50%;
+	}
+
+	&__results {
+		@include shared.resetList;
+
+		position: absolute;
+		top: 100%;
+		right: 0;
+		left: 0;
+		z-index: 50;
+		max-height: 20rem;
+		margin-top: var(--spacing-1);
+		padding-block: var(--spacing-1);
+		overflow-y: auto;
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius);
+		background-color: var(--surface-container);
+		box-shadow: var(--box-shadow-base);
+	}
+
+	&__option {
+		--_option-bg: transparent;
+
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-2-5);
+		padding: var(--spacing-1-5) var(--spacing-3);
+		background-color: var(--_option-bg);
+		text-align: left;
+		cursor: pointer;
+
+		// The list is driven by the keyboard, so the highlight follows
+		// `aria-selected` rather than `:hover` — the pointer moves it by setting
+		// the same state, and the two can never disagree about what Enter does.
+		&[aria-selected="true"] {
+			--_option-bg: var(--surface-container-highest);
+		}
+	}
+
+	&__names {
+		min-width: 0;
+		flex: 1;
+	}
+
+	&__name {
+		@include typo.ui-caption;
+		@include shared.ellipsis;
+		display: block;
+		color: var(--on-surface);
+	}
+
+	&__married {
+		@include typo.ui-small;
+		@include shared.ellipsis;
+		display: block;
+		color: var(--on-surface-faint);
+	}
+
+	&__years {
+		@include typo.ui-small;
+		@include typo.tabular;
+		flex: 0 0 auto;
+		color: var(--on-surface-faint);
+	}
+
+	&__empty {
+		@include typo.ui-caption;
+		padding: var(--spacing-2) var(--spacing-3);
+		color: var(--on-surface-faint);
+	}
+}

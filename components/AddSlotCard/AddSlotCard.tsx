@@ -1,10 +1,12 @@
 "use client"
 
 import type { NodeProps } from "@xyflow/react"
+import clsx from "clsx"
 import { UserPlus } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { CARD_HEIGHT, CARD_WIDTH } from "@/lib/layout/constants"
 import type { AddSlotNodeData } from "@/lib/layout/types"
+import styles from "./AddSlotCard.module.scss"
 
 /**
  * A ghost card in the position a new relative would occupy — "Add sister" to the
@@ -17,7 +19,6 @@ import type { AddSlotNodeData } from "@/lib/layout/types"
  */
 export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
 	const t = useTranslations("slots")
-	const female = data.sex === "F"
 
 	return (
 		<button
@@ -26,23 +27,20 @@ export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
 				event.stopPropagation()
 				data.onAdd?.(data.anchorId, data.relation, data.sex, data.slot)
 			}}
-			style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
-			className={`nodrag flex flex-col items-center justify-center gap-2 rounded-xl border-2 bg-panel shadow-lg transition-transform hover:scale-[1.03] ${
-				female
-					? "border-female-line text-female-ink hover:bg-female-soft"
-					: "border-male-line text-male-ink hover:bg-male-soft"
-			}`}
+			style={
+				{
+					"--_card-width": `${CARD_WIDTH}px`,
+					"--_card-height": `${CARD_HEIGHT}px`,
+				} as React.CSSProperties
+			}
+			data-sex={data.sex === "F" ? "female" : "male"}
+			// `nodrag` is React Flow's: without it, pressing the card drags the node.
+			className={clsx("nodrag", styles.slot)}
 		>
-			<span
-				className={`flex h-11 w-11 items-center justify-center rounded-full ${
-					female ? "bg-female-soft" : "bg-male-soft"
-				}`}
-			>
+			<span className={styles.slot__badge}>
 				<UserPlus size={20} strokeWidth={2} />
 			</span>
-			<span className="px-1 text-center font-semibold text-[11px] text-ink-soft leading-tight">
-				{t(data.slot)}
-			</span>
+			<span className={styles.slot__label}>{t(data.slot)}</span>
 		</button>
 	)
 }

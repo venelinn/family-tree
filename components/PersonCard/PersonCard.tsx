@@ -1,9 +1,11 @@
 "use client"
 
 import { Handle, type NodeProps, Position } from "@xyflow/react"
+import clsx from "clsx"
 import { Minus, Plus, X } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { Avatar } from "@/components/Avatar"
+import { Button } from "@/components/Button"
 import { usePersonName } from "@/components/PersonNames"
 import { formatTreeDate } from "@/lib/date-format"
 import {
@@ -13,6 +15,7 @@ import {
 	PEDIGREE_CARD_WIDTH,
 } from "@/lib/layout/constants"
 import type { PersonNodeData } from "@/lib/layout/types"
+import styles from "./PersonCard.module.scss"
 
 /**
  * Handle contract, shared with UnionCard and PlaceholderCard:
@@ -70,13 +73,10 @@ function RevealBar({
 				onToggle?.()
 			}}
 			title={mode === "expand" ? t("showBranch", { branch: label }) : label}
-			className={`nodrag absolute left-0 z-10 flex w-full items-center justify-center gap-1 rounded-md border py-0.5 font-medium text-[10px] shadow-sm transition-colors ${
-				direction === "up" ? "-top-4" : "-bottom-4"
-			} ${
-				mode === "expand"
-					? "border-line-strong border-dashed bg-panel-veil text-ink-muted hover:border-ink-faint hover:bg-wash hover:text-ink-soft"
-					: "border-branch-line bg-branch-soft text-branch-ink hover:bg-branch-soft-hover"
-			}`}
+			data-mode={mode}
+			data-direction={direction}
+			// `nodrag` is React Flow's: without it, pressing the bar drags the node.
+			className={clsx("nodrag", styles.card__reveal)}
 		>
 			<Icon size={11} strokeWidth={2.5} />
 			{label}
@@ -104,18 +104,6 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 		onRequestAdd,
 	} = data
 
-	const accent =
-		person.sex === "F"
-			? "border-female-line bg-female-soft"
-			: "border-male-line bg-male-soft"
-	// The offset colour has to be named: Tailwind's default is white, which
-	// would draw a white halo around every ring on the dark canvas.
-	const ring = isSelected
-		? "ring-2 ring-branch-ring ring-offset-1 ring-offset-surface"
-		: isRoot
-			? "ring-2 ring-root-ring ring-offset-1 ring-offset-surface"
-			: ""
-
 	const born = formatTreeDate(person.birthDate, locale)
 	const died = formatTreeDate(person.deathDate, locale)
 
@@ -123,48 +111,48 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 	// and height is the scarce dimension; portrait in the family view, where the
 	// chart sprawls sideways instead.
 	const landscape = variant === "landscape"
-	const width = landscape ? PEDIGREE_CARD_WIDTH : CARD_WIDTH
-	const height = landscape ? PEDIGREE_CARD_HEIGHT : CARD_HEIGHT
+	const shape = landscape ? "landscape" : "portrait"
+
+	// The layout maths owns the card's size, so it arrives as numbers and is
+	// handed to CSS as variables rather than as inline width/height.
+	const sizing = {
+		"--_card-width": `${landscape ? PEDIGREE_CARD_WIDTH : CARD_WIDTH}px`,
+		"--_card-height": `${landscape ? PEDIGREE_CARD_HEIGHT : CARD_HEIGHT}px`,
+	} as React.CSSProperties
 
 	return (
 		<div
-			className={`group relative flex rounded-xl border-2 shadow-sm transition-shadow hover:shadow-md ${accent} ${ring} ${
-				landscape
-					? "items-center gap-2.5 px-2.5"
-					: "flex-col items-center px-1.5 pt-2.5 pb-2"
-			}`}
-			style={{ width, height }}
+			className={styles.card}
+			style={sizing}
+			data-sex={person.sex === "F" ? "female" : "male"}
+			data-variant={shape}
+			data-root={isRoot || undefined}
+			data-selected={isSelected || undefined}
 		>
 			<Handle
 				type="target"
 				id="top"
 				position={Position.Top}
-				className="opacity-0!"
+				className={styles.card__handle}
 			/>
 			<Handle
 				type="target"
 				id="left"
 				position={Position.Left}
-				className="opacity-0!"
+				className={styles.card__handle}
 			/>
 			<Handle
 				type="source"
 				id="right"
 				position={Position.Right}
-				className="opacity-0!"
+				className={styles.card__handle}
 			/>
 
-			{/* Mourning ribbon across the top-left corner. */}
 			{person.deceased ? (
 				<span
 					title={t("deceased", { sex: person.sex })}
-					className="pointer-events-none absolute top-0 left-0 h-5 w-5 overflow-hidden rounded-tl-[9px]"
-				>
-					<span
-						className="block h-full w-full bg-ribbon"
-						style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
-					/>
-				</span>
+					className={styles.card__ribbon}
+				/>
 			) : null}
 
 			{ancestors === "expandable" ||
@@ -186,52 +174,47 @@ export function PersonCard({ data }: NodeProps & { data: PersonNodeData }) {
 				/>
 			) : null}
 
-			{/* Add relatives. Always on for the selected card, on hover otherwise —
-			    20 permanent buttons would be noise, but hover-only would be
-			    undiscoverable, so the selected card carries it openly. */}
 			{onRequestAdd ? (
-				<button
-					type="button"
+				<Button
+					variant={isAdding ? "primary" : "secondary"}
+					className={clsx("nodrag", styles.card__add)}
+					// Openly present on the card being acted on; otherwise the stylesheet
+					// reveals it on hover or keyboard focus.
+					data-visible={isSelected || isAdding || undefined}
+					title={
+						isAdding ? t("close") : t("addRelative", { name: nameOf(person) })
+					}
+					aria-label={
+						isAdding ? t("close") : t("addRelative", { name: nameOf(person) })
+					}
+					aria-expanded={isAdding}
+					icon={
+						isAdding ? (
+							<X size={12} strokeWidth={2.5} />
+						) : (
+							<Plus size={13} strokeWidth={2.5} />
+						)
+					}
 					onClick={(event) => {
 						event.stopPropagation()
 						onRequestAdd(person.id)
 					}}
-					title={
-						isAdding ? t("close") : t("addRelative", { name: nameOf(person) })
-					}
-					className={`nodrag absolute top-1 right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border shadow-sm transition-opacity ${
-						isAdding
-							? "border-invert bg-invert text-on-invert opacity-100"
-							: "border-line-strong bg-panel text-ink-muted hover:border-ink-faint hover:text-ink"
-					} ${isSelected || isAdding ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-				>
-					{isAdding ? (
-						<X size={12} strokeWidth={2.5} />
-					) : (
-						<Plus size={13} strokeWidth={2.5} />
-					)}
-				</button>
+				/>
 			) : null}
 
 			<Avatar person={person} size={landscape ? 46 : 52} />
 
-			<div
-				className={
-					landscape ? "min-w-0 flex-1 text-left" : "mt-1.5 w-full text-center"
-				}
-			>
-				<div className="line-clamp-2 font-semibold text-[11px] text-ink leading-tight">
-					{nameOf(person)}
-				</div>
-				<div className="mt-1 space-y-px text-[10px] text-ink-muted leading-tight">
+			<div className={styles.card__body} data-variant={shape}>
+				<div className={styles.card__name}>{nameOf(person)}</div>
+				<div className={styles.card__facts}>
 					{born ? (
-						<div className="truncate">
-							<span className="text-ink-faint">✳</span> {born}
+						<div className={styles.card__fact}>
+							<span className={styles.card__glyph}>✳</span> {born}
 						</div>
 					) : null}
 					{died ? (
-						<div className="truncate">
-							<span className="text-ink-faint">†</span> {died}
+						<div className={styles.card__fact}>
+							<span className={styles.card__glyph}>†</span> {died}
 						</div>
 					) : null}
 					{!born && !died && person.deceased ? (

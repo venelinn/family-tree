@@ -9,6 +9,7 @@ import {
 	PEDIGREE_CARD_WIDTH,
 } from "@/lib/layout/constants"
 import type { PlaceholderNodeData } from "@/lib/layout/types"
+import styles from "./PlaceholderCard.module.scss"
 
 /**
  * An ancestor slot we have no record for. Inert for now — it becomes the entry
@@ -23,17 +24,19 @@ export function PlaceholderCard({
 
 	return (
 		<div
-			className="flex items-center justify-center rounded-xl border-2 border-line-strong border-dashed text-[12px] text-ink-faint"
-			style={{
-				width: landscape ? PEDIGREE_CARD_WIDTH : CARD_WIDTH,
-				height: landscape ? PEDIGREE_CARD_HEIGHT : CARD_HEIGHT,
-			}}
+			className={styles.placeholder}
+			style={
+				{
+					"--_card-width": `${landscape ? PEDIGREE_CARD_WIDTH : CARD_WIDTH}px`,
+					"--_card-height": `${landscape ? PEDIGREE_CARD_HEIGHT : CARD_HEIGHT}px`,
+				} as React.CSSProperties
+			}
 		>
 			<Handle
 				type="target"
 				id="left"
 				position={Position.Left}
-				className="!opacity-0"
+				className={styles.placeholder__handle}
 			/>
 			<span>+ {t(data.relation)}</span>
 		</div>

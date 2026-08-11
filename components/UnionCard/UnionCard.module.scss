@@ -1,0 +1,12 @@
+.union {
+	width: var(--_union-size);
+	height: var(--_union-size);
+	border-radius: 50%;
+	background-color: var(--union);
+
+	// React Flow ships styles for `.react-flow__handle`; matching the block as
+	// well as the element outranks them without `!important`.
+	& &__handle {
+		opacity: 0;
+	}
+}

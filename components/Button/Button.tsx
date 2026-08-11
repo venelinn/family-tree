@@ -70,6 +70,12 @@ export interface ButtonProps {
 	"aria-pressed"?: boolean
 	"aria-expanded"?: boolean
 	title?: string
+	/**
+	 * Data attributes pass through to the element. The styling rules make these
+	 * the way a component expresses state to CSS, so the shared button has to
+	 * carry them: `data-visible` on the card's add button, for one.
+	 */
+	[key: `data-${string}`]: unknown
 }
 
 export function Button({
