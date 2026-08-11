@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { PersonForm } from "@/components/tree/PersonForm"
+import { PersonForm } from "@/components/PersonForm"
 import type { PersonFormValues } from "@/lib/actions"
 import type { StepProps } from "../types"
 

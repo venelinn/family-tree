@@ -3,15 +3,18 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev -p 3022",
-		"build": "next build",
+		"dev": "pnpm run build-dictionary && next dev -p 3022",
+		"clean": "rm -rf .next",
+		"build": "pnpm run clean && pnpm run build-dictionary && next build",
+		"build:ci": "pnpm run build-dictionary && next build",
 		"start": "next start",
 		"lint": "biome check",
 		"format": "biome format --write",
 		"i18n:check": "tsx scripts/check-messages.ts",
 		"photos": "tsx scripts/localize-photos.ts",
 		"import": "tsx scripts/import-gedcom.ts",
-		"backfill:married": "tsx scripts/backfill-married-names.ts"
+		"backfill:married": "tsx scripts/backfill-married-names.ts",
+		"build-dictionary": "style-dictionary build -c ./tokens/config.js"
 	},
 	"dependencies": {
 		"@xyflow/react": "^12.11.2",
@@ -31,6 +34,7 @@
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.4",
 		"baseline-browser-mapping": "^2.11.13",
+		"sass": "^1.102.0",
 		"style-dictionary": "^5.5.1",
 		"tailwindcss": "^4.3.3",
 		"tsx": "^4.23.11",

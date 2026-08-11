@@ -4,64 +4,94 @@ Light and dark, chosen on `/settings` or left to follow the operating system.
 
 ## The rule
 
-**Components name the role, never the colour.** `bg-panel`, not `bg-white`;
-`text-ink-muted`, not `text-slate-500`.
+**Components name the role, never the colour.** `var(--surface-container)`, not
+`#fff`; `var(--on-surface-variant)`, not `#64748b`.
 
 That is the whole design. Because every element asks for a role, the dark theme
-is a change to one file — `app/globals.css` — rather than a `dark:` variant
-bolted onto every element in the app. A new component gets dark mode for free as
-long as it uses tokens, and the way to notice one that doesn't is that its
-colours stop responding to the setting.
+is a change to one file — `styles/_theme-dark.scss` — rather than a `dark:`
+variant bolted onto every element in the app. A new component gets dark mode for
+free as long as it uses tokens, and the way to notice one that doesn't is that
+its colours stop responding to the setting.
 
-The tokens are defined once, as `light-dark()` pairs:
+## The three files
 
-```css
---panel: light-dark(#ffffff, #151e2e);
---ink-muted: light-dark(#64748b, #93a1b5);
-```
+Colour is a layered system, and each layer is a file:
 
-and handed to Tailwind in an `@theme inline` block, which is what generates
-`bg-panel`, `text-ink-muted`, `border-female-line` and the rest.
+| File | Holds | Edited by |
+| --- | --- | --- |
+| `tokens/*.json` | The palette, and the roles it plays in light | Hand |
+| `styles/_css-variables.css` | The same, as CSS custom properties | **Style Dictionary — never by hand** |
+| `styles/_theme-dark.scss` | The same roles, dark | Hand |
+| `styles/_compat.scss` | Pre-token names aliased onto the new ones | Shrinks, then dies |
+
+`pnpm build-dictionary` regenerates the middle one; `dev` and `build` run it
+first, so it is never stale. `_base-variables.scss` (SCSS variables, for
+breakpoints) and `variables.js` come out of the same build.
 
 ## The token set
 
+Two groups. The **semantic layer** is generic UI — anything that could exist in
+any app:
+
+| Use | Token |
+| --- | --- |
+| Page background | `--background`, `--surface` |
+| Card / panel / raised surface | `--surface-container`, and `-lowest` / `-low` / `-high` / `-highest` |
+| Translucent panel over scrolling content | `--surface-veil` |
+| Primary text and icons | `--on-surface` |
+| Secondary text, muted icons | `--on-surface-variant` |
+| Four further steps of emphasis | `--on-surface-soft`, `--on-surface-faint`, `--on-surface-ghost` |
+| Hairline border or divider | `--outline-variant` (weakest: `--outline-subtle`) |
+| Stronger border | `--outline` |
+| Primary button fill, active toggle | `--primary` (`--primary-hover`), text on it `--on-primary` |
+| Pale brand tint | `--primary-container`, text `--on-primary-container` |
+| Inverted, e.g. a tooltip | `--inverse-surface` / `--inverse-on-surface` |
+| Error text or icon | `--error`; filled `--on-error`; tinted `--error-container` / `--on-error-container` |
+
+The **domain layer** is this app and no other:
+
 | Group | Tokens | For |
 | --- | --- | --- |
-| Chrome | `surface` `panel` `panel-veil` `wash` `muted` | Page, raised surfaces, hover states |
-| Lines | `line-subtle` `line` `line-strong` | Borders and dividers, three weights |
-| Text | `ink` `ink-soft` `ink-muted` `ink-faint` `ink-ghost` | Five steps of emphasis |
-| Inverted | `invert` `invert-hover` `on-invert` | Primary buttons, the active "add" toggle |
 | Sex | `male-*` `female-*` (`-line` `-soft` `-ink` `-solid`) | Person cards and avatars |
 | Root | `root-ring` `root-line` `root-soft` `root-ink` | The person the chart is centred on |
 | Branch | `branch-ring` `branch-line` `branch-soft` `branch-soft-hover` `branch-ink` | Selection ring, collapse bars |
-| Danger | `danger-soft` `danger-ink` `danger-text` | Errors, Delete |
 | Canvas | `canvas-dot` `edge-spouse` `edge-descent` `union` `ribbon` | React Flow, drawn from TypeScript |
 
-`surface` and `wash` are the same colour in light and deliberately different in
-dark: one is the page, the other is a hover state on a panel that sits *above*
-the page. Collapsing them works until the first dark hover, which then darkens
-instead of lifting.
+Below both sits the raw palette — `--color-slate-200`, `--color-rose-600`. It is
+the vocabulary the other two are written in. **Components never name it
+directly**: it is not overridden in dark, so `background: var(--color-white)`
+paints a stark white panel on a dark page.
+
+`--surface` and `--surface-container-high` are the same colour in light and
+deliberately different in dark: one is the page, the other is a hover state on a
+panel that sits *above* the page. Collapsing them works until the first dark
+hover, which then darkens instead of lifting.
+
+This app's accent is ink itself — a primary button is the one inverted surface —
+so `--primary` flips with the theme rather than staying a fixed brand hue.
 
 ## How the choice is applied
 
 The preference is one of three values — `system`, `light`, `dark` — stored in a
 cookie and read on the server, exactly like the locale. `app/layout.tsx` stamps
-it as `data-theme` on `<html>`, and three rules in `globals.css` turn it into a
-`color-scheme`, which is what `light-dark()` resolves against:
+it as `data-theme` on `<html>`, and `_theme-dark.scss` turns it into tokens:
 
-```css
-:root                      { color-scheme: light dark; }  /* system */
-:root[data-theme="light"]  { color-scheme: light; }
-:root[data-theme="dark"]   { color-scheme: dark; }
+```scss
+:root[data-theme="dark"] { @include dark-tokens; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { @include dark-tokens; }
+}
 ```
 
-`system` matches neither override, which leaves `light dark` in place and lets
-the OS decide — and a change to the OS setting is picked up live, with no
-JavaScript involved.
+`system` matches the first rule not at all and the second one whenever the OS is
+dark — so the OS decides, and a change to it is picked up live, with no
+JavaScript involved. Both entry points share one mixin; duplicating the token
+list instead is how the two halves of a theme drift apart.
 
-Setting `color-scheme` also themes the native controls for free: the depth
-slider, the "deceased" checkbox and the scrollbars follow along without being
-styled.
+`dark-tokens` also sets `color-scheme: dark`, which themes the native controls
+for free: the depth slider, the "deceased" checkbox and the scrollbars follow
+along without being styled.
 
 ### Why there's no flash, and no inline script
 
@@ -102,17 +132,32 @@ take a `theme` prop at all.
 
 ## Adding a colour
 
-Add the token to both blocks in `globals.css` — the `:root` pair and the
-`@theme inline` mapping — then use the generated utility. Two things to avoid:
+1. Add the raw value to `tokens/colors.json` if the palette doesn't have it.
+2. Give it a role in `tokens/semantic.json` (generic) or `tokens/domain.json`
+   (this app) — as a `{color.reference}`, not a second copy of the hex.
+3. Add the dark counterpart to the `dark-tokens` mixin in
+   `styles/_theme-dark.scss`. Skip this only when the colour is deliberately
+   theme-independent, like a selection ring.
 
-- **Don't use a Tailwind palette class** (`bg-slate-100`, `text-rose-600`). It
-  will look right in light and wrong in dark, and nothing will fail to tell you.
-- **Don't name a token after its colour.** `--slate-100` gives you no way to
-  decide what it should become in dark; `--muted` does.
+Two things to avoid:
 
-Watch for collisions with Tailwind's own utilities when naming: `--color-solid`
-had to become `--color-invert`, because `border-solid` is already a border-style
-utility.
+- **Don't reach past the role to the palette.** `var(--color-slate-100)` gives
+  you no way to decide what it should become in dark; `var(--surface-dim)` does.
+- **Don't name a token after its colour.** Same reason, one level up.
 
-Rings need their offset named too — `ring-offset-surface`. Tailwind's default
-offset is white, which draws a halo around every ring on the dark canvas.
+## The migration
+
+Components are still styled with Tailwind utilities — `bg-panel`,
+`text-ink-muted` — and are moving to `.module.scss` one at a time. Those utility
+names come from the pre-token era, and `styles/_compat.scss` keeps them alive by
+aliasing the old role names onto the new ones:
+
+```scss
+--panel: var(--surface-container);
+--ink-muted: var(--on-surface-variant);
+```
+
+So a converted component and an unconverted one sitting side by side read the
+same colour and re-theme together. **New work uses the semantic names**; each
+alias is deleted along with the last component that needed it, and the file goes
+when Tailwind does. See `rules/css-styling.mdc` for how to write the modules.

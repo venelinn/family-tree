@@ -2,9 +2,10 @@ import { Settings } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
-import { EmptyTree } from "@/components/tree/EmptyTree"
-import { TreeApp } from "@/components/tree/TreeApp"
+import { EmptyTree } from "@/components/EmptyTree"
+import { TreeApp } from "@/components/TreeApp"
 import { loadActiveTree, serializeFamilyGraph } from "@/lib/data"
+import { getNamesFollowLanguage } from "@/lib/name-language"
 import { getUserTheme } from "@/lib/theme"
 
 /**
@@ -18,6 +19,7 @@ import { getUserTheme } from "@/lib/theme"
 export default async function HomePage() {
 	const active = await loadActiveTree()
 	const theme = await getUserTheme()
+	const namesFollowLanguage = await getNamesFollowLanguage()
 
 	// Nothing set up yet: this is a first run.
 	if (active.status === "none") redirect("/welcome")
@@ -60,6 +62,7 @@ export default async function HomePage() {
 			homePersonId={rootId}
 			treeName={meta.name}
 			theme={theme}
+			namesFollowLanguage={namesFollowLanguage}
 		/>
 	)
 }

@@ -3,7 +3,7 @@ import { Raleway } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getTranslations } from "next-intl/server"
 import { getUserTheme } from "@/lib/theme"
-import "./globals.css"
+import "@/styles/globals.scss"
 
 /**
  * The one webfont in the project.
@@ -20,7 +20,7 @@ import "./globals.css"
  * Variable font, so no `weight`: the whole 100–900 axis arrives in one file and
  * every `font-medium` in the app is real rather than synthesised.
  *
- * Monospace is the system stack, set in `globals.css`. File paths and hashes
+ * Monospace is the system stack, set in `globals.scss`. File paths and hashes
  * need to line up; they do not need a download to do it.
  */
 const raleway = Raleway({
@@ -48,10 +48,11 @@ export default async function RootLayout({
 		// Rendered from the cookie on the server, so the first paint is already
 		// the right theme — no flash, and no blocking script in `<head>`.
 		// `system` is stamped too, purely so the choice is visible in devtools;
-		// no selector matches it, which is what leaves `color-scheme: light dark`
-		// in place to follow the OS.
+		// no `[data-theme]` rule matches it, which is what leaves the
+		// `prefers-color-scheme` query in `styles/_theme-dark.scss` in charge and
+		// lets the OS decide.
 		// The font class goes on `<html>`, not `<body>`, and that placement is
-		// load-bearing. `globals.css` declares `--font-sans: var(--font-raleway)`
+		// load-bearing. `globals.scss` declares `--font-sans: var(--font-raleway)`
 		// on `:root`, and a custom property is resolved on the element that
 		// declares it — so with `--font-raleway` defined one level down on the
 		// body, `--font-sans` resolved against nothing, went invalid, took

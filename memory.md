@@ -54,7 +54,8 @@ in a cookie (no `/en` `/bg` prefix, no middleware). Adding a language is three
 files — see [docs/i18n.md](docs/i18n.md).
 
 Themed: light and dark, `system` by default, picked on `/settings` and kept in a
-cookie the same way. Colour lives in semantic tokens in `app/globals.css` — see
+cookie the same way. Colour lives in semantic tokens built by Style Dictionary
+from `tokens/*.json`, with the dark values in `styles/_theme-dark.scss` — see
 [docs/theming.md](docs/theming.md).
 
 Multi-tree: several trees, each a file that **may live anywhere on disk** —
@@ -147,9 +148,12 @@ attribute lives on the root layout.
 
 **Never write a Tailwind palette class.** `bg-slate-100`, `text-rose-600` and
 friends look correct in light and wrong in dark, and nothing fails to tell you.
-Every colour goes through a semantic token — `bg-panel`, `text-ink-muted`,
-`border-female-line` — defined in `app/globals.css`. Two naming traps when adding
-one: it must not collide with a Tailwind utility (`--color-solid` had to become
+Every colour goes through a semantic token — `var(--surface-container)`,
+`var(--on-surface-variant)`, `var(--female-line)` — declared in `tokens/*.json`
+and darkened in `styles/_theme-dark.scss`. The `bg-panel` / `text-ink-muted`
+utilities still in the components are the pre-token names, kept alive by
+`styles/_compat.scss` until each component moves to `.module.scss`. Two naming
+traps when adding one: it must not collide with a Tailwind utility (`--color-solid` had to become
 `--color-invert`, because `border-solid` is a border-style), and rings need
 `ring-offset-surface` or Tailwind's white default halos them on the dark canvas.
 
@@ -216,8 +220,8 @@ pass reserving space for in-law fans up front — a real change to
 | --- | --- | --- |
 | `resolveAllowance` | `lib/layout/family.ts` | Expanding grants the full slider depth. It must not grant a fixed step — that made the same button behave differently on the root than on a spouse. |
 | `MAX_COLLATERAL_DESCENT` | `lib/layout/family.ts` | How far an ancestor's own descendants are followed back down. |
-| `EXPANSION_BUDGET` | `components/tree/TreeApp.tsx` | People an expansion may add before it displaces other open branches. |
-| `MIN_READABLE_ZOOM` | `components/tree/TreeCanvas.tsx` | Zoom floor before panning is preferred over shrinking. |
+| `EXPANSION_BUDGET` | `components/TreeApp/TreeApp.tsx` | People an expansion may add before it displaces other open branches. |
+| `MIN_READABLE_ZOOM` | `components/TreeCanvas/TreeCanvas.tsx` | Zoom floor before panning is preferred over shrinking. |
 | `SIBLING_GAP` / `SPOUSE_GAP` | `lib/layout/constants.ts` | Their *contrast* is what makes couples readable. |
 
 ## Verifying changes

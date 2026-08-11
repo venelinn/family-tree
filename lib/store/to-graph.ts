@@ -33,6 +33,7 @@ export function toFamilyGraph(snapshot: TreeSnapshot): FamilyGraph {
 			givenName: record.givenName,
 			surname: record.surname,
 			marriedName: record.marriedName,
+			names: record.names,
 			sex: record.sex,
 			birthDate: record.birthDate,
 			birthYear: yearOf(record.birthDate),

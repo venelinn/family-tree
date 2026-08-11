@@ -16,6 +16,8 @@ export interface Person {
 	surname?: string
 	/** Family name taken on marriage, when it differs from `surname`. */
 	marriedName?: string
+	/** The same name in another language, keyed by locale — see `person-name.ts`. */
+	names?: Record<string, string>
 	sex: Sex
 	birthDate?: string
 	birthYear?: number

@@ -6,14 +6,25 @@ alwaysApply: false
 
 # HTML & Component Rules
 
+> **Status in this project.** This file came from a codebase with a larger UI kit.
+> family-tree has **`Heading` and `Button`** — documented below, and binding.
+> `Input`, `Select`, `Modal`, `EmptyState` and `PageBox` **do not exist yet**:
+> until they do, write semantic `<input>`, `<select>` and `<dialog>`, and build
+> the shared component the first time a second place needs it. The
+> `Input`/`Select` and `Modal` sections below describe the destination, not
+> today's rule.
+>
+> Sections that apply without qualification: **Headings**, **Buttons**,
+> **Text & Translations**, **Page Structure**, **Semantic HTML**.
+
 ## Headings
 
-- **Never use raw `<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>` elements** — always use the `<Heading>` component from `@/components/Headings`
-- The `<Heading>` component provides consistent typography, styling, and animation support
-- Use `as` for the semantic HTML element and `size` for the visual size (they can differ)
+- **Never use raw `<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>` elements** — always use the `<Heading>` component from `@/components/Heading`
+- Use `as` for the semantic HTML element and `size` for the visual size — **they are separate decisions**. The document outline is what a screen reader navigates by (one `<h1>`, no skipped levels); the visual scale is a design question and often disagrees
+- `Heading` has no `"use client"`, so it renders to HTML with no JavaScript when used from a server component
 
 ```tsx
-import { Heading } from "@/components/Headings"
+import { Heading } from "@/components/Heading"
 
 // Page title
 <Heading as="h1" size="h2">Page Title</Heading>
@@ -34,28 +45,32 @@ import { Heading } from "@/components/Headings"
 | `className` | `string` | — | Additional CSS class |
 | `uppercase` | `boolean` | `false` | Uppercase text transform |
 | `center` | `boolean` | `false` | Center-aligned text |
-| `animationID` | `string` | — | Animation identifier |
-| `isHidden` | `boolean` | `false` | Visually hidden |
+| `isHidden` | `boolean` | `false` | Visually hidden, still announced |
+| `id` | `string` | — | For `aria-labelledby` on the section it titles |
 
 ## Buttons
 
 - **Never use raw `<button>` elements** — always use the `<Button>` component from `@/components/Button`
-- The `<Button>` component handles variants, sizes, icons, links, and accessibility
+- **`href` decides the element**: with it you get a `next/link` (prefetched, client-side navigation), without it a real `<button>`. Actions get buttons, destinations get links — never the reverse
+- **`icon` takes a node, not a name** — `icon={<Plus size={16} />}`. A string resolved through a registry cannot be tree-shaken, so it would pull the whole icon set into the bundle
+- **An icon-only button needs `aria-label`** — there is no text to announce
+- `Button` has no `"use client"`. Passing `onClick` is what puts it in a client bundle, and only for the component that passes one — a server component cannot pass a function at all, which TypeScript catches at compile time
 
 ```tsx
+import { Plus, X } from "lucide-react"
 import { Button } from "@/components/Button"
 
 // Standard action button
-<Button label="Submit" variant="primary" onClick={handleSubmit} />
+<Button label={t("submit")} variant="primary" onClick={handleSubmit} />
 
 // Button with icon
-<Button label="Add item" variant="secondary" icon="Plus" />
+<Button label={t("addPerson")} variant="secondary" icon={<Plus size={16} />} />
 
-// Link styled as button
-<Button label="View details" variant="primary" href="/details" />
+// Link styled as button — renders next/link, no JavaScript from a server component
+<Button label={t("settings")} variant="ghost" href="/settings" />
 
-// Icon-only button (provide aria-label via label prop or wrapper)
-<Button icon="X" variant="secondary" onClick={handleClose} />
+// Icon-only button
+<Button icon={<X size={16} />} aria-label={t("close")} variant="ghost" />
 ```
 
 ### Button Props Reference
@@ -63,75 +78,43 @@ import { Button } from "@/components/Button"
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `label` | `string` | — | Button text (omit for icon-only) |
-| `variant` | `"primary" \| "secondary" \| "success" \| "danger" \| "warning" \| "toggle" \| "request" \| "link"` | `"secondary"` | Visual variant |
-| `href` | `string` | — | Renders as `<Link>` when provided |
+| `variant` | `"primary" \| "secondary" \| "ghost" \| "danger" \| "link"` | `"secondary"` | Visual variant |
+| `href` | `string` | — | Renders as `next/link` when provided |
+| `isExternal` | `boolean` | `false` | With `href`, renders a plain `<a target="_blank">` |
 | `type` | `"button" \| "submit" \| "reset"` | `"button"` | HTML button type |
-| `icon` | `string` | — | Lucide icon name (left position by default) |
-| `iconAfter` | `string` | — | Lucide icon name after label |
-| `iconPosition` | `"left" \| "right"` | `"left"` | Icon placement |
-| `size` | `FormElementSize` | `"md"` | Button size |
-| `outlined` | `boolean` | `false` | Outlined variant |
-| `isRounded` | `boolean` | `false` | Rounded corners |
+| `onClick` | `MouseEventHandler` | — | Client components only |
+| `icon` | `ReactNode` | — | Icon element, before the label by default |
+| `iconAfter` | `ReactNode` | — | Icon element, always after the label |
+| `iconPosition` | `"left" \| "right"` | `"left"` | Placement of `icon` |
+| `size` | `"sm" \| "md" \| "lg"` | `"md"` | Button size |
+| `outlined` | `boolean` | `false` | Drops the fill, promotes it to the border |
+| `full` | `boolean` | `false` | Fills the container width |
 | `disabled` | `boolean` | `false` | Disabled state |
 
-### Admin & owner UI (lists, forms, wizards)
+### Variant roles (this codebase)
 
-Owner and admin surfaces should feel consistent: same **variant** roles, same **footer** pattern for save/cancel, and the same **primary** styling rules as everywhere else in the app.
+| Use | `variant` |
+|-----|-----------|
+| The main commit on a form or step — save, add, continue | `primary` |
+| A secondary action that still needs a visible control | `secondary` |
+| Cancel, back, dismiss, low-emphasis chrome | `ghost` |
+| Delete and other irreversible actions | `danger` |
+| Inline in a sentence, where a button would be too loud | `link` |
 
-#### Variant roles (this codebase)
-
-In `Button.module.scss`, **primary** reads as blue (update / apply / main commit) and **secondary** reads as green (add / create new entity). Use that split intentionally:
-
-| Use | `variant` | Notes |
-|-----|-----------|--------|
-| Main commit on a form or wizard step (save, continue, generate, apply) | `primary` | Solid, not `outlined` — see below |
-| **Add …** in a page/section header (new boat, trip type, add-on, location, etc.) | `secondary` | Often `icon="Plus"` and `size="sm"` next to a title |
-| Cancel, back, dismiss | `ghost` | Optional `outlined` only when a bordered low-emphasis control is required |
-| Delete, irreversible actions | `danger` | — |
-| Attention / confirm with care | `warning` | Rare; ensure `Button.module.scss` defines `&--warning` if used |
-
-Always import `Button` from `@/components/Button`, not from nested paths like `Button/Button`.
-
-#### `PageBox` and list hubs (owner + admin)
-
-- **`actions` prop** (top-right next to the title): use **`variant="secondary"`** for **Add …** / create CTAs so the green add action is distinct from the page’s primary task and matches other owner list pages (e.g. trip types, add-ons).
-- Typical pattern: `variant="secondary"`, `size="sm"`, `icon="Plus"`, `label={t("add…")}`.
-- **Empty states** that offer a single “add first …” action may use `primary` when that is the only path forward; if the same app also shows a header **Add** with `secondary`, follow the dominant pattern for that feature (see `LocationManager`, add-on list). For hub list pages (owner / renter) follow **`## Empty States`** below — render `<EmptyState>` with a CTA that mirrors the header action (`secondary`).
-
-#### Forms (owner profile, add-ons, locations, admin settings, etc.)
-
-- **Footer row**: **Submit / Save** → `variant="primary"`, `size="md"`, **no `outlined`** on the main submit (solid primary). **Cancel** → `variant="ghost"`.
-- Align labels with shared copy: prefer `saveChanges` / `save` / `saving` (or the feature namespace equivalent) in **all** locales — do not hardcode English.
-- Use **`Input`**, **`Textarea`**, **`Select`** from `@/components/Forms` with the `label` prop; follow **Text & Translations** for every visible string.
-- **Page title / section title**: `Heading` + `PageBox` as elsewhere; avoid raw `<h*>`.
-
-Reference-style examples: `ProfileForm`, `AddOnForm`, owner `LocationForm`, and similar admin forms.
-
-#### Wizard & step footers (availability, pricing, etc.)
-
-Multi-step wizards (e.g. `components/Availability/Wizard/`, `components/Pricing/Wizard/`) use the **same** primary button rules as **forms**:
-
-- **Main step CTA** (Save & continue, Continue, Generate, Save schedule, etc.):
-  - `variant="primary"` — **solid** (do **not** set `outlined` on primary; outline + primary looks like a secondary affordance)
-  - `size="md"` (set explicitly if the file mixes `sm` / `md`)
-  - Do not use `size="sm"` for the main step CTA unless layout forces it; keep steps visually aligned.
-- **Secondary actions** in the same bar (Cancel, stay, low-emphasis): `variant="ghost"`. Add `outlined` on ghost only when you need a visible border (e.g. “Change availability” in read-only summary), not for the main forward action.
-- **Reference implementations**: `BlockDatesStep`, `GenerateStep` (summary row), `ScheduleEditor` (save), Pricing steps `BracketsStep`, `ModifiersStep`, `GuestBasedStep`, `SummaryStep`.
+`primary` is the app's one inverted surface — ink-on-page in light, page-on-ink
+in dark. It follows the theme automatically; do not restyle it per component.
 
 ## Empty States
 
-For "no data yet" states on hub list pages (owner / renter / admin), use the **`<EmptyState>`** component from `@/components/Loading` — never a plain `<p>`, a custom flex `<div>`, or a bare message. Props: `icon`, `title`, `description?`, `action?` (`{ label, href?, onClick?, icon?, variant? }`), `bordered?`.
+There is no shared `EmptyState` component yet. The pattern to copy is
+`components/EmptyTree/EmptyTree.tsx`: a bordered card with an icon badge, a
+`<Heading>`, one line of help, and **one** `variant="primary"` action that is
+the single path forward — never a bare `<p>` saying "nothing here".
 
-- **Match the page's nav icon.** The `icon` prop should be the same Lucide icon the page uses in the sidebar (`components/Navigation/submenuRegistry.ts`): My Boats = `Sailboat`, Favorites = `Bookmark`, Bookings = `Calendar`, Earnings = `DollarSign`, Transactions = `CreditCard`, Messages = `MessageCircle`, Notifications = `Bell`, Disputes = `AlertTriangle`.
-- **Always `bordered`** in the hub (dashed container) for a consistent look.
-- **CTA after the description**, via the `action` prop, using `variant: "secondary"` + an icon:
-  - If the page has a top-right header action (Add Boat, File New Dispute, …), the empty-state CTA **mirrors it exactly** — same label, same icon, same `href` (e.g. My Boats → `t("addBoat")` / `Plus` / `/{lang}/owner/boats/new`).
-  - Otherwise point at the funnel step that produces data: renter Bookings / Favorites / Messages / Transactions → **"Browse boats"** (`icon: "Search"`, → `/{lang}/search`); owner Earnings → **"Manage boats"** (→ `/{lang}/owner/boats`).
-  - Pages with no sensible action (e.g. Notifications — auto-generated) get **no** `action`.
-- **CTA only when the account is truly empty.** When a status filter / tab yields zero rows but the user *has* data, render the `EmptyState` **without** an `action` (`statusFilter ? undefined : { … }`). Reserve the CTA for the genuinely-empty account.
-- **Hide redundant controls when truly empty.** When the list is empty, drop the header create button and the status-filter tabs (`actions={isEmpty ? undefined : <Button…/>}`, `{!isEmpty && <Tabs/>}`) and the list/calendar **view** toggle. **Keep** toggles that navigate between distinct views (e.g. Earnings' Dashboard / Transactions) — hiding them would trap the user.
-
-Reference implementations: `components/Owner/BoatList/BoatList.tsx` (My Boats), owner + renter `BookingsContent` / `DisputesContent`, `components/Favorites/FavoritesContent.tsx` (shared by both roles), owner `OwnerTransactionsContent` + `OwnerDashboardTab`, renter `TransactionsContent` / `MessagesContent` / `NotificationsContent`.
+- The action must be the thing that produces the missing data, not a link to
+  somewhere else to think about it.
+- Every string goes through `useTranslations()`, including the help line.
+- Build the shared component the second time this shape is needed.
 
 ## Page Structure (`app/` files)
 
@@ -243,9 +226,3 @@ import { Input, Select } from "@/components/Forms"
 - **Never wrap a block-level component with an inline element** like `<a>` or `<Link>` — if a card needs to be clickable, pass `link` as a prop instead of wrapping it
 - **Always use the `<Modal>` component from `@/components/Modal` for modals, overlays, and confirmation dialogs** — never build dialogs from `<div>` overlays with `onClick` handlers. `<Modal>` wraps the native `<dialog>` element and provides `showModal()`/`close()`, `::backdrop`, Escape key, and outside-click handling out of the box
 - All interactive elements must have accessible names (`aria-label`, visible text, or `aria-labelledby`)
-
-## Storybook
-
-- Every reusable component in `components/` must have a colocated `.stories.tsx` file
-- Stories use `@storybook/nextjs` framework with `Meta` and `StoryObj` types
-- Provide meaningful mock data in story args to demonstrate component states

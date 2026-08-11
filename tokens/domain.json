@@ -1,0 +1,38 @@
+{
+	"male": {
+		"line": { "value": "{color.sky-300}" },
+		"soft": { "value": "{color.sky-50}" },
+		"ink": { "value": "{color.sky-700}" },
+		"solid": { "value": "{color.sky-200}" }
+	},
+	"female": {
+		"line": { "value": "{color.rose-300}" },
+		"soft": { "value": "{color.rose-50}" },
+		"ink": { "value": "{color.rose-700}" },
+		"solid": { "value": "{color.rose-200}" }
+	},
+
+	"root": {
+		"ring": { "value": "{color.emerald-400}" },
+		"line": { "value": "{color.emerald-300}" },
+		"soft": { "value": "{color.emerald-50}" },
+		"ink": { "value": "{color.emerald-600}" }
+	},
+	"branch": {
+		"ring": { "value": "{color.amber-400}" },
+		"line": { "value": "{color.amber-300}" },
+		"soft": { "value": "{color.amber-50}" },
+		"soft-hover": { "value": "{color.amber-100}" },
+		"ink": { "value": "{color.amber-700}" }
+	},
+
+	"canvas": {
+		"dot": { "value": "{color.slate-200}" }
+	},
+	"edge": {
+		"spouse": { "value": "{color.slate-400}" },
+		"descent": { "value": "{color.slate-300}" }
+	},
+	"union": { "value": "{color.slate-400}" },
+	"ribbon": { "value": "{color.slate-800}" }
+}

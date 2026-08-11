@@ -116,7 +116,7 @@ export function Onboarding({
 
 			<main className="flex flex-1 items-center justify-center px-6">
 				{/* Keyed on the step so each one re-enters; the animation is disabled
-				    under `prefers-reduced-motion` in `globals.css`. */}
+				    under `prefers-reduced-motion` in `styles/globals.scss`. */}
 				<div key={step} className="slot-enter w-full py-10">
 					{step === "name" ? <NameStep {...stepProps} /> : null}
 					{step === "storage" ? (

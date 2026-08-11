@@ -12,6 +12,8 @@ export interface PersonFormValues {
 	fullName: string
 	/** Family name taken on marriage. Blank when there isn't one. */
 	marriedName?: string
+	/** The same name in other languages, keyed by locale. Blanks are dropped. */
+	names?: Record<string, string>
 	sex: "M" | "F"
 	birthDate?: string
 	birthPlace?: string
@@ -23,6 +25,20 @@ export interface PersonFormValues {
 
 /** Blank strings from an empty form field should be absent, not "". */
 const clean = (value: string | undefined) => value?.trim() || undefined
+
+/**
+ * Same idea for the per-language names: a row the user added and left empty is
+ * not a name, and an empty map should be absent rather than stored as `{}`.
+ */
+function cleanNames(
+	names: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+	const entries = Object.entries(names ?? {}).flatMap(([locale, value]) => {
+		const name = value.trim()
+		return name ? [[locale, name] as const] : []
+	})
+	return entries.length ? Object.fromEntries(entries) : undefined
+}
 
 export function toPersonInput(values: PersonFormValues): PersonInput {
 	const fullName = values.fullName.trim()
@@ -36,6 +52,7 @@ export function toPersonInput(values: PersonFormValues): PersonInput {
 		givenName: parts.slice(0, -1).join(" ") || fullName,
 		surname: parts.length > 1 ? parts.at(-1) : undefined,
 		marriedName: clean(values.marriedName),
+		names: cleanNames(values.names),
 		sex: values.sex,
 		birthDate: clean(values.birthDate),
 		birthPlace: clean(values.birthPlace),

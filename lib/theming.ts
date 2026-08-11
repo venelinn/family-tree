@@ -6,7 +6,8 @@
  * `/settings`.
  *
  * `system` is not a third palette. It is the *absence* of a choice, which lets
- * `color-scheme: light dark` in `globals.css` defer to the operating system.
+ * the `prefers-color-scheme` query in `styles/_theme-dark.scss` — the one no
+ * explicit `[data-theme]` overrides — defer to the operating system.
  * Keeping it as a stored value rather than "no cookie" matters: it is how a user
  * who picked dark once gets back to following the OS.
  */

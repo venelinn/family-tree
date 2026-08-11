@@ -19,7 +19,7 @@ lib/family-graph.ts         FamilyGraph { people, unions } + relationship querie
   │ lib/layout/family.ts    ─┐
   │ lib/layout/pedigree.ts  ─┴ graph + root → positioned nodes and edges
   ▼
-components/tree/*           React Flow canvas, cards, side panel
+components/*                React Flow canvas, cards, side panel
 ```
 
 ## The two seams
@@ -91,33 +91,42 @@ Also holds `reviveFamilyGraph`, because `FamilyGraph` uses `Map`s which don't
 survive the server → client boundary; the page serialises to arrays and the
 client rebuilds.
 
-### `components/tree/`
+### `components/`
 
-| File | Role |
+One folder per component, flat — `components/Toolbar/{Toolbar.tsx,
+Toolbar.module.scss, index.ts}` — so a component's markup, styles and public
+surface sit together and consumers import the folder. There is no grouping
+directory: `tree/` and `settings/` were removed when the components moved to CSS
+Modules, because a component's folder is now the unit that matters.
+
+| Component | Role |
 | --- | --- |
-| `TreeApp.tsx` | Client root: view, root person, selection, depth, branch overrides |
-| `TreeCanvas.tsx` | React Flow wrapper — node/edge mapping, framing |
-| `PersonCard.tsx` | Portrait card, mourning ribbon, reveal bars |
-| `UnionCard.tsx` | The couple marker children hang from |
-| `PlaceholderCard.tsx` | "+ Add father" slots in the pedigree view |
-| `PersonPanel.tsx` | Sidebar: action bar, facts timeline, immediate family |
-| `EmptyTree.tsx` | First-person prompt for a tree started empty |
-| `PersonForm.tsx` | Add / edit fields |
-| `UnionForm.tsx` | Marriage date, place and whether it ended |
-| `PersonSearch.tsx` | Find a person by name; also the picker when linking |
-| `LinkPersonForm.tsx` | Relate two people who are both already in the tree |
-| `PhotoDrop.tsx` | Drag-and-drop photos, promote or remove them |
-| `AddSlotCard.tsx` | Ghost "Add sister" cards around the selected person |
-| `Toolbar.tsx` | View switch, depth slider, person count, link to settings |
-| `Avatar.tsx` | Photo with initials fallback |
+| `TreeApp` | Client root: view, root person, selection, depth, branch overrides |
+| `TreeCanvas` | React Flow wrapper — node/edge mapping, framing |
+| `PersonCard` | Portrait card, mourning ribbon, reveal bars |
+| `UnionCard` | The couple marker children hang from |
+| `PlaceholderCard` | "+ Add father" slots in the pedigree view |
+| `PersonPanel` | Sidebar: action bar, facts timeline, immediate family |
+| `EmptyTree` | First-person prompt for a tree started empty |
+| `PersonForm` | Add / edit fields |
+| `UnionForm` | Marriage date, place and whether it ended |
+| `PersonSearch` | Find a person by name; also the picker when linking |
+| `LinkPersonForm` | Relate two people who are both already in the tree |
+| `PhotoDrop` | Drag-and-drop photos, promote or remove them |
+| `AddSlotCard` | Ghost "Add sister" cards around the selected person |
+| `Toolbar` | View switch, depth slider, person count, link to settings |
+| `Avatar` | Photo with initials fallback |
+| `Heading`, `Button` | The shared UI kit — see `rules/html-rules.mdc` |
 
-`components/settings/` holds the preference pickers — `LanguagePicker`,
-`ThemePicker` and `TreeManager`, deliberately the same row shape, since they all
-answer "one of these, please".
+`LanguagePicker`, `ThemePicker`, `NameLanguagePicker` and `TreeManager` are the
+preference pickers, deliberately the same row shape, since they all answer "one
+of these, please".
 
 `components/Onboarding/` is the first-run wizard at `/welcome`: name the tree,
 choose where its file is kept, set language and theme, and add the first person.
-`components/tree/EmptyTree.tsx` is its counterpart for a tree started empty.
+It keeps its `steps/` subfolder because the steps are parts of one flow rather
+than components in their own right. `EmptyTree` is its counterpart for a tree
+started empty.
 
 ### `lib/localization.ts`, `messages/`, `i18n/request.ts`
 
@@ -127,17 +136,23 @@ in a cookie rather than a URL prefix. The rule that shapes the rest of the code:
 titles, relationship labels, add-slot labels, and write failures alike. See
 [i18n.md](i18n.md).
 
-### `lib/theming.ts`, `lib/theme.ts`, `app/globals.css`
+### `lib/theming.ts`, `lib/theme.ts`, `tokens/`, `styles/`
 
 Light and dark, `system` by default. Same three-file shape as the locale —
 shared constants, a server-side cookie read, a server action for the write — for
 the same reason: it is one preference, set once, on the settings page.
 
 The rule that shapes the components: **name the role, not the colour**.
-`bg-panel`, never `bg-white`. Every colour in the app resolves through a token in
-`globals.css`, including the React Flow canvas, so the dark theme is a change to
-that one file rather than a `dark:` variant on every element. See
+`var(--surface-container)`, never `#fff`. Roles are declared in `tokens/*.json`
+and built by Style Dictionary into `styles/_css-variables.css`; the dark values
+are a hand-maintained override in `styles/_theme-dark.scss`. Every colour
+resolves through them, including the React Flow canvas, so the dark theme is a
+change to one file rather than a `dark:` variant on every element. See
 [theming.md](theming.md).
+
+Styling itself is mid-migration: components are Tailwind utilities today and are
+moving to colocated `.module.scss` one at a time, with `styles/_compat.scss`
+holding the two together. `rules/css-styling.mdc` is the guide.
 
 ## Writes
 

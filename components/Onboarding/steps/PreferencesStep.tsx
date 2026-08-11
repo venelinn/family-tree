@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
-import { LanguagePicker } from "@/components/settings/LanguagePicker"
-import { ThemePicker } from "@/components/settings/ThemePicker"
+import { LanguagePicker } from "@/components/LanguagePicker"
+import { ThemePicker } from "@/components/ThemePicker"
 import type { ThemePreference } from "@/lib/theming"
 import type { StepProps } from "../types"
 

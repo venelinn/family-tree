@@ -1,0 +1,164 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+// Every property is declared once on `.btn` and reads a `--_btn-*` variable.
+// The size and variant modifiers, and the interaction states, only ever
+// *reassign* those variables — never re-declare the property. See the Responsive
+// section of `rules/css-styling.mdc` for why.
+.btn {
+	--_btn-bg: transparent;
+	--_btn-color: var(--on-surface-soft);
+	--_btn-border: transparent;
+	--_btn-radius: var(--border-radius);
+	--_btn-padding: var(--spacing-2) var(--spacing-3);
+	--_btn-gap: var(--spacing-2);
+	--_btn-opacity: 1;
+	--_btn-underline: none;
+
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--_btn-gap);
+	width: var(--_btn-width, auto);
+	padding: var(--_btn-padding);
+	border: 1px solid var(--_btn-border);
+	border-radius: var(--_btn-radius);
+	background-color: var(--_btn-bg);
+	color: var(--_btn-color);
+	opacity: var(--_btn-opacity);
+	font-family: inherit;
+	font-weight: var(--font-weight-medium);
+	text-align: center;
+	text-decoration: var(--_btn-underline);
+	cursor: pointer;
+	// A button label wrapping mid-word looks broken and changes the control's
+	// height under a translation. Bulgarian runs longer than English.
+	white-space: nowrap;
+
+	@media (prefers-reduced-motion: no-preference) {
+		transition:
+			background-color var(--animation-duration-fast) ease,
+			color var(--animation-duration-fast) ease,
+			border-color var(--animation-duration-fast) ease;
+	}
+
+	&:focus-visible {
+		@include shared.focus-ring;
+	}
+
+	&:disabled,
+	&[aria-disabled="true"] {
+		--_btn-opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	// ── Sizes ───────────────────────────────────────────────────────────────
+	&--sm {
+		@include typo.ui-small;
+		--_btn-padding: var(--spacing-1) var(--spacing-2);
+		--_btn-gap: var(--spacing-1-5);
+		--_btn-radius: var(--border-radius-sm);
+	}
+
+	&--md {
+		@include typo.ui-caption;
+		--_btn-padding: var(--spacing-2) var(--spacing-3);
+	}
+
+	&--lg {
+		@include typo.ui-body;
+		--_btn-padding: var(--spacing-3) var(--spacing-4);
+		--_btn-radius: var(--border-radius-lg);
+	}
+
+	// ── Variants ────────────────────────────────────────────────────────────
+	// The app's accent is ink itself, so "primary" is the one inverted surface.
+	// `--primary` flips with the theme, which is why this needs no dark rule.
+	&--primary {
+		--_btn-bg: var(--primary);
+		--_btn-color: var(--on-primary);
+
+		&:hover:not(:disabled) {
+			--_btn-bg: var(--primary-hover);
+		}
+	}
+
+	&--secondary {
+		--_btn-bg: var(--surface-container);
+		--_btn-color: var(--on-surface);
+		--_btn-border: var(--outline-variant);
+
+		&:hover:not(:disabled) {
+			--_btn-bg: var(--surface-container-highest);
+		}
+	}
+
+	&--ghost {
+		--_btn-color: var(--on-surface-soft);
+
+		&:hover:not(:disabled) {
+			--_btn-bg: var(--surface-container-highest);
+			--_btn-color: var(--on-surface);
+		}
+	}
+
+	&--danger {
+		--_btn-bg: var(--error-container);
+		--_btn-color: var(--on-error-container);
+
+		&:hover:not(:disabled) {
+			--_btn-color: var(--error);
+		}
+	}
+
+	// Reads as a link, behaves as whatever element it rendered.
+	&--link {
+		--_btn-padding: 0;
+		--_btn-color: var(--primary);
+		--_btn-underline: underline;
+		--_btn-gap: var(--spacing-1);
+	}
+
+	// `outlined` drops the fill and promotes the fill colour to the border, so
+	// it composes with every variant instead of needing one rule each.
+	&--outlined {
+		--_btn-bg: transparent;
+		--_btn-border: currentcolor;
+
+		&:hover:not(:disabled) {
+			--_btn-bg: var(--surface-container-highest);
+		}
+	}
+
+	&--full {
+		--_btn-width: 100%;
+	}
+
+	// Square, and sized explicitly rather than by `aspect-ratio` — Safari
+	// resolves that against the wrong box inside a flex row.
+	&--icon-only {
+		--_btn-padding: 0;
+
+		width: var(--_btn-size, 2.25rem);
+		height: var(--_btn-size, 2.25rem);
+
+		&.btn--sm {
+			--_btn-size: 1.75rem;
+		}
+
+		&.btn--lg {
+			--_btn-size: 2.75rem;
+		}
+	}
+
+	&__icon {
+		display: inline-flex;
+		// Safari shrinks icons in a flex row without this.
+		flex: 0 0 auto;
+	}
+
+	&__label {
+		// Lets a long label ellipsis instead of pushing the icon out of the button.
+		min-width: 0;
+	}
+}

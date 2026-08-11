@@ -1,27 +1,40 @@
 {
-	"system": {
-		"error": { "value": "#b3002f" },
-		"error-light": { "value": "#fff2f2" },
-		"success": { "value": "#046239" },
-		"warning": { "value": "#f4ae11" },
-		"warning-light": { "value": "#fff8e6" },
-		"white": { "value": "#ffffff" },
-		"black": { "value": "#000000" }
-	},
 	"color": {
-		"main": { "value": "#022443" },
-		"highlight": { "value": "#c62828" },
-		"blue": { "value": "#0284d4" },
-		"green": { "value": "#00A674" },
-		"blue-dark": { "value": "#0f2541" },
-		"blue-light": { "value": "#a7e1f4" },
-		"lime": { "value": "#bef564" },
-		"grey": { "value": "#65675e" },
-		"grey-light": { "value": "#f3f3f3" },
-		"grey-dark": { "value": "#444444" },
-		"grey-mid": { "value": "#f2f2f2" },
-		"grey-border": { "value": "#cccccc" },
-		"white": { "value": "{system.white}" },
-		"black": { "value": "{system.black}" }
+		"white": { "value": "#ffffff" },
+		"black": { "value": "#000000" },
+
+		"slate-50": { "value": "#f8fafc" },
+		"slate-100": { "value": "#f1f5f9" },
+		"slate-200": { "value": "#e2e8f0" },
+		"slate-300": { "value": "#cbd5e1" },
+		"slate-400": { "value": "#94a3b8" },
+		"slate-500": { "value": "#64748b" },
+		"slate-600": { "value": "#475569" },
+		"slate-700": { "value": "#334155" },
+		"slate-800": { "value": "#1e293b" },
+		"slate-900": { "value": "#0f172a" },
+
+		"sky-50": { "value": "#f0f9ff" },
+		"sky-200": { "value": "#bae6fd" },
+		"sky-300": { "value": "#7dd3fc" },
+		"sky-700": { "value": "#0369a1" },
+
+		"rose-50": { "value": "#fff1f2" },
+		"rose-200": { "value": "#fecdd3" },
+		"rose-300": { "value": "#fda4af" },
+		"rose-400": { "value": "#fb7185" },
+		"rose-600": { "value": "#e11d48" },
+		"rose-700": { "value": "#be123c" },
+
+		"emerald-50": { "value": "#ecfdf5" },
+		"emerald-300": { "value": "#6ee7b7" },
+		"emerald-400": { "value": "#34d399" },
+		"emerald-600": { "value": "#059669" },
+
+		"amber-50": { "value": "#fffbeb" },
+		"amber-100": { "value": "#fef3c7" },
+		"amber-300": { "value": "#fcd34d" },
+		"amber-400": { "value": "#fbbf24" },
+		"amber-700": { "value": "#b45309" }
 	}
 }

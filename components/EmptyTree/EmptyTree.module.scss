@@ -1,0 +1,50 @@
+@use "styles/typo-mixins" as typo;
+
+.empty {
+	display: grid;
+	place-items: center;
+	// Not a state override — the second line is the fallback pair for browsers
+	// without `dvh`, where `vh` counts the mobile URL bar as visible.
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding-inline: var(--spacing-6);
+	background-color: var(--background);
+
+	&__inner {
+		width: 100%;
+		max-width: 28rem;
+	}
+
+	&__card {
+		display: grid;
+		justify-items: center;
+		gap: var(--spacing-4);
+		padding: var(--spacing-10) var(--spacing-6);
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius-xl);
+		background-color: var(--surface-container);
+		text-align: center;
+	}
+
+	// The form case reuses the card's frame but not its padding — `PersonForm`
+	// brings its own.
+	&__form {
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius-xl);
+		background-color: var(--surface-container);
+	}
+
+	&__badge {
+		display: inline-flex;
+		padding: var(--spacing-3);
+		border-radius: 50%;
+		background-color: var(--root-soft);
+		color: var(--root-ink);
+	}
+
+	&__help {
+		@include typo.ui-caption;
+		margin-top: var(--spacing-1-5);
+		color: var(--on-surface-variant);
+	}
+}

@@ -24,6 +24,17 @@ export interface PersonRecord {
 	 * of the family knows them. MyHeritage exports it as `_MARNM`.
 	 */
 	marriedName?: string
+	/**
+	 * The same person's name written in another language, keyed by locale code:
+	 * `{ bg: "Венелин Николов" }`.
+	 *
+	 * `fullName` stays the one canonical name and is what every language falls
+	 * back to — these are alternative spellings of the same person, not a
+	 * replacement, so a tree read in a language nobody filled in still shows
+	 * everybody. Keyed by plain `string` rather than `Locale` on purpose: a file
+	 * written when the app knew a third language must still load when it doesn't.
+	 */
+	names?: Record<string, string>
 	sex: Sex
 	/** ISO `1976-12-23` when fully known, otherwise free text like `Jun 1991`. */
 	birthDate?: string
