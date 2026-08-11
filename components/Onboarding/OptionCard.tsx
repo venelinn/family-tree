@@ -1,13 +1,14 @@
 import { Check } from "lucide-react"
 import type React from "react"
+import { Heading } from "@/components/Heading"
+import styles from "./OptionCard.module.scss"
 
 /**
  * One choice in a step.
  *
- * Colour comes entirely from semantic tokens — `bg-root-soft`, `text-ink-muted`
- * — never from a Tailwind palette class, so the card is legible in both themes
- * without a single `dark:` variant. Selected state matches the settings pickers
- * on purpose: the same green means "this is the one you're on" everywhere.
+ * Selected state matches the settings pickers on purpose: the same green means
+ * "this is the one you're on" everywhere in the app. `aria-pressed` carries it,
+ * so the stylesheet and the screen reader read the same source.
  */
 
 interface OptionCardProps {
@@ -30,36 +31,20 @@ export function OptionCard({
 			type="button"
 			onClick={onClick}
 			aria-pressed={selected}
-			className={`relative w-full rounded-2xl border p-5 text-left transition-colors ${
-				selected
-					? "border-root-line bg-root-soft"
-					: "border-line bg-panel hover:border-line-strong hover:bg-wash"
-			}`}
+			className={styles.option}
 		>
-			<div className="flex flex-col gap-1.5">
-				{icon ? (
-					<div className={selected ? "text-root-ink" : "text-ink-faint"}>
-						{icon}
-					</div>
-				) : null}
-				<h3
-					className={`pr-7 font-semibold ${selected ? "text-root-ink" : "text-ink"}`}
-				>
+			<span className={styles.option__body}>
+				{icon ? <span className={styles.option__icon}>{icon}</span> : null}
+				<Heading as="h3" size="base" className={styles.option__label}>
 					{label}
-				</h3>
+				</Heading>
 				{description ? (
-					<p className="text-ink-muted text-sm leading-relaxed">
-						{description}
-					</p>
+					<span className={styles.option__description}>{description}</span>
 				) : null}
-			</div>
+			</span>
 
 			{selected ? (
-				<Check
-					size={18}
-					strokeWidth={2.5}
-					className="absolute top-5 right-5 text-root-ink"
-				/>
+				<Check size={18} strokeWidth={2.5} className={styles.option__check} />
 			) : null}
 		</button>
 	)

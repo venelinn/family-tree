@@ -1,9 +1,14 @@
 import { CloudOff, FolderOpen, HardDrive, TriangleAlert } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
+import { Button } from "@/components/Button"
+import { Callout } from "@/components/Callout"
+import { Input } from "@/components/Forms"
+import { Heading } from "@/components/Heading"
 import { previewStorageAction } from "@/lib/tree-actions"
 import OptionCard from "../OptionCard"
 import type { StepProps } from "../types"
+import styles from "./Step.module.scss"
 
 /**
  * Where the tree file is kept.
@@ -58,20 +63,19 @@ export function StorageStep({
 	const ready = !custom || Boolean(preview.file)
 
 	return (
-		<div className="mx-auto flex max-w-xl flex-col gap-6">
-			<div className="text-center">
-				<h1 className="font-semibold text-2xl text-ink tracking-tight">
+		<div className={styles.step}>
+			<div className={styles.step__intro}>
+				<Heading as="h1" size="h2">
 					{t("storageTitle")}
-				</h1>
-				<p className="mt-2 text-ink-muted">{t("storageHelp")}</p>
+				</Heading>
+				<p className={styles.step__help}>{t("storageHelp")}</p>
 			</div>
 
-			<p className="flex items-start gap-2.5 rounded-xl border border-root-line bg-root-soft px-4 py-3 text-root-ink text-sm">
-				<CloudOff size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
+			<Callout icon={<CloudOff size={16} strokeWidth={2} />}>
 				{t("storagePrivacy")}
-			</p>
+			</Callout>
 
-			<div className="grid gap-3">
+			<div className={styles.step__options}>
 				<OptionCard
 					icon={<HardDrive size={20} strokeWidth={1.75} />}
 					label={t("storageDefault")}
@@ -89,54 +93,42 @@ export function StorageStep({
 			</div>
 
 			{custom ? (
-				<label className="flex flex-col gap-1.5">
-					<span className="font-medium text-[11px] text-ink-muted uppercase tracking-wide">
-						{t("storagePathLabel")}
-					</span>
-					<input
-						value={data.customPath}
-						onChange={(event) => onUpdate({ customPath: event.target.value })}
-						placeholder={t("storagePathPlaceholder")}
-						spellCheck={false}
-						autoComplete="off"
-						className="w-full rounded-xl border border-line bg-panel px-4 py-2.5 font-mono text-ink text-sm outline-none focus:border-line-strong"
-					/>
-				</label>
+				<Input
+					label={t("storagePathLabel")}
+					value={data.customPath}
+					onChange={(event) => onUpdate({ customPath: event.target.value })}
+					placeholder={t("storagePathPlaceholder")}
+					spellCheck={false}
+					autoComplete="off"
+					full
+				/>
 			) : null}
 
-			{preview.error ? (
-				<p className="rounded-xl bg-danger-soft px-4 py-3 text-danger-ink text-sm">
-					{preview.error}
-				</p>
-			) : null}
+			<Callout tone="error">{preview.error}</Callout>
 
 			{preview.file ? (
-				<div className="flex flex-col gap-2">
-					<p className="text-ink-faint text-xs">{t("storageResolved")}</p>
-					<code className="break-all rounded-xl bg-muted px-4 py-3 font-mono text-ink-soft text-xs">
-						{preview.file}
-					</code>
+				<div className={styles.step__resolved}>
+					<p className={styles.step__resolvedLabel}>{t("storageResolved")}</p>
+					<code className={styles.step__path}>{preview.file}</code>
 					{preview.cloudSynced ? (
-						<p className="flex items-start gap-2.5 rounded-xl border border-branch-line bg-branch-soft px-4 py-3 text-branch-ink text-sm">
-							<TriangleAlert
-								size={16}
-								strokeWidth={2}
-								className="mt-0.5 shrink-0"
-							/>
+						<Callout
+							tone="warning"
+							icon={<TriangleAlert size={16} strokeWidth={2} />}
+						>
 							{t("storageCloudWarning")}
-						</p>
+						</Callout>
 					) : null}
 				</div>
 			) : null}
 
-			<button
-				type="button"
-				onClick={onNext}
+			<Button
+				label={t("continue")}
+				variant="primary"
+				size="lg"
 				disabled={!ready}
-				className="rounded-xl bg-invert px-4 py-3 font-medium text-on-invert hover:bg-invert-hover disabled:opacity-40"
-			>
-				{t("continue")}
-			</button>
+				full
+				onClick={onNext}
+			/>
 		</div>
 	)
 }

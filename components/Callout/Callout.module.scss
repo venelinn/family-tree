@@ -1,0 +1,38 @@
+@use "styles/typo-mixins" as typo;
+
+// A tinted note with an icon: a promise being made, a caveat being raised, or a
+// failure being reported. The tone picks the colour family, all of which already
+// mean something elsewhere in the app — green for "this is the one", amber for
+// the branch warnings, and the error tokens for failures.
+.callout {
+	--_callout-border: var(--root-line);
+	--_callout-bg: var(--root-soft);
+	--_callout-color: var(--root-ink);
+
+	@include typo.ui-caption;
+	display: flex;
+	align-items: start;
+	gap: var(--spacing-2-5);
+	padding: var(--spacing-3) var(--spacing-4);
+	border: 1px solid var(--_callout-border);
+	border-radius: var(--border-radius-lg);
+	background-color: var(--_callout-bg);
+	color: var(--_callout-color);
+
+	&--warning {
+		--_callout-border: var(--branch-line);
+		--_callout-bg: var(--branch-soft);
+		--_callout-color: var(--branch-ink);
+	}
+
+	&--error {
+		--_callout-border: var(--error-container);
+		--_callout-bg: var(--error-container);
+		--_callout-color: var(--on-error-container);
+	}
+
+	&__icon {
+		margin-top: var(--spacing-0-5);
+		flex: 0 0 auto;
+	}
+}

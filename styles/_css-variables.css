@@ -77,8 +77,9 @@
   --spacing-6-5: 1.625rem; /** 26px */
   --spacing-7-5: 1.875rem; /** 30px */
   --spacing-8-5: 2.125rem; /** 34px */
-  --font-family-heading: var(--font-sans); /** next/font sets --font-raleway on <html>; globals.scss maps it to --font-sans */
-  --font-family-body: var(--font-sans);
+  --font-family-heading: inherit; /** Headings share the body face. next/font puts it on <body> via a class, so inheriting is how it reaches them. */
+  --font-family-body: inherit;
+  --font-family-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; /** No webfont: paths and hashes need to line up, not to be branded, and the system stack is already the right shape on every OS. */
   --font-size-base: 1rem;
   --font-weight-light: 300;
   --font-weight-normal: 400;

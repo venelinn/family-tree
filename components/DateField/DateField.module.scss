@@ -1,0 +1,27 @@
+@use "styles/functions" as fn;
+@use "styles/mixins" as shared;
+
+.dateField {
+	display: grid;
+
+	// A link, not a button: it changes what the field *is*, and reads as an aside
+	// to the field rather than an action on the form.
+	&__toggle {
+		justify-self: start;
+		margin-top: var(--spacing-1);
+		color: var(--_toggle-color, var(--on-surface-faint));
+		font-size: fn.rem(11px);
+		text-decoration: var(--_toggle-decoration, none);
+		text-underline-offset: 2px;
+		cursor: pointer;
+
+		&:hover {
+			--_toggle-color: var(--on-surface-soft);
+			--_toggle-decoration: underline;
+		}
+
+		&:focus-visible {
+			@include shared.focus-ring;
+		}
+	}
+}

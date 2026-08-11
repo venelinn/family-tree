@@ -1,7 +1,7 @@
 "use client"
 
-import { Check } from "lucide-react"
 import { useTransition } from "react"
+import { ChoiceList } from "@/components/ChoiceList"
 import { setUserLocale } from "@/lib/locale-actions"
 import { type Locale, localeNames, localization } from "@/lib/localization"
 
@@ -23,36 +23,15 @@ export function LanguagePicker({ current }: { current: string }) {
 	}
 
 	return (
-		<ul className="divide-y divide-line-subtle overflow-hidden rounded-lg border border-line">
-			{localization.locales.map((locale) => {
-				const active = locale === current
-				return (
-					<li key={locale}>
-						<button
-							type="button"
-							onClick={() => choose(locale)}
-							disabled={pending}
-							aria-current={active ? "true" : undefined}
-							className={`flex w-full items-center gap-3 px-4 py-3 text-left disabled:opacity-60 ${
-								active ? "bg-root-soft" : "hover:bg-wash"
-							}`}
-						>
-							<span className="flex-1 font-medium text-ink-soft text-sm">
-								{localeNames[locale]}
-							</span>
-							<span className="font-medium text-[11px] text-ink-faint uppercase">
-								{locale}
-							</span>
-							{active ? (
-								<Check size={16} strokeWidth={2.5} className="text-root-ink" />
-							) : (
-								// Keeps the rows the same width whether ticked or not.
-								<span className="h-4 w-4" />
-							)}
-						</button>
-					</li>
-				)
-			})}
-		</ul>
+		<ChoiceList
+			items={localization.locales.map((locale) => ({
+				value: locale as string,
+				label: localeNames[locale],
+				badge: locale,
+			}))}
+			current={current}
+			onChoose={(locale) => choose(locale as Locale)}
+			disabled={pending}
+		/>
 	)
 }

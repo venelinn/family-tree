@@ -1,7 +1,11 @@
 import { Sprout, UserPlus } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { Button } from "@/components/Button"
+import { Callout } from "@/components/Callout"
+import { Heading } from "@/components/Heading"
 import OptionCard from "../OptionCard"
 import type { StepProps } from "../types"
+import styles from "./Step.module.scss"
 
 /**
  * Start from yourself, or from nothing.
@@ -30,15 +34,15 @@ export function StartStep({
 	const empty = data.startMode === "empty"
 
 	return (
-		<div className="mx-auto flex max-w-xl flex-col gap-6">
-			<div className="text-center">
-				<h1 className="font-semibold text-2xl text-ink tracking-tight">
+		<div className={styles.step}>
+			<div className={styles.step__intro}>
+				<Heading as="h1" size="h2">
 					{t("startTitle")}
-				</h1>
-				<p className="mt-2 text-ink-muted">{t("startHelp")}</p>
+				</Heading>
+				<p className={styles.step__help}>{t("startHelp")}</p>
 			</div>
 
-			<div className="grid gap-3">
+			<div className={styles.step__options}>
 				<OptionCard
 					icon={<UserPlus size={20} strokeWidth={1.75} />}
 					label={t("startMe")}
@@ -55,20 +59,18 @@ export function StartStep({
 				/>
 			</div>
 
-			{error ? (
-				<p className="rounded-xl bg-danger-soft px-4 py-3 text-danger-ink text-sm">
-					{error}
-				</p>
-			) : null}
+			<Callout tone="error">{error}</Callout>
 
-			<button
-				type="button"
-				onClick={empty ? onSubmit : onNext}
+			<Button
+				label={
+					pending ? t("creating") : empty ? t("createTree") : t("continue")
+				}
+				variant="primary"
+				size="lg"
 				disabled={pending}
-				className="rounded-xl bg-invert px-4 py-3 font-medium text-on-invert hover:bg-invert-hover disabled:opacity-40"
-			>
-				{pending ? t("creating") : empty ? t("createTree") : t("continue")}
-			</button>
+				full
+				onClick={empty ? onSubmit : onNext}
+			/>
 		</div>
 	)
 }

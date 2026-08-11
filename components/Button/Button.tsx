@@ -1,5 +1,6 @@
 import clsx from "clsx"
 import Link from "next/link"
+import type { FormElementSize } from "@/components/Forms"
 import styles from "./Button.module.scss"
 
 /**
@@ -41,7 +42,8 @@ export const BUTTON_VARIANTS = [
 ] as const
 
 export type ButtonVariant = (typeof BUTTON_VARIANTS)[number]
-export type ButtonSize = "sm" | "md" | "lg"
+/** Shared with the form controls, so a button lines up beside an input. */
+export type ButtonSize = FormElementSize
 
 export interface ButtonProps {
 	/** Visible text. Omit for an icon-only button — then `aria-label` is required. */

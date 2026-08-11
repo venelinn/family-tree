@@ -9,6 +9,10 @@
 	--_btn-bg: transparent;
 	--_btn-color: var(--on-surface-soft);
 	--_btn-border: transparent;
+	// Dashed reads as "not committed yet" — the add-a-language buttons on the
+	// person form use it, the same way the chart draws a person it has no record
+	// of.
+	--_btn-border-style: solid;
 	--_btn-radius: var(--border-radius);
 	--_btn-padding: var(--spacing-2) var(--spacing-3);
 	--_btn-gap: var(--spacing-2);
@@ -21,7 +25,7 @@
 	gap: var(--_btn-gap);
 	width: var(--_btn-width, auto);
 	padding: var(--_btn-padding);
-	border: 1px solid var(--_btn-border);
+	border: 1px var(--_btn-border-style) var(--_btn-border);
 	border-radius: var(--_btn-radius);
 	background-color: var(--_btn-bg);
 	color: var(--_btn-color);

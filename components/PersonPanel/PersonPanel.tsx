@@ -1,7 +1,7 @@
 "use client"
 
+import clsx from "clsx"
 import {
-	ChevronDown,
 	Crosshair,
 	Link2,
 	MapPin,
@@ -14,7 +14,11 @@ import {
 } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
+import { Accordion } from "@/components/Accordion"
 import { Avatar } from "@/components/Avatar"
+import { Button } from "@/components/Button"
+import { FormError } from "@/components/Forms"
+import { Heading } from "@/components/Heading"
 import { usePersonName } from "@/components/PersonNames"
 import { PhotoDrop } from "@/components/PhotoDrop"
 import { ageOf } from "@/lib/age"
@@ -34,6 +38,7 @@ import {
 	type Person,
 } from "@/lib/family-graph"
 import type { BranchState } from "@/lib/layout/types"
+import styles from "./PersonPanel.module.scss"
 
 interface PersonPanelProps {
 	graph: FamilyGraph
@@ -64,44 +69,6 @@ interface PersonPanelProps {
 	onLink: (personId: string) => void
 	/** Break a relationship, leaving both people in place. */
 	onUnlink: (personId: string, relation: RelationKey, otherId: string) => void
-}
-
-/** Collapsible section. Open by default — the content is why you clicked. */
-function Section({
-	title,
-	count,
-	children,
-	defaultOpen = true,
-}: {
-	title: string
-	count?: number
-	children: React.ReactNode
-	defaultOpen?: boolean
-}) {
-	const [open, setOpen] = useState(defaultOpen)
-	return (
-		<section className="border-line-subtle border-t">
-			<button
-				type="button"
-				onClick={() => setOpen((current) => !current)}
-				className="flex w-full items-center gap-1.5 px-5 py-3 text-left hover:bg-wash"
-			>
-				<span className="font-semibold text-[11px] text-ink-faint uppercase tracking-wide">
-					{title}
-				</span>
-				{count != null ? (
-					<span className="text-[11px] text-ink-ghost">{count}</span>
-				) : null}
-				<ChevronDown
-					size={14}
-					className={`ml-auto text-ink-faint transition-transform ${
-						open ? "" : "-rotate-90"
-					}`}
-				/>
-			</button>
-			{open ? <div className="px-5 pb-4">{children}</div> : null}
-		</section>
-	)
 }
 
 /**
@@ -174,63 +141,54 @@ function RelativeRow({
 					: ""
 
 	return (
-		<li className="group flex items-center gap-1">
+		<li className={styles.relative}>
 			<button
 				type="button"
 				onClick={() => onFocus(person.id)}
-				className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-muted"
+				className={styles.relative__link}
 			>
 				<Avatar person={person} size={34} />
-				<span className="min-w-0 flex-1">
-					<span className="block truncate font-medium text-ink text-sm">
-						{nameOf(person)}
-					</span>
-					<span className="block text-ink-muted text-xs">
+				<span className={styles.relative__names}>
+					<span className={styles.relative__name}>{nameOf(person)}</span>
+					<span className={styles.relative__relation}>
 						{tRelations(relation)}
 					</span>
 					{years ? (
-						<span className="block text-ink-faint text-xs">{years}</span>
+						<span className={styles.relative__years}>{years}</span>
 					) : null}
 				</span>
 			</button>
 
-			{/*
-			 * Two clicks, deliberately. Breaking a link is not destructive — both
-			 * people stay — but it is invisible once done, and an accidental
-			 * detach on a 253-person tree could go unnoticed for a long time.
-			 */}
 			{onUnlink ? (
 				confirming ? (
-					<span className="flex shrink-0 items-center gap-1">
-						<button
-							type="button"
+					<span className={styles.relative__confirm}>
+						<Button
+							label={t("unlinkConfirm")}
+							variant="danger"
+							size="sm"
+							className={styles.relative__yes}
 							onClick={() => {
 								setConfirming(false)
 								onUnlink()
 							}}
-							className="rounded-md bg-danger-soft px-2 py-1 font-medium text-danger-ink text-xs"
-						>
-							{t("unlinkConfirm")}
-						</button>
-						<button
-							type="button"
-							onClick={() => setConfirming(false)}
+						/>
+						<Button
+							variant="ghost"
 							aria-label={t("unlinkCancel")}
-							className="rounded-md p-1 text-ink-faint hover:text-ink"
-						>
-							<X size={13} strokeWidth={2} />
-						</button>
+							className={styles.relative__cancel}
+							icon={<X size={13} strokeWidth={2} />}
+							onClick={() => setConfirming(false)}
+						/>
 					</span>
 				) : (
-					<button
-						type="button"
-						onClick={() => setConfirming(true)}
+					<Button
+						variant="ghost"
 						aria-label={t("unlink")}
 						title={t("unlink")}
-						className="shrink-0 rounded-md p-1.5 text-ink-ghost opacity-0 hover:bg-muted hover:text-danger-text focus-visible:opacity-100 group-hover:opacity-100"
-					>
-						<Unlink size={13} strokeWidth={2} />
-					</button>
+						className={styles.relative__unlink}
+						icon={<Unlink size={13} strokeWidth={2} />}
+						onClick={() => setConfirming(true)}
+					/>
 				)
 			) : null}
 		</li>
@@ -257,18 +215,14 @@ function Action({
 			onClick={onClick}
 			disabled={disabled}
 			title={label}
-			className="group flex flex-1 flex-col items-center gap-1 disabled:opacity-40"
+			// `aria-current` rather than a class: "this is the one you are on" is
+			// state a screen reader should hear, and the stylesheet reads the same
+			// attribute.
+			aria-current={active || undefined}
+			className={styles.panel__action}
 		>
-			<span
-				className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
-					active
-						? "border-root-line bg-root-soft text-root-ink"
-						: "border-line bg-wash text-ink-soft group-hover:border-line-strong group-hover:bg-muted group-enabled:group-hover:text-ink"
-				}`}
-			>
-				{icon}
-			</span>
-			<span className="font-medium text-[10px] text-ink-muted">{label}</span>
+			<span className={styles.panel__actionIcon}>{icon}</span>
+			<span className={styles.panel__actionLabel}>{label}</span>
 		</button>
 	)
 }
@@ -287,9 +241,8 @@ function MenuItem({
 		<button
 			type="button"
 			onClick={onClick}
-			className={`w-full px-3 py-2 text-left text-sm hover:bg-wash ${
-				danger ? "text-danger-text" : "text-ink-soft"
-			}`}
+			data-danger={danger || undefined}
+			className={styles.panel__menuItem}
 		>
 			{children}
 		</button>
@@ -322,7 +275,7 @@ export function PersonPanel({
 
 	if (!person) {
 		return (
-			<aside className="flex w-80 shrink-0 items-center justify-center border-line border-l bg-panel p-6 text-center text-ink-faint text-sm">
+			<aside className={clsx(styles.panel, styles["panel--empty"])}>
 				{t("empty")}
 			</aside>
 		)
@@ -339,51 +292,42 @@ export function PersonPanel({
 	const facts = buildFacts(graph, person)
 
 	return (
-		<aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-line border-l bg-panel">
-			<header className="px-5 pt-5 pb-4">
-				<div className="flex items-start gap-3">
+		<aside className={styles.panel}>
+			<header className={styles.panel__header}>
+				<div className={styles.panel__identity}>
 					{/* Keyed so a previous person's failed-photo state doesn't stick. */}
 					<Avatar key={person.id} person={person} size={64} />
-					<div className="min-w-0 flex-1">
-						<h2 className="font-semibold text-ink text-lg leading-tight">
+					<div className={styles.panel__names}>
+						<Heading as="h2" size="h4">
 							{nameOf(person)}
-						</h2>
-						<p className="mt-1 text-ink-muted text-sm">
+						</Heading>
+						<p className={styles.panel__lifespan}>
 							<Lifespan person={person} />
 						</p>
 						{/* Both names matter: the one she was born under is how she
 						    appears in her parents' records, the one she took is how the
 						    rest of the family knows her. */}
 						{person.marriedName && person.marriedName !== person.surname ? (
-							<p className="mt-0.5 text-ink-muted text-xs">
+							<p className={styles.panel__married}>
 								{t("marriedNameLine", { name: person.marriedName })}
 							</p>
 						) : null}
 						{person.birthPlace ? (
-							<p className="mt-0.5 text-ink-faint text-xs">
-								{person.birthPlace}
-							</p>
+							<p className={styles.panel__place}>{person.birthPlace}</p>
 						) : null}
 					</div>
-					<button
-						type="button"
-						onClick={onClose}
+					<Button
+						variant="ghost"
+						size="sm"
 						aria-label={t("closeDetails")}
-						className="rounded p-1 text-ink-faint hover:bg-muted hover:text-ink-soft"
-					>
-						✕
-					</button>
+						icon={<X size={15} strokeWidth={2} />}
+						onClick={onClose}
+					/>
 				</div>
 
-				{error ? (
-					<p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
-						{error}
-					</p>
-				) : null}
+				<FormError className={styles.panel__error}>{error}</FormError>
 
-				{/* One row for everything you can do to this person, rather than a
-				    banner, a button pair and an accordion scattered down the panel. */}
-				<div className="relative mt-4 flex items-start gap-1">
+				<div className={styles.panel__actions}>
 					<Action
 						icon={<Crosshair size={17} strokeWidth={2} />}
 						label={isRoot ? t("centred") : t("centre")}
@@ -415,17 +359,17 @@ export function PersonPanel({
 							<button
 								type="button"
 								aria-label={t("closeMenu")}
-								className="fixed inset-0 z-10 cursor-default"
+								className={styles.panel__backdrop}
 								onClick={() => setMenuOpen(false)}
 							/>
-							<div className="absolute top-12 right-0 z-20 w-56 overflow-hidden rounded-lg border border-line bg-panel py-1 shadow-lg">
+							<div className={styles.panel__menu}>
 								<MenuItem
 									onClick={() => {
 										onLink(person.id)
 										setMenuOpen(false)
 									}}
 								>
-									<span className="flex items-center gap-2">
+									<span className={styles.panel__menuLine}>
 										<Link2 size={14} strokeWidth={2} />
 										{t("linkExisting")}
 									</span>
@@ -458,7 +402,7 @@ export function PersonPanel({
 											: t("hideChildren")}
 									</MenuItem>
 								) : null}
-								<div className="my-1 border-line-subtle border-t" />
+								<hr className={styles.panel__menuDivider} />
 								<MenuItem
 									danger
 									onClick={() => {
@@ -474,7 +418,7 @@ export function PersonPanel({
 										}
 									}}
 								>
-									<span className="flex items-center gap-2">
+									<span className={styles.panel__menuLine}>
 										<Trash2 size={13} strokeWidth={2} />
 										{t("deletePerson")}
 									</span>
@@ -485,11 +429,11 @@ export function PersonPanel({
 				</div>
 			</header>
 
-			<Section title={t("sectionFacts")} count={facts.length}>
+			<Accordion title={t("sectionFacts")} count={facts.length}>
 				{facts.length === 0 ? (
-					<p className="text-ink-faint text-sm">{t("noFacts")}</p>
+					<p className={styles.panel__empty}>{t("noFacts")}</p>
 				) : (
-					<ol className="space-y-3">
+					<ol className={styles.facts}>
 						{facts.map((fact) => {
 							const related = fact.relatedId
 								? graph.people.get(fact.relatedId)
@@ -497,55 +441,51 @@ export function PersonPanel({
 							// Bound outside the callback so it stays narrowed to a string.
 							const { unionId } = fact
 							return (
-								<li key={fact.id} className="group flex gap-3">
-									<div className="w-11 shrink-0 pt-0.5 text-right">
-										<div className="font-semibold text-ink-soft text-sm tabular-nums">
-											{fact.year ?? "—"}
-										</div>
+								<li key={fact.id} className={styles.fact}>
+									<div className={styles.fact__when}>
+										<div className={styles.fact__year}>{fact.year ?? "—"}</div>
 										{fact.age != null ? (
-											<div className="text-[10px] text-ink-faint">
+											<div className={styles.fact__age}>
 												{t("age", { age: fact.age })}
 											</div>
 										) : null}
 									</div>
-									<div className="min-w-0 flex-1 border-line-subtle border-l pl-3">
-										<div className="flex items-start gap-1.5">
-											<div className="min-w-0 flex-1 font-medium text-ink text-sm">
+									<div className={styles.fact__body}>
+										<div className={styles.fact__head}>
+											<div className={styles.fact__title}>
 												{tFacts(fact.titleKey)}
 											</div>
-											{/* Only marriages carry a union id, and a marriage is the
-											    one fact here that isn't derived from somebody's dates
-											    — so it is the only one that can be edited in place. */}
 											{unionId ? (
-												<button
-													type="button"
-													onClick={() => onEditUnion(unionId)}
+												<Button
+													variant="ghost"
 													aria-label={t("editMarriage")}
 													title={t("editMarriage")}
-													className="-mr-1 shrink-0 rounded p-1 text-ink-ghost opacity-0 transition-opacity hover:bg-muted hover:text-ink-soft focus-visible:opacity-100 group-hover:opacity-100"
-												>
-													<Pencil size={12} strokeWidth={2} />
-												</button>
+													className={styles.fact__edit}
+													icon={<Pencil size={12} strokeWidth={2} />}
+													onClick={() => onEditUnion(unionId)}
+												/>
 											) : null}
 										</div>
 										{related ? (
 											<button
 												type="button"
 												onClick={() => onFocus(related.id)}
-												className="mt-1 flex items-center gap-1.5 rounded px-1 py-0.5 text-ink-soft text-xs hover:bg-muted"
+												className={styles.fact__related}
 											>
 												<Avatar person={related} size={18} />
-												<span className="truncate">{nameOf(related)}</span>
+												<span className={styles.fact__relatedName}>
+													{nameOf(related)}
+												</span>
 											</button>
 										) : null}
 										{fact.date ? (
-											<div className="mt-0.5 text-ink-muted text-xs">
+											<div className={styles.fact__date}>
 												{formatTreeDate(fact.date, locale)}
 											</div>
 										) : null}
 										{fact.place ? (
-											<div className="mt-0.5 flex items-start gap-1 text-ink-faint text-xs">
-												<MapPin size={11} className="mt-0.5 shrink-0" />
+											<div className={styles.fact__place}>
+												<MapPin size={11} className={styles.fact__pin} />
 												<span>{fact.place}</span>
 											</div>
 										) : null}
@@ -555,31 +495,27 @@ export function PersonPanel({
 						})}
 					</ol>
 				)}
-			</Section>
+			</Accordion>
 
 			{person.note ? (
-				<Section title={t("sectionNote")}>
-					{/* `whitespace-pre-line` so the paragraph breaks the parser turned
-					    MyHeritage's HTML into survive to the screen. */}
-					<p className="whitespace-pre-line text-ink-soft text-sm leading-relaxed">
-						{person.note}
-					</p>
-				</Section>
+				<Accordion title={t("sectionNote")}>
+					<p className={styles.note}>{person.note}</p>
+				</Accordion>
 			) : null}
 
-			<Section title={t("sectionPhotos")} count={person.photos.length}>
+			<Accordion title={t("sectionPhotos")} count={person.photos.length}>
 				<PhotoDrop
 					personId={person.id}
 					photos={person.photos}
 					name={nameOf(person)}
 				/>
-			</Section>
+			</Accordion>
 
-			<Section title={t("sectionFamily")} count={family.length}>
+			<Accordion title={t("sectionFamily")} count={family.length}>
 				{family.length === 0 ? (
-					<p className="text-ink-faint text-sm">{t("noRelatives")}</p>
+					<p className={styles.panel__empty}>{t("noRelatives")}</p>
 				) : (
-					<ul className="space-y-0.5">
+					<ul className={styles.relatives}>
 						{family.map((relative) => {
 							const relation = relationKeyFor(graph, person, relative)
 							return (
@@ -600,7 +536,7 @@ export function PersonPanel({
 						})}
 					</ul>
 				)}
-			</Section>
+			</Accordion>
 		</aside>
 	)
 }

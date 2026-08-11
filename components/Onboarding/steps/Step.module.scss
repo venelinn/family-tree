@@ -1,0 +1,68 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+// Every step is the same column: a centred title block, the step's own content,
+// and a full-width control that moves the wizard on.
+.step {
+	display: grid;
+	max-width: 36rem;
+	gap: var(--spacing-6);
+	margin-inline: auto;
+
+	// The person form is denser than the rest, so it sets its own rhythm.
+	&--form {
+		gap: var(--spacing-4);
+	}
+
+	&__intro {
+		text-align: center;
+	}
+
+	&__help {
+		@include typo.ui-body;
+		margin-top: var(--spacing-2);
+		color: var(--on-surface-variant);
+	}
+
+	&__options {
+		display: grid;
+		gap: var(--spacing-3);
+	}
+
+	&__section {
+		display: grid;
+		gap: var(--spacing-3);
+	}
+
+	&__sectionTitle {
+		@include shared.field-label;
+	}
+
+	// The form step frames `PersonForm`, which brings its own padding.
+	&__card {
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius-xl);
+		background-color: var(--surface-container);
+	}
+
+	&__resolved {
+		display: grid;
+		gap: var(--spacing-2);
+	}
+
+	&__resolvedLabel {
+		@include typo.ui-small;
+		color: var(--on-surface-faint);
+	}
+
+	&__path {
+		@include typo.ui-small;
+		padding: var(--spacing-3) var(--spacing-4);
+		border-radius: var(--border-radius-lg);
+		background-color: var(--surface-container-highest);
+		color: var(--on-surface-soft);
+		font-family: var(--font-family-mono);
+		// A path has no spaces to break at and must not run off the column.
+		word-break: break-all;
+	}
+}

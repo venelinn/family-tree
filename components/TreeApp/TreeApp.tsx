@@ -35,6 +35,7 @@ import { displayName } from "@/lib/person-name"
 import type { ThemePreference } from "@/lib/theming"
 import type { Relation } from "@/lib/tree-ops"
 
+import styles from "./TreeApp.module.scss"
 import "@xyflow/react/dist/style.css"
 
 interface TreeAppProps {
@@ -414,7 +415,7 @@ export function TreeApp({
 
 	return (
 		<PersonNameProvider follow={namesFollowLanguage}>
-			<div className="flex h-screen flex-col">
+			<div className={styles.app}>
 				<Toolbar
 					treeName={treeName}
 					people={people}
@@ -432,8 +433,8 @@ export function TreeApp({
 					onReset={() => focus(homePersonId)}
 				/>
 
-				<div className="flex min-h-0 flex-1">
-					<div className="min-w-0 flex-1">
+				<div className={styles.app__body}>
+					<div className={styles.app__canvas}>
 						{/* The provider must sit outside the component calling useReactFlow. */}
 						<ReactFlowProvider>
 							<TreeCanvas
@@ -456,7 +457,7 @@ export function TreeApp({
 					</div>
 
 					{editor?.mode === "link" ? (
-						<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
+						<aside className={styles.app__aside}>
 							{(() => {
 								const anchor = graph.people.get(editor.personId)
 								if (!anchor) return null
@@ -478,7 +479,7 @@ export function TreeApp({
 							})()}
 						</aside>
 					) : editor?.mode === "union" ? (
-						<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
+						<aside className={styles.app__aside}>
 							{(() => {
 								const union = graph.unions.get(editor.unionId)
 								if (!union) return null
@@ -502,7 +503,7 @@ export function TreeApp({
 							})()}
 						</aside>
 					) : editor ? (
-						<aside className="w-80 shrink-0 overflow-y-auto border-line border-l bg-panel">
+						<aside className={styles.app__aside}>
 							<PersonForm
 								title={
 									editor.mode === "edit" ? t("editTitle") : tSlots(editor.slot)

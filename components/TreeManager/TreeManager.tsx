@@ -8,9 +8,10 @@ import {
 	TriangleAlert,
 	X,
 } from "lucide-react"
-import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
+import { Button } from "@/components/Button"
+import { FormError, Input } from "@/components/Forms"
 import type { TreeSummary } from "@/lib/store/registry"
 import {
 	adoptTreeAction,
@@ -21,6 +22,7 @@ import {
 	renameTreeAction,
 	setActiveTreeAction,
 } from "@/lib/tree-actions"
+import styles from "./TreeManager.module.scss"
 
 /**
  * Which tree you're looking at, and where each one is kept.
@@ -88,25 +90,26 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 	}
 
 	return (
-		<div className="flex flex-col gap-4">
-			<ul className="divide-y divide-line-subtle overflow-hidden rounded-lg border border-line">
+		<div className={styles.trees}>
+			<ul className={styles.trees__list}>
 				{trees.map((tree) => {
 					const active = tree.id === activeId
 					const editingThis = editing?.id === tree.id
 					return (
-						<li key={tree.id} className={active ? "bg-root-soft" : undefined}>
-							<div className="flex items-center gap-3 px-4 py-3">
+						<li
+							key={tree.id}
+							className={styles.trees__item}
+							aria-current={active || undefined}
+						>
+							<div className={styles.trees__row}>
 								<button
 									type="button"
 									onClick={() => run(() => setActiveTreeAction(tree.id))}
 									disabled={pending || active || !tree.available}
-									aria-current={active ? "true" : undefined}
-									className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left disabled:cursor-default"
+									className={styles.trees__choose}
 								>
-									<span className="font-medium text-ink-soft text-sm">
-										{tree.name}
-									</span>
-									<span className="flex items-center gap-1.5 text-ink-faint text-xs">
+									<span className={styles.trees__name}>{tree.name}</span>
+									<span className={styles.trees__meta}>
 										{tree.available ? (
 											t("treePeople", { count: tree.peopleCount })
 										) : (
@@ -116,73 +119,55 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 											</>
 										)}
 									</span>
-									<code className="mt-1 block max-w-full truncate font-mono text-[11px] text-ink-ghost">
-										{tree.file}
-									</code>
+									<code className={styles.trees__path}>{tree.file}</code>
 								</button>
 
-								{active ? (
-									<Check
-										size={16}
-										strokeWidth={2.5}
-										className="shrink-0 text-root-ink"
-									/>
-								) : (
-									<span className="h-4 w-4 shrink-0" />
-								)}
+								<span className={styles.trees__check}>
+									{active ? <Check size={16} strokeWidth={2.5} /> : null}
+								</span>
 							</div>
 
-							<div className="flex flex-wrap gap-3 px-4 pb-3 text-xs">
-								<button
-									type="button"
+							<div className={styles.trees__actions}>
+								<Button
+									label={t("treeRename")}
+									variant="ghost"
+									className={styles.trees__action}
 									onClick={() =>
-										setEditing({
-											id: tree.id,
-											field: "name",
-											value: tree.name,
-										})
+										setEditing({ id: tree.id, field: "name", value: tree.name })
 									}
-									className="font-medium text-ink-muted hover:text-ink"
-								>
-									{t("treeRename")}
-								</button>
-								<button
-									type="button"
+								/>
+								<Button
+									label={t("treeMove")}
+									variant="ghost"
+									className={styles.trees__action}
 									onClick={() =>
-										setEditing({
-											id: tree.id,
-											field: "path",
-											value: tree.file,
-										})
+										setEditing({ id: tree.id, field: "path", value: tree.file })
 									}
-									className="font-medium text-ink-muted hover:text-ink"
-								>
-									{t("treeMove")}
-								</button>
-								<button
-									type="button"
-									onClick={() => run(() => forgetTreeAction(tree.id))}
+								/>
+								<Button
+									label={t("treeForget")}
+									variant="ghost"
+									data-action="forget"
 									disabled={pending || trees.length === 1}
-									className="font-medium text-ink-muted hover:text-danger-text disabled:opacity-40"
-								>
-									{t("treeForget")}
-								</button>
+									className={styles.trees__action}
+									onClick={() => run(() => forgetTreeAction(tree.id))}
+								/>
 							</div>
 
 							{tree.available && !tree.bundle ? (
-								<div className="flex flex-col gap-2 border-line-subtle border-t bg-wash px-4 py-3">
-									<p className="text-ink-muted text-xs leading-relaxed">
+								<div className={styles.trees__drawer}>
+									<p className={styles.trees__drawerText}>
 										{t("treeConvertHelp")}
 									</p>
-									<button
-										type="button"
-										onClick={() => convert(tree.id)}
+									<Button
+										label={t("treeConvert")}
+										variant="secondary"
+										size="sm"
 										disabled={pending}
-										className="flex w-fit items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 font-medium text-ink-soft text-xs hover:bg-wash disabled:opacity-40"
-									>
-										<FolderSymlink size={14} strokeWidth={2} />
-										{t("treeConvert")}
-									</button>
+										className={styles.trees__convert}
+										icon={<FolderSymlink size={14} strokeWidth={2} />}
+										onClick={() => convert(tree.id)}
+									/>
 								</div>
 							) : null}
 
@@ -192,41 +177,39 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 										event.preventDefault()
 										commit()
 									}}
-									className="flex flex-col gap-2 border-line-subtle border-t bg-panel px-4 py-3"
+									className={styles.trees__drawer}
 								>
-									<span className="font-medium text-[11px] text-ink-muted uppercase tracking-wide">
-										{editing.field === "name"
-											? t("treeRenameLabel")
-											: t("treeMoveLabel")}
-									</span>
-									<div className="flex gap-2">
-										<input
-											// biome-ignore lint/a11y/noAutofocus: opened by an explicit click
+									<div className={styles.trees__editRow}>
+										<Input
+											label={
+												editing.field === "name"
+													? t("treeRenameLabel")
+													: t("treeMoveLabel")
+											}
 											autoFocus
 											value={editing.value}
 											spellCheck={false}
+											data-field={editing.field}
+											className={styles.trees__editField}
 											onChange={(event) =>
 												setEditing({ ...editing, value: event.target.value })
 											}
-											className={`flex-1 rounded-lg border border-line bg-panel px-3 py-1.5 text-ink text-sm outline-none focus:border-line-strong ${
-												editing.field === "path" ? "font-mono text-xs" : ""
-											}`}
+											full
 										/>
-										<button
+									</div>
+									<div className={styles.trees__editRow}>
+										<Button
 											type="submit"
+											label={t("treeSave")}
+											variant="primary"
 											disabled={pending}
-											className="rounded-lg bg-invert px-3 py-1.5 font-medium text-on-invert text-sm hover:bg-invert-hover disabled:opacity-50"
-										>
-											{t("treeSave")}
-										</button>
-										<button
-											type="button"
-											onClick={() => setEditing(undefined)}
-											className="rounded-lg border border-line px-2 py-1.5 text-ink-muted hover:bg-wash"
+										/>
+										<Button
+											variant="secondary"
 											aria-label={t("treeCancel")}
-										>
-											<X size={15} strokeWidth={2} />
-										</button>
+											icon={<X size={15} strokeWidth={2} />}
+											onClick={() => setEditing(undefined)}
+										/>
 									</div>
 								</form>
 							) : null}
@@ -235,26 +218,20 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 				})}
 			</ul>
 
-			{error ? (
-				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
-					{error}
-				</p>
-			) : null}
+			<FormError>{error}</FormError>
 
 			{converted ? (
-				<div className="flex flex-col gap-1.5 rounded-lg bg-root-soft px-3 py-2.5 text-sm">
-					<p className="text-ink-soft">
+				<div className={styles.trees__done}>
+					<p className={styles.trees__doneTitle}>
 						{t("treeConvertDone", { count: converted.photosCopied ?? 0 })}
 					</p>
 					{converted.photosMissing ? (
-						<p className="text-ink-muted text-xs">
+						<p className={styles.trees__doneNote}>
 							{t("treeConvertMissing", { count: converted.photosMissing })}
 						</p>
 					) : null}
-					<p className="text-ink-muted text-xs">{t("treeConvertKept")}</p>
-					<code className="block max-w-full truncate font-mono text-[11px] text-ink-ghost">
-						{converted.previous}
-					</code>
+					<p className={styles.trees__doneNote}>{t("treeConvertKept")}</p>
+					<code className={styles.trees__path}>{converted.previous}</code>
 				</div>
 			) : null}
 
@@ -263,39 +240,38 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 					event.preventDefault()
 					run(() => adoptTreeAction(openPath))
 				}}
-				className="flex flex-col gap-2 rounded-lg border border-line border-dashed p-4"
+				className={styles.trees__adopt}
 			>
-				<span className="font-medium text-[11px] text-ink-muted uppercase tracking-wide">
-					{t("treeOpenTitle")}
-				</span>
-				<p className="text-ink-muted text-xs">{t("treeOpenHelp")}</p>
-				<div className="mt-1 flex gap-2">
-					<input
+				<span className={styles.trees__adoptTitle}>{t("treeOpenTitle")}</span>
+				<p className={styles.trees__adoptHelp}>{t("treeOpenHelp")}</p>
+				<div className={styles.trees__adoptRow}>
+					<Input
+						label={t("treeOpenTitle")}
 						value={openPath}
 						onChange={(event) => setOpenPath(event.target.value)}
 						placeholder={t("treeOpenPlaceholder")}
 						spellCheck={false}
 						autoComplete="off"
-						className="flex-1 rounded-lg border border-line bg-panel px-3 py-1.5 font-mono text-ink text-xs outline-none focus:border-line-strong"
+						className={styles.trees__adoptField}
+						full
 					/>
-					<button
+					<Button
 						type="submit"
+						label={t("treeOpen")}
+						variant="secondary"
 						disabled={pending || !openPath.trim()}
-						className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 font-medium text-ink-soft text-sm hover:bg-wash disabled:opacity-40"
-					>
-						<FolderInput size={15} strokeWidth={2} />
-						{t("treeOpen")}
-					</button>
+						icon={<FolderInput size={15} strokeWidth={2} />}
+					/>
 				</div>
 			</form>
 
-			<Link
+			<Button
+				label={t("treeNew")}
 				href="/welcome?new"
-				className="flex items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-2 font-medium text-ink-soft text-sm hover:bg-wash"
-			>
-				<Plus size={15} strokeWidth={2} />
-				{t("treeNew")}
-			</Link>
+				variant="secondary"
+				className={styles.trees__new}
+				icon={<Plus size={15} strokeWidth={2} />}
+			/>
 		</div>
 	)
 }

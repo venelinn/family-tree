@@ -1,0 +1,85 @@
+@use "styles/functions" as fn;
+@use "styles/typo-mixins" as typo;
+
+// A native disclosure: `<details>` and `<summary>`.
+//
+// No JavaScript holds the open state, which is the point — the sections work
+// before hydration and keep working if it never happens, the keyboard and
+// screen-reader behaviour is the platform's, and find-in-page can open a closed
+// section to show a match.
+.accordion {
+	border-top: 1px solid var(--outline-subtle);
+
+	// The animatable half of the modern disclosure. `block-size: auto` is only
+	// interpolable because `globals.scss` opts into `interpolate-size`;
+	// `allow-discrete` is what lets `content-visibility` flip at the right end of
+	// the transition instead of immediately.
+	&::details-content {
+		block-size: 0;
+		overflow: hidden;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				block-size var(--animation-duration-base) var(--animation-ease-out),
+				content-visibility var(--animation-duration-base)
+					var(--animation-ease-out);
+			transition-behavior: allow-discrete;
+		}
+	}
+
+	&[open]::details-content {
+		block-size: auto;
+	}
+
+	&__summary {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-1-5);
+		padding: var(--spacing-3) var(--spacing-5);
+		cursor: pointer;
+
+		&:hover {
+			background-color: var(--surface-container-high);
+		}
+
+		// The default triangle, in both spellings. `list-style` covers Firefox and
+		// Chrome; the pseudo-element is Safari's.
+		list-style: none;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+	}
+
+	&__title {
+		color: var(--on-surface-faint);
+		font-size: fn.rem(11px);
+		font-weight: var(--font-weight-semibold);
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	&__count {
+		@include typo.tabular;
+		color: var(--on-surface-ghost);
+		font-size: fn.rem(11px);
+	}
+
+	&__chevron {
+		margin-left: auto;
+		color: var(--on-surface-faint);
+		rotate: -90deg;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: rotate var(--animation-duration-fast) ease;
+		}
+	}
+
+	&[open] &__chevron {
+		rotate: 0deg;
+	}
+
+	&__content {
+		padding: 0 var(--spacing-5) var(--spacing-4);
+	}
+}

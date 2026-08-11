@@ -1,13 +1,14 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
+import { Button } from "@/components/Button"
 import type { PersonFormValues } from "@/lib/actions"
 import type { ThemePreference } from "@/lib/theming"
 import { createTreeAction } from "@/lib/tree-actions"
 import BottomNav from "./BottomNav"
+import styles from "./Onboarding.module.scss"
 import AboutYouStep from "./steps/AboutYouStep"
 import NameStep from "./steps/NameStep"
 import PreferencesStep from "./steps/PreferencesStep"
@@ -99,25 +100,18 @@ export function Onboarding({
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col bg-surface">
-			<header className="flex items-center justify-between px-6 py-4">
-				<span className="font-medium text-ink-faint text-sm">
-					{t("appName")}
-				</span>
+		<div className={styles.onboarding}>
+			<header className={styles.onboarding__header}>
+				<span className={styles.onboarding__brand}>{t("appName")}</span>
 				{hasTrees ? (
-					<Link
-						href="/"
-						className="rounded-lg px-3 py-1.5 font-medium text-ink-muted text-sm hover:bg-wash hover:text-ink"
-					>
-						{t("cancel")}
-					</Link>
+					<Button label={t("cancel")} href="/" variant="ghost" />
 				) : null}
 			</header>
 
-			<main className="flex flex-1 items-center justify-center px-6">
+			<main className={styles.onboarding__main}>
 				{/* Keyed on the step so each one re-enters; the animation is disabled
-				    under `prefers-reduced-motion` in `styles/globals.scss`. */}
-				<div key={step} className="slot-enter w-full py-10">
+				    under `prefers-reduced-motion` in the stylesheet. */}
+				<div key={step} className={styles.onboarding__slot}>
 					{step === "name" ? <NameStep {...stepProps} /> : null}
 					{step === "storage" ? (
 						<StorageStep {...stepProps} defaultDir={defaultDir} />

@@ -1,0 +1,31 @@
+// The chart shell: a fixed header, then a row of canvas + side panel that fills
+// what is left. The height chain is load-bearing — React Flow measures its
+// container, and a percentage height with nothing to resolve against collapses
+// it to zero.
+.app {
+	display: flex;
+	height: 100vh;
+	height: 100dvh;
+	flex-direction: column;
+
+	&__body {
+		display: flex;
+		min-height: 0;
+		flex: 1;
+	}
+
+	&__canvas {
+		min-width: 0;
+		flex: 1;
+	}
+
+	// The forms that replace the person panel: same width, so opening one doesn't
+	// resize the chart.
+	&__aside {
+		width: 20rem;
+		flex-shrink: 0;
+		overflow-y: auto;
+		border-left: 1px solid var(--outline-variant);
+		background-color: var(--surface-container);
+	}
+}

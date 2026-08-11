@@ -3,10 +3,20 @@
 import { Plus, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { Button } from "@/components/Button"
 import { DateField } from "@/components/DateField"
+import {
+	Checkbox,
+	FormError,
+	Input,
+	Select,
+	Textarea,
+} from "@/components/Forms"
+import { Heading } from "@/components/Heading"
 import type { PersonFormValues } from "@/lib/actions"
 import type { Person } from "@/lib/family-graph"
 import { type Locale, localeNames, localization } from "@/lib/localization"
+import styles from "./PersonForm.module.scss"
 
 /**
  * Add or edit a person.
@@ -42,11 +52,6 @@ interface PersonFormProps {
 	onSubmit: (values: PersonFormValues) => void
 	onCancel: () => void
 }
-
-const field =
-	"w-full rounded-lg border border-line bg-panel px-2.5 py-1.5 text-ink text-sm outline-none focus:border-line-strong"
-const label =
-	"block font-medium text-[11px] text-ink-muted uppercase tracking-wide"
 
 export function PersonForm({
 	title,
@@ -103,83 +108,76 @@ export function PersonForm({
 				event.preventDefault()
 				onSubmit(values)
 			}}
-			className="flex flex-col gap-3 p-5"
+			className={styles.personForm}
 		>
-			<h2 className="font-semibold text-ink">{title}</h2>
+			<Heading as="h2" size="base">
+				{title}
+			</Heading>
 
 			{unionOptions && unionOptions.length > 1 ? (
-				<label className={label}>
-					{t("childOf")}
-					<select
-						value={unionId ?? unionOptions[0].id}
-						onChange={(event) => onUnionChange?.(event.target.value)}
-						className={`${field} mt-1`}
-					>
-						{unionOptions.map((option) => (
-							<option key={option.id} value={option.id}>
-								{option.label}
-							</option>
-						))}
-					</select>
-				</label>
+				<Select
+					label={t("childOf")}
+					value={unionId ?? unionOptions[0].id}
+					onChange={(event) => onUnionChange?.(event.target.value)}
+					full
+				>
+					{unionOptions.map((option) => (
+						<option key={option.id} value={option.id}>
+							{option.label}
+						</option>
+					))}
+				</Select>
 			) : null}
 
-			<div>
-				<label className={label}>
-					{t("fullName")}
-					<input
-						// biome-ignore lint/a11y/noAutofocus: the form opens on an explicit click
-						autoFocus
-						required
-						value={values.fullName}
-						onChange={(event) => set("fullName", event.target.value)}
-						className={`${field} mt-1`}
-						placeholder={t("fullNamePlaceholder")}
-					/>
-				</label>
-			</div>
+			<Input
+				label={t("fullName")}
+				autoFocus
+				required
+				value={values.fullName}
+				onChange={(event) => set("fullName", event.target.value)}
+				placeholder={t("fullNamePlaceholder")}
+				full
+			/>
 
-			{/* The same name in another language. The remove button sits outside the
-			    label, or clicking it would land on the input instead. */}
+			{/* The same name in another language. The remove button sits beside the
+			    field rather than inside it — a label wrapping a second control would
+			    make clicking it focus the input. */}
 			{openNames.map((locale) => (
-				<div key={locale} className="flex items-end gap-1.5">
-					<label className={`${label} min-w-0 flex-1`}>
-						{t("nameIn", { language: localeNames[locale] })}
-						<input
-							value={values.names?.[locale] ?? ""}
-							onChange={(event) => setName(locale, event.target.value)}
-							className={`${field} mt-1`}
-							placeholder={t("fullNamePlaceholder")}
-						/>
-					</label>
-					<button
-						type="button"
-						onClick={() => setName(locale, undefined)}
+				<div key={locale} className={styles.personForm__nameRow}>
+					<Input
+						label={t("nameIn", { language: localeNames[locale] })}
+						value={values.names?.[locale] ?? ""}
+						onChange={(event) => setName(locale, event.target.value)}
+						placeholder={t("fullNamePlaceholder")}
+						className={styles.personForm__nameField}
+						full
+					/>
+					<Button
+						variant="secondary"
 						aria-label={t("removeNameIn", { language: localeNames[locale] })}
 						title={t("removeNameIn", { language: localeNames[locale] })}
-						className="shrink-0 rounded-lg border border-line p-2 text-ink-faint hover:bg-wash hover:text-ink"
-					>
-						<X size={13} strokeWidth={2} />
-					</button>
+						icon={<X size={13} strokeWidth={2} />}
+						onClick={() => setName(locale, undefined)}
+					/>
 				</div>
 			))}
 
 			{closedNames.length ? (
 				<div>
-					<div className="flex flex-wrap gap-1.5">
+					<div className={styles.personForm__addNames}>
 						{closedNames.map((locale) => (
-							<button
+							<Button
 								key={locale}
-								type="button"
+								label={t("addNameIn", { language: localeNames[locale] })}
+								variant="secondary"
+								size="sm"
+								icon={<Plus size={12} strokeWidth={2.5} />}
+								className={styles.personForm__addName}
 								onClick={() => setName(locale, "")}
-								className="flex items-center gap-1 rounded-lg border border-line border-dashed px-2.5 py-1 font-medium text-ink-muted text-xs hover:bg-wash hover:text-ink"
-							>
-								<Plus size={12} strokeWidth={2.5} />
-								{t("addNameIn", { language: localeNames[locale] })}
-							</button>
+							/>
 						))}
 					</div>
-					<p className="mt-1 text-ink-faint text-xs">{t("namesHint")}</p>
+					<p className={styles.personForm__hint}>{t("namesHint")}</p>
 				</div>
 			) : null}
 
@@ -190,123 +188,93 @@ export function PersonForm({
 			 * uneditable just because the sex on file says otherwise.
 			 */}
 			{values.sex === "F" || values.marriedName ? (
-				<div>
-					<label className={label}>
-						{t("marriedName")}
-						<input
-							value={values.marriedName}
-							onChange={(event) => set("marriedName", event.target.value)}
-							className={`${field} mt-1`}
-							placeholder={t("marriedNamePlaceholder")}
-						/>
-					</label>
-					<p className="mt-1 text-ink-faint text-xs">{t("marriedNameHint")}</p>
-				</div>
+				<Input
+					label={t("marriedName")}
+					value={values.marriedName}
+					onChange={(event) => set("marriedName", event.target.value)}
+					placeholder={t("marriedNamePlaceholder")}
+					hint={t("marriedNameHint")}
+					full
+				/>
 			) : null}
 
 			{lockedSex ? null : (
 				<fieldset>
-					<legend className={label}>{t("sex")}</legend>
-					<div className="mt-1 flex gap-2">
+					<legend className={styles.personForm__legend}>{t("sex")}</legend>
+					<div className={styles.personForm__sexes}>
 						{(["M", "F"] as const).map((sex) => (
-							<button
+							<Button
 								key={sex}
-								type="button"
+								label={sex === "M" ? t("male") : t("female")}
+								variant="secondary"
+								aria-pressed={values.sex === sex}
+								data-sex={sex === "F" ? "female" : "male"}
+								className={styles.personForm__sex}
 								onClick={() => set("sex", sex)}
-								className={`flex-1 rounded-lg border px-3 py-1.5 font-medium text-sm ${
-									values.sex === sex
-										? sex === "F"
-											? "border-female-line bg-female-soft text-female-ink"
-											: "border-male-line bg-male-soft text-male-ink"
-										: "border-line text-ink-muted hover:bg-wash"
-								}`}
-							>
-								{sex === "M" ? t("male") : t("female")}
-							</button>
+							/>
 						))}
 					</div>
 				</fieldset>
 			)}
 
-			<div className="grid grid-cols-2 items-start gap-2">
+			<div className={styles.personForm__pair}>
 				<DateField
 					label={t("birthDate")}
 					value={values.birthDate ?? ""}
 					onChange={(date) => set("birthDate", date)}
 					placeholder={t("datePlaceholder")}
 				/>
-				<label className={label}>
-					{t("birthPlace")}
-					<input
-						value={values.birthPlace}
-						onChange={(event) => set("birthPlace", event.target.value)}
-						className={`${field} mt-1`}
-						placeholder={t("birthPlacePlaceholder")}
-					/>
-				</label>
+				<Input
+					label={t("birthPlace")}
+					value={values.birthPlace}
+					onChange={(event) => set("birthPlace", event.target.value)}
+					placeholder={t("birthPlacePlaceholder")}
+					full
+				/>
 			</div>
 
-			<label className="flex items-center gap-2 text-ink-soft text-sm">
-				<input
-					type="checkbox"
-					checked={values.deceased}
-					onChange={(event) => set("deceased", event.target.checked)}
-					className="accent-invert"
-				/>
-				{t("deceased")}
-			</label>
+			<Checkbox
+				label={t("deceased")}
+				checked={values.deceased}
+				onChange={(event) => set("deceased", event.target.checked)}
+			/>
 
 			{values.deceased ? (
-				<div className="grid grid-cols-2 items-start gap-2">
+				<div className={styles.personForm__pair}>
 					<DateField
 						label={t("deathDate")}
 						value={values.deathDate ?? ""}
 						onChange={(date) => set("deathDate", date)}
 						placeholder={t("datePlaceholder")}
 					/>
-					<label className={label}>
-						{t("deathPlace")}
-						<input
-							value={values.deathPlace}
-							onChange={(event) => set("deathPlace", event.target.value)}
-							className={`${field} mt-1`}
-						/>
-					</label>
+					<Input
+						label={t("deathPlace")}
+						value={values.deathPlace}
+						onChange={(event) => set("deathPlace", event.target.value)}
+						full
+					/>
 				</div>
 			) : null}
 
-			<label className={label}>
-				{t("note")}
-				<textarea
-					value={values.note}
-					onChange={(event) => set("note", event.target.value)}
-					rows={3}
-					placeholder={t("notePlaceholder")}
-					className={`${field} mt-1 resize-y`}
-				/>
-			</label>
+			<Textarea
+				label={t("note")}
+				value={values.note}
+				onChange={(event) => set("note", event.target.value)}
+				placeholder={t("notePlaceholder")}
+				full
+			/>
 
-			{error ? (
-				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
-					{error}
-				</p>
-			) : null}
+			<FormError>{error}</FormError>
 
-			<div className="mt-1 flex gap-2">
-				<button
+			<div className={styles.personForm__actions}>
+				<Button
 					type="submit"
+					label={pending ? t("saving") : submitLabel}
+					variant="primary"
 					disabled={pending}
-					className="flex-1 rounded-lg bg-invert px-3 py-2 font-medium text-on-invert text-sm hover:bg-invert-hover disabled:opacity-50"
-				>
-					{pending ? t("saving") : submitLabel}
-				</button>
-				<button
-					type="button"
-					onClick={onCancel}
-					className="rounded-lg border border-line px-3 py-2 font-medium text-ink-soft text-sm hover:bg-wash"
-				>
-					{t("cancel")}
-				</button>
+					className={styles.personForm__submit}
+				/>
+				<Button label={t("cancel")} variant="secondary" onClick={onCancel} />
 			</div>
 		</form>
 	)

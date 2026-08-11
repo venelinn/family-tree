@@ -6,6 +6,9 @@
 // Kept deliberately small. A mixin earns its place by being needed in more than
 // one component; anything used once belongs in that component's module.
 
+@use "styles/functions" as fn;
+@use "styles/typo-mixins" as typo;
+
 // A list that carries semantics for a screen reader but no bullets or indent.
 @mixin resetList {
 	margin: 0;
@@ -76,4 +79,68 @@
 		cursor: pointer;
 		content: "";
 	}
+}
+
+// ── Form fields ─────────────────────────────────────────────────────────────
+// The label and the control are a mixin rather than a component because a
+// `<legend>`, a bare `<span>` and a `<label>` all need to look like a field
+// label, and they cannot all be the same element.
+
+@mixin field-label {
+	display: block;
+	color: var(--on-surface-variant);
+	// Below the UI scale on purpose: these caps sit above every field in a dense
+	// side panel and would shout at 12px.
+	font-size: fn.rem(11px);
+	font-weight: var(--font-weight-medium);
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+@mixin field-control {
+	--_field-border: var(--outline-variant);
+
+	@include typo.ui-caption;
+	width: 100%;
+	padding: var(--spacing-1-5) var(--spacing-2-5);
+	border: 1px solid var(--_field-border);
+	border-radius: var(--border-radius);
+	background-color: var(--surface-container);
+	color: var(--on-surface);
+	font-family: inherit;
+	outline: none;
+
+	&:focus {
+		--_field-border: var(--outline);
+	}
+
+	&::placeholder {
+		color: var(--on-surface-faint);
+	}
+
+	&:disabled {
+		opacity: 0.6;
+	}
+}
+
+// The hint or help line under a field.
+@mixin field-hint {
+	@include typo.ui-small;
+	margin-top: var(--spacing-1);
+	color: var(--on-surface-faint);
+}
+
+// The body of a form panel: a single column of fields with one gap between
+// them. Grid rather than flex-column, per `rules/css-styling.mdc`.
+@mixin form-panel {
+	display: grid;
+	gap: var(--spacing-3);
+	padding: var(--spacing-5);
+}
+
+// What went wrong with this field. Colour alone would fail anyone who can't see
+// it, so the message is text — the colour only reinforces it.
+@mixin field-error {
+	@include typo.ui-small;
+	color: var(--error);
 }

@@ -3,10 +3,14 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { Avatar } from "@/components/Avatar"
+import { Button } from "@/components/Button"
 import { DateField } from "@/components/DateField"
+import { Checkbox, FormError, Input } from "@/components/Forms"
+import { Heading } from "@/components/Heading"
 import { usePersonName } from "@/components/PersonNames"
 import type { UnionFormValues } from "@/lib/actions"
 import type { Person, Union } from "@/lib/family-graph"
+import styles from "./UnionForm.module.scss"
 
 /**
  * Edit a marriage: when, where, and whether it ended.
@@ -30,11 +34,6 @@ interface UnionFormProps {
 	onSubmit: (values: UnionFormValues) => void
 	onCancel: () => void
 }
-
-const field =
-	"w-full rounded-lg border border-line bg-panel px-2.5 py-1.5 text-ink text-sm outline-none focus:border-line-strong"
-const label =
-	"block font-medium text-[11px] text-ink-muted uppercase tracking-wide"
 
 export function UnionForm({
 	union,
@@ -65,17 +64,17 @@ export function UnionForm({
 				event.preventDefault()
 				onSubmit(values)
 			}}
-			className="flex flex-col gap-3 p-5"
+			className={styles.unionForm}
 		>
-			<h2 className="font-semibold text-ink">{t("marriageTitle")}</h2>
+			<Heading as="h2" size="base">
+				{t("marriageTitle")}
+			</Heading>
 
-			<ul className="flex flex-col gap-1.5">
+			<ul className={styles.unionForm__spouses}>
 				{spouses.map((spouse) => (
-					<li key={spouse.id} className="flex items-center gap-2.5">
+					<li key={spouse.id} className={styles.unionForm__spouse}>
 						<Avatar person={spouse} size={28} />
-						<span className="truncate text-ink-soft text-sm">
-							{nameOf(spouse)}
-						</span>
+						<span className={styles.unionForm__name}>{nameOf(spouse)}</span>
 					</li>
 				))}
 			</ul>
@@ -88,48 +87,32 @@ export function UnionForm({
 				autoFocus
 			/>
 
-			<label className={label}>
-				{t("marriagePlace")}
-				<input
-					value={values.marriagePlace}
-					onChange={(event) => set("marriagePlace", event.target.value)}
-					className={`${field} mt-1`}
-					placeholder={t("birthPlacePlaceholder")}
-				/>
-			</label>
+			<Input
+				label={t("marriagePlace")}
+				value={values.marriagePlace}
+				onChange={(event) => set("marriagePlace", event.target.value)}
+				placeholder={t("birthPlacePlaceholder")}
+				full
+			/>
 
-			<label className="flex items-center gap-2 text-ink-soft text-sm">
-				<input
-					type="checkbox"
-					checked={values.divorced}
-					onChange={(event) => set("divorced", event.target.checked)}
-					className="accent-invert"
-				/>
-				{t("divorced")}
-			</label>
-			<p className="-mt-1 text-ink-faint text-xs">{t("divorcedHint")}</p>
+			<Checkbox
+				label={t("divorced")}
+				checked={values.divorced}
+				onChange={(event) => set("divorced", event.target.checked)}
+			/>
+			<p className={styles.unionForm__hint}>{t("divorcedHint")}</p>
 
-			{error ? (
-				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
-					{error}
-				</p>
-			) : null}
+			<FormError>{error}</FormError>
 
-			<div className="mt-1 flex gap-2">
-				<button
+			<div className={styles.unionForm__actions}>
+				<Button
 					type="submit"
+					label={pending ? t("saving") : submitLabel}
+					variant="primary"
 					disabled={pending}
-					className="flex-1 rounded-lg bg-invert px-3 py-2 font-medium text-on-invert text-sm hover:bg-invert-hover disabled:opacity-50"
-				>
-					{pending ? t("saving") : submitLabel}
-				</button>
-				<button
-					type="button"
-					onClick={onCancel}
-					className="rounded-lg border border-line px-3 py-2 font-medium text-ink-soft text-sm hover:bg-wash"
-				>
-					{t("cancel")}
-				</button>
+					className={styles.unionForm__submit}
+				/>
+				<Button label={t("cancel")} variant="secondary" onClick={onCancel} />
 			</div>
 		</form>
 	)

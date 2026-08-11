@@ -1,0 +1,67 @@
+@use "styles/typo-mixins" as typo;
+
+// One choice in a step. Selected state matches the settings pickers on purpose:
+// the same green means "this is the one you're on" everywhere in the app.
+.option {
+	--_option-border: var(--outline-variant);
+	--_option-bg: var(--surface-container);
+	--_option-icon: var(--on-surface-faint);
+	--_option-title: var(--on-surface);
+
+	position: relative;
+	width: 100%;
+	padding: var(--spacing-5);
+	border: 1px solid var(--_option-border);
+	border-radius: var(--border-radius-xl);
+	background-color: var(--_option-bg);
+	text-align: left;
+	cursor: pointer;
+
+	@media (prefers-reduced-motion: no-preference) {
+		transition:
+			background-color var(--animation-duration-fast) ease,
+			border-color var(--animation-duration-fast) ease;
+	}
+
+	&:hover {
+		--_option-border: var(--outline);
+		--_option-bg: var(--surface-container-high);
+	}
+
+	&[aria-pressed="true"] {
+		--_option-border: var(--root-line);
+		--_option-bg: var(--root-soft);
+		--_option-icon: var(--root-ink);
+		--_option-title: var(--root-ink);
+	}
+
+	&__body {
+		display: grid;
+		gap: var(--spacing-1-5);
+		justify-items: start;
+	}
+
+	&__icon {
+		color: var(--_option-icon);
+	}
+
+	&__label {
+		// Room for the tick in the corner.
+		padding-right: var(--spacing-7);
+		color: var(--_option-title);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	&__description {
+		@include typo.ui-caption;
+		color: var(--on-surface-variant);
+		line-height: 1.6;
+	}
+
+	&__check {
+		position: absolute;
+		top: var(--spacing-5);
+		right: var(--spacing-5);
+		color: var(--root-ink);
+	}
+}

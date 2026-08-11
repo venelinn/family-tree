@@ -18,6 +18,7 @@ alwaysApply: false
 ## Design Tokens
 
 - All values come from Style Dictionary (`tokens/*.json` → `styles/_css-variables.css` + `styles/_base-variables.scss` + `styles/variables.js`). The generated files carry a "do not edit" header and mean it — change the JSON and run `pnpm build-dictionary` (which `dev` and `build` do for you)
+- **Type comes from the mixins, the family from `next/font`.** `lib/fonts.ts` owns the webfont and the root layout puts its class on `<body>`; `body { @include typo.ui-body }` sets the scale. There is no `--font-sans`: a class inherits, and the custom property it replaced had to be declared on the same element it resolved against
 - Use `var(--spacing-*)` for spacing, `var(--border-radius*)` for corners, `var(--box-shadow-base)` for elevation. For typography prefer the typo mixins (see **Typography**); for colour prefer the semantic layer (see **Dark Mode**)
 - SCSS breakpoints: `base.$breakpoint-sm` (36rem), `base.$breakpoint-md` (48rem), `base.$breakpoint-lg` (62rem), `base.$breakpoint-xl` (75rem)
 - Each breakpoint has a `-max` variant (e.g. `$breakpoint-md-max: 47.9375rem`)
@@ -66,15 +67,26 @@ alwaysApply: false
 - **Native form chrome adapts via `color-scheme: dark`** (already set in `_theme-dark.scss`) — do not restyle scrollbars, autofill, date pickers, or `accent-color` per component
 - **Verifying a change is dark-mode-safe**: open the page with `<html data-theme="dark">`. If text/borders/backgrounds disappear or render at wrong contrast, swap the offending token to its semantic equivalent from the table above
 
-## Migrating off Tailwind
+## Tailwind's role
 
-The app is moving from Tailwind utilities to CSS Modules, one component at a
-time. Both are live, and both read the same custom properties.
+The app is styled with CSS Modules. Tailwind is present for its **utilities
+only** — the same minimal integration bgmtl uses:
 
-- **New and converted components use `.module.scss`.** Do not add Tailwind classes to a component that has a module
-- `styles/_compat.scss` aliases the pre-token names (`--panel`, `--ink-muted`, `--line`) onto the semantic layer so the ~250 remaining utility call sites keep working. **Never reference the left-hand column in new code** — use `--surface-container`, `--on-surface-variant`, `--outline-variant`
-- When a component's conversion removes the last user of a utility, delete its entry from both `_compat.scss` and the `@theme inline` block in `styles/globals.scss`
-- A half-converted component is worse than either — convert all of its markup in one pass
+```scss
+@layer utilities {
+  @import "tailwindcss/theme.css";
+  @import "tailwindcss/utilities.css";
+}
+```
+
+- **No preflight.** `styles/_reset.scss` does that job instead, in the `reset`
+  layer — smaller than preflight and written for what this app actually renders
+  (every list is a styled list, every control is a component)
+- **No component uses a utility class**, and none should. `@theme inline` in
+  `globals.scss` exposes the semantic tokens as utilities (`bg-surface-container`,
+  `text-on-surface-variant`) purely as an escape hatch for a one-off
+- Adding a colour to `@theme inline` is only worth it when a utility for it is
+  actually wanted; the tokens themselves are always available as `var(--…)`
 
 ## Cascade Layers
 
@@ -87,8 +99,8 @@ time. Both are live, and both read the same custom properties.
 Later wins, so precedence is decided there and nowhere else — that is what makes
 `!important` unnecessary rather than merely discouraged.
 
-- `frameworks` — third-party CSS (Tailwind's `theme.css` today)
-- `reset` — Tailwind preflight
+- `frameworks` — third-party CSS
+- `reset` — `styles/_reset.scss`, this app's replacement for Tailwind preflight
 - `base` — element defaults: `html`, `body`, global keyframes
 - `theme` / `layouts` — reserved; declared so their position is fixed before anything needs them
 - `components` — where component CSS would sit if Next layered it

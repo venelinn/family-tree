@@ -1,0 +1,83 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.personForm {
+	@include shared.form-panel;
+
+	&__legend {
+		@include shared.field-label;
+	}
+
+	&__hint {
+		@include shared.field-hint;
+	}
+
+	// A translated name and the button that removes it. `end` rather than
+	// `center`: the label sits above the input, so centring would ride the button
+	// up to the middle of the pair.
+	&__nameRow {
+		display: flex;
+		align-items: end;
+		gap: var(--spacing-1-5);
+	}
+
+	&__nameField {
+		min-width: 0;
+		flex: 1;
+	}
+
+	&__addNames {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-1-5);
+	}
+
+	// Dashed, because the language isn't on the record yet — the same grammar the
+	// chart uses for a person it has no record of.
+	&__addNames &__addName {
+		--_btn-border: var(--outline-variant);
+		--_btn-border-style: dashed;
+		--_btn-color: var(--on-surface-variant);
+	}
+
+	&__pair {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		align-items: start;
+		gap: var(--spacing-2);
+	}
+
+	&__sexes {
+		display: flex;
+		gap: var(--spacing-2);
+		margin-top: var(--spacing-1);
+	}
+
+	&__sexes &__sex {
+		flex: 1;
+
+		// The tint that answers the question the button is asking, so the choice
+		// looks like the card it will produce.
+		&[aria-pressed="true"] {
+			--_btn-bg: var(--male-soft);
+			--_btn-border: var(--male-line);
+			--_btn-color: var(--male-ink);
+		}
+
+		&[aria-pressed="true"][data-sex="female"] {
+			--_btn-bg: var(--female-soft);
+			--_btn-border: var(--female-line);
+			--_btn-color: var(--female-ink);
+		}
+	}
+
+	&__actions {
+		display: flex;
+		gap: var(--spacing-2);
+		margin-top: var(--spacing-1);
+	}
+
+	&__submit {
+		flex: 1;
+	}
+}

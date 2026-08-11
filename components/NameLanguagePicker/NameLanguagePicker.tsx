@@ -1,8 +1,9 @@
 "use client"
 
-import { Check, Languages, Type } from "lucide-react"
+import { Languages, Type } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useTransition } from "react"
+import { ChoiceList } from "@/components/ChoiceList"
 import { setNamesFollowLanguage } from "@/lib/name-language-actions"
 
 /**
@@ -40,43 +41,16 @@ export function NameLanguagePicker({ current }: { current: boolean }) {
 	}
 
 	return (
-		<ul className="divide-y divide-line-subtle overflow-hidden rounded-lg border border-line">
-			{OPTIONS.map(({ follow, icon: Icon, labelKey, hintKey }) => {
-				const active = follow === current
-				return (
-					<li key={labelKey}>
-						<button
-							type="button"
-							onClick={() => choose(follow)}
-							disabled={pending}
-							aria-current={active ? "true" : undefined}
-							className={`flex w-full items-center gap-3 px-4 py-3 text-left disabled:opacity-60 ${
-								active ? "bg-root-soft" : "hover:bg-wash"
-							}`}
-						>
-							<Icon
-								size={16}
-								strokeWidth={2}
-								className={active ? "text-root-ink" : "text-ink-faint"}
-							/>
-							<span className="flex-1">
-								<span className="block font-medium text-ink-soft text-sm">
-									{t(labelKey)}
-								</span>
-								<span className="block text-ink-faint text-xs">
-									{t(hintKey)}
-								</span>
-							</span>
-							{active ? (
-								<Check size={16} strokeWidth={2.5} className="text-root-ink" />
-							) : (
-								// Keeps the rows the same width whether ticked or not.
-								<span className="h-4 w-4" />
-							)}
-						</button>
-					</li>
-				)
-			})}
-		</ul>
+		<ChoiceList
+			items={OPTIONS.map(({ follow, icon: Icon, labelKey, hintKey }) => ({
+				value: follow,
+				label: t(labelKey),
+				hint: t(hintKey),
+				icon: <Icon size={16} strokeWidth={2} />,
+			}))}
+			current={current}
+			onChoose={choose}
+			disabled={pending}
+		/>
 	)
 }

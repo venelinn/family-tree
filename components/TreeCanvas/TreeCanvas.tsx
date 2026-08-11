@@ -28,6 +28,7 @@ import {
 } from "@/lib/layout/constants"
 import type { LayoutNode, LayoutResult, ViewType } from "@/lib/layout/types"
 import type { ThemePreference } from "@/lib/theming"
+import styles from "./TreeCanvas.module.scss"
 
 // Defined at module scope: a fresh object each render makes React Flow rebuild
 // every node component and is the classic source of flicker.
@@ -256,7 +257,7 @@ export function TreeCanvas({
 			maxZoom={2}
 			proOptions={{ hideAttribution: true }}
 			colorMode={theme}
-			className="bg-surface"
+			className={styles.canvas}
 		>
 			{/* React Flow passes `color` through as a custom property on the SVG's
 			    inline style, and takes minimap fills and edge strokes as inline
@@ -268,13 +269,13 @@ export function TreeCanvas({
 				pannable
 				zoomable
 				nodeColor={(node) => {
-					if (node.type !== "person") return "var(--line)"
+					if (node.type !== "person") return "var(--outline-variant)"
 					const person = (node.data as { person?: { sex?: string } }).person
 					return person?.sex === "F"
 						? "var(--female-solid)"
 						: "var(--male-solid)"
 				}}
-				className="bg-panel!"
+				className={styles.canvas__minimap}
 			/>
 		</ReactFlow>
 	)

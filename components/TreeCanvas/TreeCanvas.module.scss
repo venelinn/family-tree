@@ -1,0 +1,9 @@
+.canvas {
+	background-color: var(--background);
+
+	// React Flow paints the minimap frame itself; matching the block as well as
+	// the element outranks its stylesheet without `!important`.
+	& &__minimap {
+		background-color: var(--surface-container);
+	}
+}

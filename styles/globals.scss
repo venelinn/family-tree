@@ -1,27 +1,24 @@
 // The one global stylesheet, loaded from `app/layout.tsx`.
 //
-// Colour is a three-layer system and each layer is a file:
+// Colour is a two-file system:
 //
 //   1. `tokens/*.json`      → the palette and the roles it plays, built by
 //                             Style Dictionary into `_css-variables.css`
 //                             (light) — never edited by hand.
 //   2. `_theme-dark.scss`   → the same roles, dark. Hand-maintained.
-//   3. `_compat.scss`       → the pre-token role names, aliased onto the new
-//                             ones so the Tailwind utilities still in use keep
-//                             working. Deleted when the last one goes.
 //
 // Components name the *role*, never the colour: `var(--surface-container)`, not
 // `#fff`. That is what makes the dark theme a change to one file rather than a
 // variant bolted onto every element. See `docs/theming.md`.
 //
-// Tailwind and CSS Modules coexist for the duration of the migration. Both read
-// the same custom properties — the `@theme inline` block below is the only
-// bridge between them — so a converted component and an unconverted one sitting
-// side by side are the same colour in both themes.
+// Styling itself is CSS Modules, one per component. Tailwind is kept for its
+// utilities as an escape hatch only — there is no preflight, and no component
+// uses a utility class.
 
+@use "typo-mixins" as typo;
+@use "reset";
 @use "css-variables";
 @use "theme-dark";
-@use "compat";
 
 // The cascade, declared once and in order. Later layers win, so this line is the
 // only place the precedence of the whole stylesheet is decided — no specificity
@@ -35,20 +32,19 @@
 // Convert a component's markup in one pass and the question never comes up.
 @layer frameworks, reset, base, theme, layouts, components, utilities;
 
-// Tailwind, unbundled. `@import "tailwindcss"` cannot be used from Sass — Sass
-// claims extensionless `@import` for itself — so the three parts it stands for
-// are imported explicitly, each into the layer it normally lands in. Preflight
-// goes to `reset` rather than `base` so our own base rules outrank it.
-@layer frameworks {
+// Tailwind is here for its utilities and nothing else — no preflight. The base
+// styling a browser applies is dealt with by `_reset.scss` instead, which is
+// smaller and knows what this app actually renders.
+//
+// `@import "tailwindcss"` cannot be used from Sass — Sass claims extensionless
+// `@import` for itself — so the two parts are imported by path.
+@layer utilities {
 	@import "tailwindcss/theme.css";
+	@import "tailwindcss/utilities.css";
 }
 
 @layer reset {
-	@import "tailwindcss/preflight.css";
-}
-
-@layer utilities {
-	@import "tailwindcss/utilities.css";
+	@include reset.styles;
 }
 
 // Automatic source detection resolves against the stylesheet's own directory,
@@ -58,128 +54,58 @@
 @source "../components";
 @source "../lib";
 
-// The bridge to Tailwind: every `--color-*` here becomes a utility —
-// `bg-panel`, `text-ink-muted`, `border-female-line`.
+// The bridge to Tailwind: every `--color-*` here becomes a utility, so
+// `bg-surface-container` and `text-on-surface-variant` exist if a one-off ever
+// needs them. `inline` keeps the utility pointing at our variable rather than
+// snapshotting its value, which is what lets a utility re-theme.
 //
-// The left-hand names are the pre-token ones, still in use across ~250 call
-// sites; they resolve through `_compat.scss` onto the semantic layer. As
-// components convert to `.module.scss` their entries leave this block together
-// with their alias.
-//
-// Watch for collisions with Tailwind's own utilities when naming: `--color-solid`
-// had to become `--color-invert`, because `border-solid` is already a
-// border-style utility.
+// Watch for collisions with Tailwind's own utilities when naming: a token called
+// `solid` could not be used, because `border-solid` is already a border-style.
 @theme inline {
+	--color-background: var(--background);
 	--color-surface: var(--surface);
-	--color-panel: var(--panel);
-	--color-panel-veil: var(--panel-veil);
-	--color-wash: var(--wash);
-	--color-muted: var(--muted);
+	--color-surface-container: var(--surface-container);
+	--color-surface-container-high: var(--surface-container-high);
+	--color-surface-container-highest: var(--surface-container-highest);
 
-	--color-line-subtle: var(--line-subtle);
-	--color-line: var(--line);
-	--color-line-strong: var(--line-strong);
+	--color-on-surface: var(--on-surface);
+	--color-on-surface-soft: var(--on-surface-soft);
+	--color-on-surface-variant: var(--on-surface-variant);
+	--color-on-surface-faint: var(--on-surface-faint);
+	--color-on-surface-ghost: var(--on-surface-ghost);
 
-	--color-ink: var(--ink);
-	--color-ink-soft: var(--ink-soft);
-	--color-ink-muted: var(--ink-muted);
-	--color-ink-faint: var(--ink-faint);
-	--color-ink-ghost: var(--ink-ghost);
+	--color-outline: var(--outline);
+	--color-outline-variant: var(--outline-variant);
+	--color-outline-subtle: var(--outline-subtle);
 
-	--color-invert: var(--invert);
-	--color-invert-hover: var(--invert-hover);
-	--color-on-invert: var(--on-invert);
-
-	--color-male-line: var(--male-line);
-	--color-male-soft: var(--male-soft);
-	--color-male-ink: var(--male-ink);
-	--color-male-solid: var(--male-solid);
-
-	--color-female-line: var(--female-line);
-	--color-female-soft: var(--female-soft);
-	--color-female-ink: var(--female-ink);
-	--color-female-solid: var(--female-solid);
-
-	--color-root-ring: var(--root-ring);
-	--color-root-line: var(--root-line);
-	--color-root-soft: var(--root-soft);
-	--color-root-ink: var(--root-ink);
-
-	--color-branch-ring: var(--branch-ring);
-	--color-branch-line: var(--branch-line);
-	--color-branch-soft: var(--branch-soft);
-	--color-branch-soft-hover: var(--branch-soft-hover);
-	--color-branch-ink: var(--branch-ink);
-
-	--color-danger-soft: var(--danger-soft);
-	--color-danger-ink: var(--danger-ink);
-	--color-danger-text: var(--danger-text);
-
-	--color-union: var(--union);
-	--color-ribbon: var(--ribbon);
-
-	/*
-	 * `--font-raleway` is defined by the `next/font` class in `app/layout.tsx`,
-	 * which is on `<html>` — the same element this resolves on. Move that class
-	 * to `<body>` and this silently becomes invalid, taking the body font with
-	 * it. It has happened once.
-	 */
-	--font-sans: var(--font-raleway);
-	/* No webfont for monospace: paths and hashes need to line up, not to be
-	 * branded, and the system stack is already the right shape on every OS. */
-	--font-mono:
-		ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono",
-		monospace;
+	--color-primary: var(--primary);
+	--color-on-primary: var(--on-primary);
+	--color-error: var(--error);
 }
 
 @layer base {
+	:root {
+		// Lets a transition interpolate to `auto` — which is what makes the native
+		// `<details>` disclosure in `Accordion` animate open instead of snapping.
+		// Opt-in, and inert for any property that isn't being transitioned.
+		interpolate-size: allow-keywords;
+	}
+
 	html,
 	body {
 		height: 100%;
 	}
 
-	// The body font is set here, not by a `font-sans` class.
-	//
-	// This line used to say `Arial, Helvetica, sans-serif` — the create-next-app
-	// default — which quietly beat the `--font-sans` token for every element in
-	// the app, since nothing opts into the utility. The webfont was downloaded on
-	// every page and then not used. Naming the token here is what makes it real.
-	//
-	// `var(--font-sans)` already carries a metric-matched fallback from
-	// `next/font`; `sans-serif` is only there for the moment before the token is
-	// defined.
+	// The family arrives from `next/font`'s class on `<body>`; the *scale* comes
+	// from the type mixin, so body copy is one step of the design system rather
+	// than a loose font-size.
 	body {
+		@include typo.ui-body;
 		background: var(--background);
 		color: var(--on-background);
-		font-family: var(--font-sans), sans-serif;
 		-moz-osx-font-smoothing: grayscale;
 		-webkit-font-smoothing: antialiased;
 		-webkit-text-size-adjust: none;
 	}
 
-	// Onboarding's step transition. Global rather than a module because the class
-	// is applied by `Onboarding` to whichever step component is mounted, and those
-	// have no stylesheet of their own yet.
-	@keyframes step-enter {
-		from {
-			opacity: 0;
-			transform: translateY(12px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	.slot-enter {
-		animation: step-enter var(--animation-duration-slow)
-			var(--animation-ease-out) both;
-	}
-
-	// Someone who has asked their OS to stop moving things means it.
-	@media (prefers-reduced-motion: reduce) {
-		.slot-enter {
-			animation: none;
-		}
-	}
 }

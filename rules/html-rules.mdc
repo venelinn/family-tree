@@ -6,16 +6,11 @@ alwaysApply: false
 
 # HTML & Component Rules
 
-> **Status in this project.** This file came from a codebase with a larger UI kit.
-> family-tree has **`Heading` and `Button`** — documented below, and binding.
-> `Input`, `Select`, `Modal`, `EmptyState` and `PageBox` **do not exist yet**:
-> until they do, write semantic `<input>`, `<select>` and `<dialog>`, and build
-> the shared component the first time a second place needs it. The
-> `Input`/`Select` and `Modal` sections below describe the destination, not
-> today's rule.
->
-> Sections that apply without qualification: **Headings**, **Buttons**,
-> **Text & Translations**, **Page Structure**, **Semantic HTML**.
+> **The kit.** `Heading`, `Button`, `Panel`, `Accordion`, `Callout`,
+> `ChoiceList`, `RelationIcon`, and the form controls in `@/components/Forms`
+> (`Input`, `Textarea`, `Select`, `Checkbox`, `FormError`). All of the sections
+> below are binding except **Modal** — there is no `Modal` component yet, so use
+> a native `<dialog>` and build one the first time a second place needs it.
 
 ## Headings
 
@@ -51,6 +46,7 @@ import { Heading } from "@/components/Heading"
 ## Buttons
 
 - **Never use raw `<button>` elements** — always use the `<Button>` component from `@/components/Button`
+- **The exception is a composite control**: one whose content is a layout rather than a label with an optional icon — a disclosure header (title + count + chevron), a list row that is itself a button (avatar + two lines + dates), a canvas affordance below the UI type scale. `Button` models a labelled action; forcing one of these through it means overriding its size, padding, radius, type *and* colour, which is everything the component contributes. Style those as a raw `<button>` in the owning component's module, and say in a comment why. Current examples: `PersonPanel`'s action row and menu items, `PersonCard`'s reveal bar, `AddSlotCard`
 - **`href` decides the element**: with it you get a `next/link` (prefetched, client-side navigation), without it a real `<button>`. Actions get buttons, destinations get links — never the reverse
 - **`icon` takes a node, not a name** — `icon={<Plus size={16} />}`. A string resolved through a registry cannot be tree-shaken, so it would pull the whole icon set into the bundle
 - **An icon-only button needs `aria-label`** — there is no text to announce

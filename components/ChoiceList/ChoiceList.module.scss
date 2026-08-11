@@ -1,0 +1,85 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+// One of these, please: a bordered list of mutually exclusive options with the
+// chosen one ticked. The settings page is three of these in a row.
+.choices {
+	@include shared.resetList;
+	overflow: hidden;
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--border-radius);
+
+	// Between rows only — a rule above the first would double the container's own
+	// border.
+	&__item + &__item {
+		border-top: 1px solid var(--outline-subtle);
+	}
+
+	&__option {
+		--_choice-bg: transparent;
+		--_choice-icon: var(--on-surface-faint);
+
+		display: flex;
+		width: 100%;
+		align-items: center;
+		gap: var(--spacing-3);
+		padding: var(--spacing-3) var(--spacing-4);
+		background-color: var(--_choice-bg);
+		text-align: left;
+		cursor: pointer;
+
+		&:hover:not(:disabled) {
+			--_choice-bg: var(--surface-container-high);
+		}
+
+		&:disabled {
+			opacity: 0.6;
+			cursor: progress;
+		}
+
+		// The chosen row. `aria-current` is what a screen reader announces, and the
+		// same attribute paints it — the two cannot drift apart.
+		&[aria-current="true"] {
+			--_choice-bg: var(--root-soft);
+			--_choice-icon: var(--root-ink);
+		}
+	}
+
+	&__icon {
+		flex: 0 0 auto;
+		color: var(--_choice-icon);
+	}
+
+	&__text {
+		flex: 1;
+	}
+
+	&__label {
+		@include typo.ui-caption;
+		display: block;
+		color: var(--on-surface-soft);
+		font-weight: var(--font-weight-medium);
+	}
+
+	&__hint {
+		@include typo.ui-small;
+		display: block;
+		color: var(--on-surface-faint);
+	}
+
+	&__badge {
+		color: var(--on-surface-faint);
+		font-size: var(--ui-small-font-size);
+		font-weight: var(--font-weight-medium);
+		text-transform: uppercase;
+	}
+
+	// Reserved whether ticked or not, so rows don't change width as the choice
+	// moves.
+	&__check {
+		width: var(--spacing-4);
+		height: var(--spacing-4);
+		flex: 0 0 auto;
+		color: var(--root-ink);
+	}
+}

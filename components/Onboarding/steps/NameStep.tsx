@@ -1,5 +1,9 @@
 import { useTranslations } from "next-intl"
+import { Button } from "@/components/Button"
+import { Input } from "@/components/Forms"
+import { Heading } from "@/components/Heading"
 import type { StepProps } from "../types"
+import styles from "./Step.module.scss"
 
 /** What to call this tree. It becomes `meta.name` inside the file. */
 export function NameStep({ data, onUpdate, onNext }: StepProps) {
@@ -12,33 +16,34 @@ export function NameStep({ data, onUpdate, onNext }: StepProps) {
 				event.preventDefault()
 				if (name) onNext()
 			}}
-			className="mx-auto flex max-w-xl flex-col gap-6"
+			className={styles.step}
 		>
-			<div className="text-center">
-				<h1 className="font-semibold text-2xl text-ink tracking-tight">
+			<div className={styles.step__intro}>
+				<Heading as="h1" size="h2">
 					{t("nameTitle")}
-				</h1>
-				<p className="mt-2 text-ink-muted">{t("nameHelp")}</p>
+				</Heading>
+				<p className={styles.step__help}>{t("nameHelp")}</p>
 			</div>
 
-			<input
-				// biome-ignore lint/a11y/noAutofocus: the first field of a wizard
+			<Input
+				label={t("nameTitle")}
 				autoFocus
 				required
+				inputSize="lg"
 				value={data.treeName}
 				onChange={(event) => onUpdate({ treeName: event.target.value })}
 				placeholder={t("namePlaceholder")}
-				aria-label={t("nameTitle")}
-				className="w-full rounded-xl border border-line bg-panel px-4 py-3 text-ink text-lg outline-none focus:border-line-strong"
+				full
 			/>
 
-			<button
+			<Button
 				type="submit"
+				label={t("continue")}
+				variant="primary"
+				size="lg"
 				disabled={!name}
-				className="rounded-xl bg-invert px-4 py-3 font-medium text-on-invert hover:bg-invert-hover disabled:opacity-40"
-			>
-				{t("continue")}
-			</button>
+				full
+			/>
 		</form>
 	)
 }

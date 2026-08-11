@@ -2,8 +2,8 @@
 
 import type { NodeProps } from "@xyflow/react"
 import clsx from "clsx"
-import { UserPlus } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { RelationIcon } from "@/components/RelationIcon"
 import { CARD_HEIGHT, CARD_WIDTH } from "@/lib/layout/constants"
 import type { AddSlotNodeData } from "@/lib/layout/types"
 import styles from "./AddSlotCard.module.scss"
@@ -38,7 +38,7 @@ export function AddSlotCard({ data }: NodeProps & { data: AddSlotNodeData }) {
 			className={clsx("nodrag", styles.slot)}
 		>
 			<span className={styles.slot__badge}>
-				<UserPlus size={20} strokeWidth={2} />
+				<RelationIcon relation={data.relation} />
 			</span>
 			<span className={styles.slot__label}>{t(data.slot)}</span>
 		</button>

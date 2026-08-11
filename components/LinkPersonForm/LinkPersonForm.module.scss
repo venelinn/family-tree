@@ -1,0 +1,36 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.linkForm {
+	@include shared.form-panel;
+
+	&__help {
+		@include typo.ui-caption;
+		color: var(--on-surface-variant);
+	}
+
+	&__legend,
+	&__label {
+		@include shared.field-label;
+	}
+
+	&__options {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: var(--spacing-2);
+		margin-top: var(--spacing-1-5);
+	}
+
+	// The chosen relation is tinted with the root colour — the same green that
+	// marks the person the chart is centred on, because this is the relation
+	// being drawn *to* them.
+	&__options &__option[aria-pressed="true"] {
+		--_btn-bg: var(--root-soft);
+		--_btn-border: var(--root-line);
+		--_btn-color: var(--root-ink);
+	}
+
+	&__who {
+		margin-top: var(--spacing-1-5);
+	}
+}

@@ -1,0 +1,20 @@
+@use "styles/typo-mixins" as typo;
+
+// A titled card. The settings page is a stack of these, and so is anything else
+// that needs a heading, a line of explanation and a control.
+.panel {
+	padding: var(--spacing-5);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--border-radius-lg);
+	background-color: var(--surface-container);
+
+	&__description {
+		@include typo.ui-caption;
+		margin-top: var(--spacing-1);
+		color: var(--on-surface-variant);
+	}
+
+	&__body {
+		margin-top: var(--spacing-4);
+	}
+}

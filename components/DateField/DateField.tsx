@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { Input } from "@/components/Forms"
+import styles from "./DateField.module.scss"
 
 /**
  * A date field with a calendar, without throwing away imprecise dates.
@@ -13,16 +15,11 @@ import { useState } from "react"
  * fields, and falls back to a text box for everything else. The toggle lets you
  * move between the two on purpose.
  *
- * `color-scheme` is set globally in `styles/_theme-dark.scss`, which is what makes the
- * native picker follow the app's theme.
+ * `color-scheme` is set globally in `styles/_theme-dark.scss`, which is what
+ * makes the native picker follow the app's theme.
  */
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
-
-const field =
-	"w-full rounded-lg border border-line bg-panel px-2.5 py-1.5 text-ink text-sm outline-none focus:border-line-strong"
-const labelClass =
-	"block font-medium text-[11px] text-ink-muted uppercase tracking-wide"
 
 interface DateFieldProps {
 	label: string
@@ -48,19 +45,16 @@ export function DateField({
 	)
 
 	return (
-		<div>
-			<label className={labelClass}>
-				{label}
-				<input
-					// biome-ignore lint/a11y/noAutofocus: the form opens on an explicit click
-					autoFocus={autoFocus}
-					type={freeText ? "text" : "date"}
-					value={value}
-					onChange={(event) => onChange(event.target.value)}
-					className={`${field} mt-1`}
-					placeholder={freeText ? placeholder : undefined}
-				/>
-			</label>
+		<div className={styles.dateField}>
+			<Input
+				label={label}
+				autoFocus={autoFocus}
+				type={freeText ? "text" : "date"}
+				value={value}
+				onChange={(event) => onChange(event.target.value)}
+				placeholder={freeText ? placeholder : undefined}
+				full
+			/>
 			<button
 				type="button"
 				onClick={() => {
@@ -70,7 +64,7 @@ export function DateField({
 					if (freeText && value && !ISO_DATE.test(value)) onChange("")
 					setFreeText((current) => !current)
 				}}
-				className="mt-1 text-[11px] text-ink-faint underline-offset-2 hover:text-ink-soft hover:underline"
+				className={styles.dateField__toggle}
 			>
 				{freeText ? t("dateUseCalendar") : t("dateUseText")}
 			</button>

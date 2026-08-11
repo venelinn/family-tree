@@ -1,8 +1,11 @@
 import { useTranslations } from "next-intl"
+import { Button } from "@/components/Button"
+import { Heading } from "@/components/Heading"
 import { LanguagePicker } from "@/components/LanguagePicker"
 import { ThemePicker } from "@/components/ThemePicker"
 import type { ThemePreference } from "@/lib/theming"
 import type { StepProps } from "../types"
+import styles from "./Step.module.scss"
 
 /**
  * Language and theme, using the very same pickers as `/settings`.
@@ -27,35 +30,35 @@ export function PreferencesStep({
 	const t = useTranslations("onboarding")
 
 	return (
-		<div className="mx-auto flex max-w-xl flex-col gap-6">
-			<div className="text-center">
-				<h1 className="font-semibold text-2xl text-ink tracking-tight">
+		<div className={styles.step}>
+			<div className={styles.step__intro}>
+				<Heading as="h1" size="h2">
 					{t("preferencesTitle")}
-				</h1>
-				<p className="mt-2 text-ink-muted">{t("preferencesHelp")}</p>
+				</Heading>
+				<p className={styles.step__help}>{t("preferencesHelp")}</p>
 			</div>
 
-			<section className="flex flex-col gap-3">
-				<h2 className="font-medium text-[11px] text-ink-muted uppercase tracking-wide">
+			<section className={styles.step__section}>
+				<Heading as="h2" size="base" className={styles.step__sectionTitle}>
 					{t("preferencesLanguage")}
-				</h2>
+				</Heading>
 				<LanguagePicker current={locale} />
 			</section>
 
-			<section className="flex flex-col gap-3">
-				<h2 className="font-medium text-[11px] text-ink-muted uppercase tracking-wide">
+			<section className={styles.step__section}>
+				<Heading as="h2" size="base" className={styles.step__sectionTitle}>
 					{t("preferencesTheme")}
-				</h2>
+				</Heading>
 				<ThemePicker current={theme} />
 			</section>
 
-			<button
-				type="button"
+			<Button
+				label={t("continue")}
+				variant="primary"
+				size="lg"
+				full
 				onClick={onNext}
-				className="rounded-xl bg-invert px-4 py-3 font-medium text-on-invert hover:bg-invert-hover"
-			>
-				{t("continue")}
-			</button>
+			/>
 		</div>
 	)
 }

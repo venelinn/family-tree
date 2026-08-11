@@ -2,10 +2,15 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { Button } from "@/components/Button"
+import { FormError } from "@/components/Forms"
+import { Heading } from "@/components/Heading"
 import { usePersonName } from "@/components/PersonNames"
 import { PersonSearch } from "@/components/PersonSearch"
+import { RelationIcon } from "@/components/RelationIcon"
 import type { Person } from "@/lib/family-graph"
 import type { Relation } from "@/lib/tree-ops"
+import styles from "./LinkPersonForm.module.scss"
 
 /**
  * Relate the selected person to somebody already in the tree.
@@ -49,40 +54,34 @@ export function LinkPersonForm({
 	const [relation, setRelation] = useState<Relation>("spouse")
 
 	return (
-		<div className="flex flex-col gap-3 p-5">
-			<h2 className="font-semibold text-ink">{t("linkTitle")}</h2>
-			<p className="text-ink-muted text-sm">
+		<div className={styles.linkForm}>
+			<Heading as="h2" size="base">
+				{t("linkTitle")}
+			</Heading>
+			<p className={styles.linkForm__help}>
 				{t("linkHelp", { name: nameOf(person) })}
 			</p>
 
 			<fieldset>
-				<legend className="block font-medium text-[11px] text-ink-muted uppercase tracking-wide">
-					{t("linkRelation")}
-				</legend>
-				<div className="mt-1.5 grid grid-cols-2 gap-2">
+				<legend className={styles.linkForm__legend}>{t("linkRelation")}</legend>
+				<div className={styles.linkForm__options}>
 					{RELATIONS.map((option) => (
-						<button
+						<Button
 							key={option.id}
-							type="button"
-							onClick={() => setRelation(option.id)}
+							label={t(option.labelKey)}
+							variant="secondary"
+							icon={<RelationIcon relation={option.id} size={15} />}
 							aria-pressed={relation === option.id}
-							className={`rounded-lg border px-3 py-1.5 font-medium text-sm ${
-								relation === option.id
-									? "border-root-line bg-root-soft text-root-ink"
-									: "border-line text-ink-muted hover:bg-wash"
-							}`}
-						>
-							{t(option.labelKey)}
-						</button>
+							className={styles.linkForm__option}
+							onClick={() => setRelation(option.id)}
+						/>
 					))}
 				</div>
 			</fieldset>
 
 			<div>
-				<span className="block font-medium text-[11px] text-ink-muted uppercase tracking-wide">
-					{t("linkWho")}
-				</span>
-				<div className="mt-1.5">
+				<span className={styles.linkForm__label}>{t("linkWho")}</span>
+				<div className={styles.linkForm__who}>
 					<PersonSearch
 						people={people}
 						excludeId={person.id}
@@ -93,20 +92,14 @@ export function LinkPersonForm({
 				</div>
 			</div>
 
-			{error ? (
-				<p className="rounded-lg bg-danger-soft px-3 py-2 text-danger-ink text-sm">
-					{error}
-				</p>
-			) : null}
+			<FormError>{error}</FormError>
 
-			<button
-				type="button"
-				onClick={onCancel}
+			<Button
+				label={pending ? t("linkSaving") : t("linkCancel")}
+				variant="secondary"
 				disabled={pending}
-				className="mt-1 rounded-lg border border-line px-3 py-2 font-medium text-ink-soft text-sm hover:bg-wash disabled:opacity-50"
-			>
-				{pending ? t("linkSaving") : t("linkCancel")}
-			</button>
+				onClick={onCancel}
+			/>
 		</div>
 	)
 }

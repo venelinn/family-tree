@@ -129,8 +129,10 @@ export const Spacing55 = "22px"; // 22px
 export const Spacing65 = "26px"; // 26px
 export const Spacing75 = "30px"; // 30px
 export const Spacing85 = "34px"; // 34px
-export const FontFamilyHeading = "var(--font-sans)"; // next/font sets --font-raleway on <html>; globals.scss maps it to --font-sans
-export const FontFamilyBody = "var(--font-sans)";
+export const FontFamilyHeading = "inherit"; // Headings share the body face. next/font puts it on <body> via a class, so inheriting is how it reaches them.
+export const FontFamilyBody = "inherit";
+export const FontFamilyMono =
+  "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace"; // No webfont: paths and hashes need to line up, not to be branded, and the system stack is already the right shape on every OS.
 export const FontSizeBase = "16px";
 export const FontWeightLight = 300;
 export const FontWeightNormal = 400;
