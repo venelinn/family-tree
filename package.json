@@ -4,11 +4,13 @@
 	"private": true,
 	"scripts": {
 		"dev": "pnpm run build-dictionary && next dev -p 3022",
+		"dev:tauri": "NEXT_PUBLIC_TAURI=1 pnpm run dev",
 		"app": "tauri dev",
 		"app:build": "tauri build",
 		"tauri": "tauri",
 		"clean": "rm -rf .next",
 		"build": "pnpm run clean && pnpm run build-dictionary && next build",
+		"build:tauri": "NEXT_PUBLIC_TAURI=1 pnpm run build",
 		"build:ci": "pnpm run build-dictionary && next build",
 		"start": "next start",
 		"lint": "biome check",

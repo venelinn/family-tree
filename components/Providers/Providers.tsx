@@ -4,9 +4,6 @@ import { NextIntlClientProvider } from "next-intl"
 import { useEffect } from "react"
 import { getMessages } from "@/lib/getMessages"
 import { useLocale } from "@/lib/locale"
-// Side effect only, and it must be an import rather than a hook: it installs the
-// store's filesystem backend, and child effects run before parent ones. See the file.
-import "@/lib/store/fs.client"
 
 /**
  * The client half of the root layout: language, and the `<html>` attributes that

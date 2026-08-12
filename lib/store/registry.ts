@@ -1,4 +1,4 @@
-import { isTauri } from "./fs.client"
+import { ensureFs, isTauri } from "./fs.client"
 import * as indexed from "./registry.indexed"
 import * as local from "./registry.local"
 
@@ -22,7 +22,12 @@ import * as local from "./registry.local"
  * it lazily is what keeps the static export from baking in the wrong answer.
  */
 
-const registry = () => (isTauri() ? local : indexed)
+const registry = () => {
+	// Installs the Tauri filesystem backend the first time anything asks for the
+	// store, rather than when this module happens to be imported. Idempotent.
+	ensureFs()
+	return isTauri() ? local : indexed
+}
 
 export type { CreateTreeOptions } from "./registry.local"
 export type { TreeSummary } from "./types"
