@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { Button } from "@/components/Button"
 import type { PersonFormValues } from "@/lib/actions"
+import { canPickFolder } from "@/lib/pick-folder"
 import { createTreeAction } from "@/lib/tree-actions"
 import BottomNav from "./BottomNav"
 import styles from "./Onboarding.module.scss"
@@ -46,9 +47,15 @@ export function Onboarding({ hasTrees }: OnboardingProps) {
 		startMode: "me",
 	})
 
+	/**
+	 * The web target has no storage step, because there is nothing to choose.
+	 * A browser tree lives in this browser's own storage; asking "where shall I
+	 * put it?" and offering one answer is worse than not asking. `StartStep` says
+	 * where it went instead, next to the advice about exporting it.
+	 */
 	const steps: StepId[] = [
 		"name",
-		"storage",
+		...(canPickFolder() ? (["storage"] as const) : []),
 		"preferences",
 		"start",
 		...(data.startMode === "me" ? (["you"] as const) : []),
@@ -88,6 +95,9 @@ export function Onboarding({ hasTrees }: OnboardingProps) {
 		onUpdate: update,
 		onNext: next,
 		onBack: back,
+		// Importing or opening an existing tree lands in the same place a finished
+		// wizard does; the action has already selected it and invalidated.
+		onDone: () => router.push("/"),
 	}
 
 	return (

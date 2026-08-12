@@ -32,9 +32,19 @@ import type { TreeMeta, TreeSnapshot } from "./types"
  */
 
 const DB_NAME = "family-tree"
-const DB_VERSION = 1
+const DB_VERSION = 2
 /** One record per tree, the whole `TreeSnapshot`, keyed by its id. */
 const TREES = "trees"
+/**
+ * Photo blobs, keyed by the same content-addressed `<sha256>.<ext>` name the
+ * bundle format uses on disk.
+ *
+ * Shared across every tree in the origin, deliberately and for the same reason
+ * the bundle shards by hash: the same scan attached to four siblings — or
+ * present in two imported trees — is one blob. The key carries no person id, so
+ * a leaked key says nothing about who is related to whom.
+ */
+const PHOTOS = "photos"
 
 function openDb(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
@@ -47,6 +57,11 @@ function openDb(): Promise<IDBDatabase> {
 			const db = request.result
 			if (!db.objectStoreNames.contains(TREES)) {
 				db.createObjectStore(TREES, { keyPath: "meta.id" })
+			}
+			// Added in v2. Written as a guarded create rather than a migration so
+			// upgrading from v1 and installing fresh take the same path.
+			if (!db.objectStoreNames.contains(PHOTOS)) {
+				db.createObjectStore(PHOTOS)
 			}
 		}
 		request.onsuccess = () => resolve(request.result)
@@ -62,12 +77,13 @@ function openDb(): Promise<IDBDatabase> {
 async function withStore<T>(
 	mode: IDBTransactionMode,
 	fn: (store: IDBObjectStore) => IDBRequest<T>,
+	name: string = TREES,
 ): Promise<T> {
 	const db = await openDb()
 	try {
 		return await new Promise<T>((resolve, reject) => {
-			const transaction = db.transaction(TREES, mode)
-			const request = fn(transaction.objectStore(TREES))
+			const transaction = db.transaction(name, mode)
+			const request = fn(transaction.objectStore(name))
 			// Resolve on the *transaction*, not the request: a write is not durable
 			// until the transaction commits, and resolving early would let the app
 			// report a save that could still fail.
@@ -113,6 +129,91 @@ export class IndexedTreeStore extends SnapshotTreeStore {
 	protected async write(snapshot: TreeSnapshot): Promise<void> {
 		await withStore("readwrite", (store) => store.put(snapshot))
 	}
+
+	/* ------------------------------------------------------------ photos ---- */
+
+	override get canStorePhotos(): boolean {
+		return true
+	}
+
+	override async hasPhoto(entry: string): Promise<boolean> {
+		const count = await withStore<number>(
+			"readonly",
+			(store) => store.count(entry),
+			PHOTOS,
+		)
+		return count > 0
+	}
+
+	override async putPhoto(entry: string, bytes: Uint8Array): Promise<void> {
+		// Stored as a Blob rather than the raw bytes: it is what `createObjectURL`
+		// wants back, and it carries the type, so reading does not have to
+		// re-derive one from the extension.
+		const blob = new Blob([bytes as BlobPart], { type: mimeFor(entry) })
+		await withStore("readwrite", (store) => store.put(blob, entry), PHOTOS)
+	}
+
+	override async deletePhoto(entry: string): Promise<void> {
+		revokeCached(entry)
+		await withStore("readwrite", (store) => store.delete(entry), PHOTOS)
+	}
+
+	override async photoSrc(entry: string): Promise<string | undefined> {
+		const cached = objectUrls.get(entry)
+		if (cached) return cached
+
+		const blob = await withStore<Blob | undefined>(
+			"readonly",
+			(store) => store.get(entry),
+			PHOTOS,
+		)
+		if (!blob) return undefined
+
+		const url = URL.createObjectURL(blob)
+		objectUrls.set(entry, url)
+		return url
+	}
+
+	/** The bytes themselves, for exporting a tree with its pictures. */
+	async readPhotoBytes(entry: string): Promise<Uint8Array | undefined> {
+		const blob = await withStore<Blob | undefined>(
+			"readonly",
+			(store) => store.get(entry),
+			PHOTOS,
+		)
+		return blob ? new Uint8Array(await blob.arrayBuffer()) : undefined
+	}
+}
+
+/**
+ * Object URLs, kept per photo for the lifetime of the page.
+ *
+ * `createObjectURL` pins the blob in memory until it is revoked, and the graph
+ * is re-read after every edit — minting a fresh URL each time would leak one
+ * per photo per keystroke. Caching by entry is safe precisely because the name
+ * is a content hash: the same key can never mean different bytes, so a cached
+ * URL cannot go stale. Deleting a photo revokes its URL, which is the only case
+ * where an entry stops being valid.
+ */
+const objectUrls = new Map<string, string>()
+
+function revokeCached(entry: string): void {
+	const url = objectUrls.get(entry)
+	if (!url) return
+	URL.revokeObjectURL(url)
+	objectUrls.delete(entry)
+}
+
+/** From the stored extension, never from an upload's own claim about itself. */
+function mimeFor(entry: string): string {
+	const extension = entry.split(".").pop()?.toLowerCase()
+	return extension === "png"
+		? "image/png"
+		: extension === "webp"
+			? "image/webp"
+			: extension === "gif"
+				? "image/gif"
+				: "image/jpeg"
 }
 
 /* ----------------------------------------------------- registry helpers ---- */

@@ -52,11 +52,51 @@ export abstract class SnapshotTreeStore implements TreeStore {
 	 * Where this store keeps photo files, if it keeps them as files at all.
 	 *
 	 * Undefined for a browser-stored tree, and for a loose `.json` that predates
-	 * bundles — both cases where there is nowhere to put a picture. `photos.ts`
-	 * refuses uploads on exactly this, which is why the two very different
-	 * reasons produce the same already-translated error.
+	 * bundles. Only `registry.local` and the import script still ask — everything
+	 * else goes through the photo methods below, which do not care whether the
+	 * answer is a directory, a database or neither.
 	 */
 	get photoDir(): string | undefined {
+		return undefined
+	}
+
+	/* ------------------------------------------------------------ photos ---- */
+
+	/**
+	 * Photos, as an operation rather than a location.
+	 *
+	 * `photos.ts` used to build paths itself from `photoDir`, which quietly meant
+	 * "photos are files" — true for a bundle, false for IndexedDB, and false
+	 * again for anything networked later. These four methods are the whole
+	 * surface it needs, and each store answers them however it stores things.
+	 *
+	 * The default is "cannot keep photos", which is the honest answer for a loose
+	 * `.json` tree and keeps the existing `treeNotABundle` refusal working
+	 * unchanged.
+	 */
+	get canStorePhotos(): boolean {
+		return false
+	}
+
+	async hasPhoto(_entry: string): Promise<boolean> {
+		return false
+	}
+
+	async putPhoto(_entry: string, _bytes: Uint8Array): Promise<void> {
+		throw new Error("This store cannot keep photos")
+	}
+
+	async deletePhoto(_entry: string): Promise<void> {
+		// Nothing stored, nothing to remove.
+	}
+
+	/**
+	 * A displayable `src` for a stored photo, or undefined if it isn't there.
+	 *
+	 * Async because a browser has to fetch the blob before it can hand out a URL
+	 * for it — which is why `toFamilyGraph` is async too.
+	 */
+	async photoSrc(_entry: string): Promise<string | undefined> {
 		return undefined
 	}
 

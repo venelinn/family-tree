@@ -1,13 +1,23 @@
-import { DIR_MODE, FILE_MODE, locate, type TreeLocation } from "./bundle"
+import { TreeOpError } from "../errors"
+import {
+	DIR_MODE,
+	FILE_MODE,
+	locate,
+	photoFile,
+	type TreeLocation,
+} from "./bundle"
 import {
 	copyFile,
 	exists,
 	mkdir,
 	readDir,
+	readFile,
 	readTextFile,
 	remove,
 	rename,
 	stat,
+	toSrc,
+	writeFile,
 	writeTextFile,
 } from "./fs"
 import * as path from "./path"
@@ -86,6 +96,49 @@ export class LocalTreeStore extends SnapshotTreeStore {
 
 	override get photoDir(): string | undefined {
 		return this.location.photoDir
+	}
+
+	/* ------------------------------------------------------------ photos ---- */
+
+	/** Only a bundle has a `photos/` directory; a loose `.json` has nowhere. */
+	override get canStorePhotos(): boolean {
+		return this.location.photoDir !== undefined
+	}
+
+	/** Content-addressed, sharded two bytes deep — see `bundle.ts`. */
+	private fileFor(entry: string): string | undefined {
+		const dir = this.location.photoDir
+		return dir ? photoFile(dir, entry) : undefined
+	}
+
+	override async hasPhoto(entry: string): Promise<boolean> {
+		const file = this.fileFor(entry)
+		return file ? await exists(file) : false
+	}
+
+	override async putPhoto(entry: string, bytes: Uint8Array): Promise<void> {
+		const file = this.fileFor(entry)
+		if (!file) throw new TreeOpError("treeNotABundle")
+		await mkdir(path.dirname(file), { recursive: true, mode: DIR_MODE })
+		await writeFile(file, bytes, { mode: FILE_MODE })
+	}
+
+	override async deletePhoto(entry: string): Promise<void> {
+		const file = this.fileFor(entry)
+		if (file && (await exists(file))) await remove(file)
+	}
+
+	override async photoSrc(entry: string): Promise<string | undefined> {
+		const file = this.fileFor(entry)
+		// `exists` rather than trusting the row: a photo deleted outside the app
+		// should show as missing rather than as a broken image element.
+		return file && (await exists(file)) ? toSrc(file) : undefined
+	}
+
+	/** The bytes themselves, for exporting a tree with its pictures. */
+	async readPhotoBytes(entry: string): Promise<Uint8Array | undefined> {
+		const file = this.fileFor(entry)
+		return file && (await exists(file)) ? await readFile(file) : undefined
 	}
 
 	async read(): Promise<TreeSnapshot> {

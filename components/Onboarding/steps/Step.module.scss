@@ -66,3 +66,68 @@
 		word-break: break-all;
 	}
 }
+
+/**
+ * "Already have a tree?" — the way out of the wizard for someone who is not
+ * starting from scratch.
+ *
+ * Separated by a rule rather than sitting in the flow, because it is a different
+ * kind of answer to the question above it: everything else on this step builds a
+ * new tree, and this leaves.
+ */
+.step__existing {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--spacing-3);
+	margin-block-start: var(--spacing-5);
+	padding-block-start: var(--spacing-5);
+	border-block-start: 1px solid var(--outline-variant);
+}
+
+.step__existingHelp {
+	@include typo.ui-body;
+	flex-basis: 100%;
+	margin: 0;
+	color: var(--on-surface-variant);
+}
+
+.step__existingTitle {
+	flex-basis: 100%;
+	color: var(--on-surface-variant);
+}
+
+/**
+ * A `<label>` around a hidden input: a file picker cannot be opened
+ * programmatically, and a `<button>` may not contain an input, so this is the
+ * one element that can both look like a button and forward the click.
+ */
+.step__importLabel {
+	@include typo.ui-body;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--spacing-2);
+	padding: var(--spacing-2) var(--spacing-3);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--border-radius);
+	background: var(--surface-container);
+	color: var(--on-surface);
+	cursor: pointer;
+
+	&:hover {
+		background: var(--surface-container-highest);
+	}
+
+	input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	&:focus-within {
+		outline: 2px solid var(--outline);
+		outline-offset: 2px;
+	}
+}

@@ -12,7 +12,7 @@ import {
 	photoEntry,
 	photoFile,
 } from "./store/bundle"
-import { dataDir, exists, mkdir, readFile, remove, writeFile } from "./store/fs"
+import { dataDir, exists, mkdir, readFile, writeFile } from "./store/fs"
 import * as path from "./store/path"
 import type { SnapshotTreeStore } from "./store/snapshot-store"
 
@@ -67,8 +67,7 @@ export async function savePhoto(
 	personId: string,
 	file: File,
 ): Promise<string[]> {
-	const { photoDir } = store
-	if (!photoDir) throw new TreeOpError("treeNotABundle")
+	if (!store.canStorePhotos) throw new TreeOpError("treeNotABundle")
 
 	if (file.size === 0) throw new TreeOpError("photoMissing")
 	if (file.size > MAX_BYTES) throw new TreeOpError("photoTooBig")
@@ -96,14 +95,9 @@ export async function savePhoto(
 
 	const hash = await sha256Hex(sanitised)
 	const entry = `${hash}.${EXTENSIONS[format]}`
-	const target = photoFile(photoDir, entry)
-	if (!target) throw new TreeOpError("photoType")
 
 	// Same bytes, same name: an identical photo added twice is already there.
-	if (!(await exists(target))) {
-		await mkdir(path.dirname(target), { recursive: true, mode: DIR_MODE })
-		await writeFile(target, sanitised, { mode: FILE_MODE })
-	}
+	if (!(await store.hasPhoto(entry))) await store.putPhoto(entry, sanitised)
 
 	// ...and the same photo on the same person is not a second photo.
 	if (person.photos.includes(entry)) return person.photos
@@ -127,15 +121,13 @@ export async function removePhoto(
 
 	// Photos from `pnpm photos` are left alone: that script owns those files and
 	// the tree file is not the only thing pointing at them.
-	const { photoDir } = store
-	if (!photoDir || !isStoredPhoto(entry)) return photos
+	if (!store.canStorePhotos || !isStoredPhoto(entry)) return photos
 
 	const stillUsed = snapshot.people.some(
 		(candidate) =>
 			candidate.id !== personId && candidate.photos.includes(entry),
 	)
-	const file = photoFile(photoDir, entry)
-	if (!stillUsed && file && (await exists(file))) await remove(file)
+	if (!stillUsed) await store.deletePhoto(entry)
 
 	return photos
 }
@@ -153,48 +145,6 @@ export async function setPrimaryPhoto(
 	const photos = [entry, ...person.photos.filter((photo) => photo !== entry)]
 	await store.updatePerson(personId, { photos })
 	return photos
-}
-
-/* ------------------------------------------------------------ reading ----- */
-
-/** Content types, by stored extension. Never taken from an upload. */
-const CONTENT_TYPES: Record<string, string> = {
-	jpg: "image/jpeg",
-	png: "image/png",
-	webp: "image/webp",
-	gif: "image/gif",
-}
-
-export interface StoredPhoto {
-	bytes: Uint8Array
-	contentType: string
-}
-
-/**
- * Read one stored photo, for the route that serves them.
- *
- * `entry` arrives from the URL, so it is checked against the stored-photo shape
- * — 64 hex characters and a known extension — before it becomes part of a path.
- * `photoFile` returns undefined for anything else, which is what keeps this
- * from being a way to read arbitrary files: the caller never supplies a path,
- * only a name from a fixed alphabet that is resolved inside a directory the
- * server chose.
- */
-export async function readPhoto(
-	store: SnapshotTreeStore,
-	entry: string,
-): Promise<StoredPhoto | undefined> {
-	const { photoDir } = store
-	if (!photoDir) return undefined
-
-	const file = photoFile(photoDir, entry)
-	if (!file || !(await exists(file))) return undefined
-
-	const extension = path.extname(entry).slice(1)
-	const contentType = CONTENT_TYPES[extension]
-	if (!contentType) return undefined
-
-	return { bytes: await readFile(file), contentType }
 }
 
 /**

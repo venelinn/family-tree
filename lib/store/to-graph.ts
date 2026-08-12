@@ -1,5 +1,5 @@
 import type { FamilyGraph, Person, Union } from "../family-graph"
-import { photoUrl } from "./bundle"
+import type { SnapshotTreeStore } from "./snapshot-store"
 import type { TreeSnapshot } from "./types"
 
 /**
@@ -11,10 +11,10 @@ import type { TreeSnapshot } from "./types"
  *
  * Photos are turned into displayable `src` values here too, which is why no
  * component has to know that a bundle's photos are files on disk while an
- * unconverted tree's are served paths. `photoDir` comes from the store's own
- * location and is undefined for a loose `.json` tree, which has none — in that
- * case every entry passes through as-is. `photoEntry` in `bundle.ts` maps them
- * back when one is removed.
+ * unconverted tree's are served paths — by asking the store, which is why this
+ * is async. A file store answers with an asset-protocol URL for a path on disk;
+ * the browser store answers with an object URL for a blob it holds.
+ * `photoEntry` in `bundle.ts` maps a `src` back when one is removed.
  */
 
 /** Pulls a year out of either an ISO date or free text like `Jun 1991`. */
@@ -23,13 +23,40 @@ function yearOf(value: string | undefined): number | undefined {
 	return match ? Number(match[0]) : undefined
 }
 
-export function toFamilyGraph(
+export async function toFamilyGraph(
 	snapshot: TreeSnapshot,
-	photoDir?: string,
-): FamilyGraph {
+	store: SnapshotTreeStore,
+): Promise<FamilyGraph> {
+	/**
+	 * Resolved once per distinct entry, not once per person.
+	 *
+	 * The same scan is attached to several siblings by design — that is what
+	 * content addressing buys — and each resolution is a filesystem check or an
+	 * IndexedDB read. Without this, one photo covering a family of five would be
+	 * looked up five times on every re-read, and the graph is re-read after every
+	 * edit.
+	 */
+	const resolved = new Map<string, Promise<string | undefined>>()
+	const srcFor = (entry: string) => {
+		const existing = resolved.get(entry)
+		if (existing) return existing
+		// A served `/photos/…` path from `pnpm photos`, or a remote URL in a tree
+		// that was never localised: already a working `src`, passed through.
+		const pending = entry.includes("/")
+			? Promise.resolve<string | undefined>(entry)
+			: store.photoSrc(entry)
+		resolved.set(entry, pending)
+		return pending
+	}
+
 	const people = new Map<string, Person>()
 	for (const record of snapshot.people) {
-		const photos = record.photos.map((entry) => photoUrl(photoDir, entry))
+		// Entries the store cannot resolve are dropped rather than rendered as
+		// broken images — a tree imported into the browser carries photo names but
+		// no bytes, which makes that the ordinary case rather than an error.
+		const photos = (
+			await Promise.all(record.photos.map((entry) => srcFor(entry)))
+		).filter((src): src is string => Boolean(src))
 		people.set(record.id, {
 			id: record.id,
 			name: record.fullName,

@@ -20,4 +20,12 @@ export interface StepProps {
 	onUpdate: (updates: Partial<OnboardingData>) => void
 	onNext: () => void
 	onBack: () => void
+	/**
+	 * Leave the wizard — the tree already exists.
+	 *
+	 * Only `NameStep` uses it, for importing or opening a tree rather than
+	 * creating one. There is nothing left to ask at that point, so this skips the
+	 * remaining steps entirely instead of walking through them.
+	 */
+	onDone?: () => void
 }

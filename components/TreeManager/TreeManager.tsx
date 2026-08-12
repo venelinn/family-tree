@@ -19,7 +19,9 @@ import {
 	adoptTreeAction,
 	type ConvertResult,
 	convertTreeAction,
+	exportTreeAction,
 	forgetTreeAction,
+	importTreeAction,
 	relocateTreeAction,
 	renameTreeAction,
 	setActiveTreeAction,
@@ -174,6 +176,15 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 										}}
 									/>
 								) : null}
+								{/* Before Forget, deliberately. On the web target forgetting
+								    really does delete, and this is the only backup. */}
+								<Button
+									label={t("treeExport")}
+									variant="ghost"
+									className={styles.trees__action}
+									disabled={pending || !tree.available}
+									onClick={() => run(() => exportTreeAction(tree.id))}
+								/>
 								<Button
 									label={t("treeForget")}
 									variant="ghost"
@@ -317,6 +328,32 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 					</div>
 				)}
 			</form>
+
+			<div className={styles.trees__adopt}>
+				<span className={styles.trees__adoptTitle}>{t("treeImportTitle")}</span>
+				<p className={styles.trees__adoptHelp}>{t("treeImportHelp")}</p>
+				{/*
+				  A real file input rather than a native dialog: this reads a file the
+				  browser hands over, so it needs no filesystem grant and works on both
+				  targets identically. Hidden behind a label so it can be styled as a
+				  button without reimplementing one.
+				*/}
+				<label className={styles.trees__import}>
+					<input
+						type="file"
+						accept=".json,application/json"
+						disabled={pending}
+						onChange={(event) => {
+							const file = event.target.files?.[0]
+							// Cleared so choosing the same file twice fires again — after a
+							// failed import that is exactly what someone will try.
+							event.target.value = ""
+							if (file) run(() => importTreeAction(file))
+						}}
+					/>
+					<span>{t("treeImport")}</span>
+				</label>
+			</div>
 
 			<Button
 				label={t("treeNew")}

@@ -64,7 +64,7 @@ export async function loadActiveTree(): Promise<ActiveTreeResult> {
 	return {
 		status: "ok",
 		meta: active,
-		graph: toFamilyGraph(await store.read(), store.photoDir),
+		graph: await toFamilyGraph(await store.read(), store),
 	}
 }
 

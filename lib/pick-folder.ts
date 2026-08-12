@@ -1,6 +1,7 @@
 "use client"
 
-import { open } from "@tauri-apps/plugin-dialog"
+import { open, save } from "@tauri-apps/plugin-dialog"
+import { writeTextFile } from "./store/fs"
 import { isTauri } from "./store/fs.client"
 
 /**
@@ -46,3 +47,34 @@ export async function pickFolder(title: string): Promise<string | undefined> {
 
 /** True when a native folder dialog is available at all. */
 export const canPickFolder = isTauri
+
+/**
+ * Ask where to save a file, then write it — the desktop half of exporting.
+ *
+ * **A blob download does not work here.** The web build exports by handing the
+ * browser an object URL on an `<a download>`, which the webview does not act on:
+ * WKWebView has no download handling unless the Rust side adds it, so the click
+ * lands and nothing happens at all. Silently. A native save dialog is both the
+ * thing that works and the better behaviour — the user chooses the location,
+ * exactly as they do everywhere else in this app.
+ *
+ * Returns the chosen path, or undefined when the user cancels, so the caller can
+ * tell "saved" from "changed their mind".
+ */
+export async function saveTextFile(
+	contents: string,
+	defaultName: string,
+	title: string,
+): Promise<string | undefined> {
+	const path = await save({
+		title,
+		defaultPath: defaultName,
+		filters: [{ name: "Family tree", extensions: ["json"] }],
+	})
+	if (!path) return undefined
+
+	// The save dialog grants write access to the path it returned, which is what
+	// lets this reach outside the app's own data directory.
+	await writeTextFile(path, contents)
+	return path
+}

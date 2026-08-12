@@ -5,6 +5,7 @@ import { setActiveTreeId } from "./active-tree"
 import { TreeOpError } from "./errors"
 import { invalidateTrees } from "./invalidate"
 import { type PersonFormValues, toPersonInput } from "./person-input"
+import { canPickFolder, saveTextFile } from "./pick-folder"
 import {
 	adoptTree,
 	convertToBundle,
@@ -19,6 +20,15 @@ import {
 	renameTree,
 	resolveTargetFile,
 } from "./store/registry"
+import {
+	collectPhotos,
+	downloadSnapshot,
+	fileNameFor,
+	nameForImport,
+	readSnapshotFile,
+	restorePhotos,
+	serializeArchive,
+} from "./transfer"
 
 /**
  * Creating, opening, moving and choosing trees.
@@ -233,4 +243,98 @@ export async function previewStorageAction(
 /** The default folder, shown in onboarding so "default" isn't a mystery. */
 export async function defaultTreeDirAction(): Promise<string> {
 	return defaultTreeDir()
+}
+
+/* ------------------------------------------------------ import / export ---- */
+
+/**
+ * Save a tree to a file the user keeps.
+ *
+ * Available on both targets and worth having on both, but it is the *only*
+ * backup a browser-stored tree has — IndexedDB does not survive clearing site
+ * data. Photos are not included; see `transfer.ts`.
+ */
+export async function exportTreeAction(id: string): Promise<TreeActionResult> {
+	try {
+		const store = await getTreeStore(id)
+		if (!store) throw new TreeOpError("noSuchTree")
+		const snapshot = await store.read()
+		// `readPhotoBytes` exists on both concrete stores but not on the abstract
+		// one — nothing else needs it, and putting it there would oblige every
+		// future backend to implement an export detail.
+		const read = (
+			store as {
+				readPhotoBytes?: (e: string) => Promise<Uint8Array | undefined>
+			}
+		).readPhotoBytes?.bind(store)
+		const photos = read ? await collectPhotos(snapshot.people, read) : undefined
+		const archive = { ...snapshot, photos }
+
+		// The webview ignores `<a download>`, so the desktop app writes the file
+		// itself through a native save dialog. See `saveTextFile`.
+		if (canPickFolder()) {
+			const saved = await saveTextFile(
+				serializeArchive(archive),
+				fileNameFor(archive),
+				"Export tree",
+			)
+			// Cancelled. Not an error, and not a success worth reporting either.
+			if (!saved) return { ok: true, treeId: id }
+		} else {
+			downloadSnapshot(archive)
+		}
+		return { ok: true, treeId: id }
+	} catch (error) {
+		return await toActionError(error)
+	}
+}
+
+/**
+ * Create a tree from an exported file, and switch to it.
+ *
+ * Always a *new* tree rather than an overwrite of an existing one. Importing on
+ * top of a tree would be the one operation here that can destroy data the user
+ * did not ask to lose, and "I have two now" is a far easier mistake to recover
+ * from than "it replaced the wrong one".
+ *
+ * This is also how a tree crosses between the desktop app and the browser, which
+ * have no storage in common.
+ */
+export async function importTreeAction(file: File): Promise<TreeActionResult> {
+	try {
+		const snapshot = await readSnapshotFile(file)
+		const summary = await createTree({
+			name: nameForImport(snapshot, file.name),
+		})
+
+		const store = await getTreeStore(summary.id)
+		if (!store) throw new TreeOpError("noSuchTree")
+
+		await store.replaceAll({
+			people: snapshot.people ?? [],
+			unions: snapshot.unions ?? [],
+			unionChildren: snapshot.unionChildren ?? [],
+		})
+		// Photos before the rows are visible, so the first render already has them
+		// rather than filling in a beat later. Failures here are per-photo and
+		// swallowed — see `restorePhotos`.
+		if (store.canStorePhotos) {
+			await restorePhotos(snapshot.photos, (entry, bytes) =>
+				store.putPhoto(entry, bytes),
+			)
+		}
+
+		// `replaceAll` clears the root when it doesn't survive; restore the file's
+		// own choice when that person did come across.
+		const rootPersonId = snapshot.meta?.rootPersonId
+		if (rootPersonId && snapshot.people?.some((p) => p.id === rootPersonId)) {
+			await store.updateMeta({ rootPersonId })
+		}
+
+		selectTree(summary.id)
+		invalidateTrees()
+		return { ok: true, treeId: summary.id }
+	} catch (error) {
+		return await toActionError(error)
+	}
 }
