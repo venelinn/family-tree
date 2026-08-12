@@ -5,6 +5,9 @@ import { Button } from "@/components/Button"
 import { Callout } from "@/components/Callout"
 import { Input } from "@/components/Forms"
 import { Heading } from "@/components/Heading"
+import { canPickFolder, pickFolder } from "@/lib/pick-folder"
+import { join } from "@/lib/store/path"
+import { bundleNameFor, defaultTreeDir } from "@/lib/store/registry"
 import { previewStorageAction } from "@/lib/tree-actions"
 import OptionCard from "../OptionCard"
 import type { StepProps } from "../types"
@@ -24,17 +27,9 @@ import styles from "./Step.module.scss"
  * and nobody should discover that afterwards.
  */
 
-interface StorageStepProps extends StepProps {
-	defaultDir: string
-}
-
-export function StorageStep({
-	data,
-	onUpdate,
-	onNext,
-	defaultDir,
-}: StorageStepProps) {
+export function StorageStep({ data, onUpdate, onNext }: StepProps) {
 	const t = useTranslations("onboarding")
+	const [defaultDir, setDefaultDir] = useState("")
 	const [preview, setPreview] = useState<{
 		file?: string
 		cloudSynced?: boolean
@@ -43,6 +38,29 @@ export function StorageStep({
 
 	const custom = data.storageMode === "custom"
 	const path = data.customPath.trim()
+
+	// Read rather than passed in: the default directory is a property of the
+	// platform — the repo's `data/` under Node, Application Support in the
+	// desktop app — and asking the store is the only thing that knows which.
+	useEffect(() => {
+		defaultTreeDir().then(setDefaultDir)
+	}, [])
+
+	/**
+	 * The user picks a *parent* folder; the tree goes inside it as
+	 * `<name>.familytree`.
+	 *
+	 * Asking for the parent rather than for the bundle itself keeps the naming
+	 * consistent with the default option, and means the folder they choose can be
+	 * one they already keep things in — Documents, an external drive — instead of
+	 * something they have to create first. The resolved path is shown below
+	 * either way, so what is about to be written is never a guess.
+	 */
+	const choose = async () => {
+		const folder = await pickFolder(t("storageChooseFolder"))
+		if (folder)
+			onUpdate({ customPath: join(folder, bundleNameFor(data.treeName)) })
+	}
 
 	// Debounced so a half-typed path doesn't flash an error on every keystroke.
 	useEffect(() => {
@@ -93,15 +111,34 @@ export function StorageStep({
 			</div>
 
 			{custom ? (
-				<Input
-					label={t("storagePathLabel")}
-					value={data.customPath}
-					onChange={(event) => onUpdate({ customPath: event.target.value })}
-					placeholder={t("storagePathPlaceholder")}
-					spellCheck={false}
-					autoComplete="off"
-					full
-				/>
+				canPickFolder() ? (
+					/**
+					 * A button rather than a text field, and not for tidiness: the
+					 * filesystem plugin denies any path it was not granted, and going
+					 * through the native dialog is what grants it. A typed path is
+					 * refused before the store ever sees it.
+					 */
+					<Button
+						label={
+							data.customPath
+								? t("storageChangeFolder")
+								: t("storageChooseFolder")
+						}
+						variant="secondary"
+						icon={<FolderOpen size={15} strokeWidth={2} />}
+						onClick={choose}
+					/>
+				) : (
+					<Input
+						label={t("storagePathLabel")}
+						value={data.customPath}
+						onChange={(event) => onUpdate({ customPath: event.target.value })}
+						placeholder={t("storagePathPlaceholder")}
+						spellCheck={false}
+						autoComplete="off"
+						full
+					/>
+				)
 			) : null}
 
 			<Callout tone="error">{preview.error}</Callout>

@@ -1,21 +1,31 @@
-import { cookies } from "next/headers"
+"use client"
+
 import { defaultLocale, isLocale, type Locale } from "./localization"
+import { readPref, usePref } from "./prefs"
 
 /**
- * The chosen language lives in a cookie rather than the URL.
+ * The chosen interface language.
  *
- * There is no `/en` / `/bg` prefix and no middleware: this is a two-page app,
- * so a locale segment would buy shareable per-language links at the cost of
- * restructuring the routes and every `revalidatePath` call. The cookie keeps
- * `/` as `/`.
+ * Still not in the URL: there is no `/en` / `/bg` prefix and no middleware. That
+ * decision predates the move off the server and survives it unchanged — this is
+ * a two-page app, and a locale segment would buy shareable per-language links at
+ * the cost of restructuring the routes. Both targets are now static exports, so
+ * a locale segment would also mean building every page twice.
  *
- * Reading is plain server code — see `locale-actions.ts` for the write, which
- * has to be a server action because only actions may set cookies.
+ * It was a cookie read during the server render; it is `localStorage` read
+ * during the client one. See `prefs.ts` for what that costs and what covers it.
+ *
+ * Unlike the theme there is no init script, because there is nothing to stamp
+ * before paint — `next-intl` needs the catalogue either way, and the fallback
+ * render is the default language rather than the wrong colour.
  */
 
-export const LOCALE_COOKIE = "NEXT_LOCALE"
+export const LOCALE_KEY = "NEXT_LOCALE"
 
-export async function getUserLocale(): Promise<Locale> {
-	const stored = (await cookies()).get(LOCALE_COOKIE)?.value
-	return isLocale(stored) ? stored : defaultLocale
-}
+const parse = (raw: string | null): Locale =>
+	isLocale(raw) ? raw : defaultLocale
+
+/** Read and write the language. Re-renders every consumer on change. */
+export const useLocale = () => usePref(LOCALE_KEY, defaultLocale, parse)
+
+export const getUserLocale = () => readPref(LOCALE_KEY, parse)

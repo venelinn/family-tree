@@ -1,12 +1,9 @@
-"use server"
+"use client"
 
-import { revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
-// Side effect only: installs the `node:fs` backend under the store.
-import "./store/fs.server"
 import { toActionError } from "./action-error"
-import { TREE_COOKIE } from "./active-tree"
+import { setActiveTreeId } from "./active-tree"
 import { TreeOpError } from "./errors"
+import { invalidateTrees } from "./invalidate"
 import { type PersonFormValues, toPersonInput } from "./person-input"
 import {
 	adoptTree,
@@ -31,12 +28,20 @@ import {
  * looking at.
  *
  * All of them take a path from the user and act on it, which is the point of
- * the feature — you decide where your family's data is kept. It also means this
- * app writes wherever it is told, so it is meant to be run on your own machine
- * and bound to localhost; do not put it on a network someone else is on.
+ * the feature — you decide where your family's data is kept.
+ *
+ * **`Action` no longer means "server action".** These were `"use server"` and
+ * ran on the other side of a wire; they are now plain async functions running in
+ * the browser beside everything else. The suffix stays because it still names a
+ * real distinction — these are the user-facing operations, which validate input
+ * and turn a `TreeOpError` into a translated string, as against the primitives
+ * in `store/registry.ts` that throw. It is also what keeps `createTreeAction`
+ * from colliding with the `createTree` it wraps.
+ *
+ * What each of them used to end with — `revalidatePath` — is now
+ * `invalidateTrees()` from `invalidate.ts`, called in the same place and doing
+ * the same job: telling every mounted reader to go and look again.
  */
-
-const ONE_YEAR = 60 * 60 * 24 * 365
 
 export interface TreeActionResult {
 	ok: boolean
@@ -44,13 +49,7 @@ export interface TreeActionResult {
 	treeId?: string
 }
 
-async function selectTree(id: string): Promise<void> {
-	;(await cookies()).set(TREE_COOKIE, id, {
-		maxAge: ONE_YEAR,
-		path: "/",
-		sameSite: "lax",
-	})
-}
+const selectTree = (id: string): void => setActiveTreeId(id)
 
 /** Switch which tree is on screen. Called from the settings page. */
 export async function setActiveTreeAction(
@@ -62,10 +61,9 @@ export async function setActiveTreeAction(
 		if (!trees.some((tree) => tree.id === id))
 			throw new TreeOpError("noSuchTree")
 
-		await selectTree(id)
-		// The whole app is showing a different family now — the chart in the
-		// client router cache included. Same reason as the locale and theme.
-		revalidatePath("/", "layout")
+		selectTree(id)
+		// The whole app is showing a different family now, not just this page.
+		invalidateTrees()
 		return { ok: true, treeId: id }
 	} catch (error) {
 		return await toActionError(error)
@@ -100,8 +98,8 @@ export async function createTreeAction(
 			await store.updateMeta({ rootPersonId: person.id })
 		}
 
-		await selectTree(summary.id)
-		revalidatePath("/", "layout")
+		selectTree(summary.id)
+		invalidateTrees()
 		return { ok: true, treeId: summary.id }
 	} catch (error) {
 		return await toActionError(error)
@@ -112,8 +110,8 @@ export async function createTreeAction(
 export async function adoptTreeAction(file: string): Promise<TreeActionResult> {
 	try {
 		const summary = await adoptTree(file)
-		await selectTree(summary.id)
-		revalidatePath("/", "layout")
+		selectTree(summary.id)
+		invalidateTrees()
 		return { ok: true, treeId: summary.id }
 	} catch (error) {
 		return await toActionError(error)
@@ -127,7 +125,7 @@ export async function relocateTreeAction(
 ): Promise<TreeActionResult> {
 	try {
 		await relocateTree(id, destination)
-		revalidatePath("/", "layout")
+		invalidateTrees()
 		return { ok: true, treeId: id }
 	} catch (error) {
 		return await toActionError(error)
@@ -140,7 +138,7 @@ export async function renameTreeAction(
 ): Promise<TreeActionResult> {
 	try {
 		await renameTree(id, name)
-		revalidatePath("/", "layout")
+		invalidateTrees()
 		return { ok: true, treeId: id }
 	} catch (error) {
 		return await toActionError(error)
@@ -174,7 +172,7 @@ export async function convertTreeAction(
 			id,
 			destination,
 		)
-		revalidatePath("/", "layout")
+		invalidateTrees()
 		return {
 			ok: true,
 			treeId: id,
@@ -193,8 +191,8 @@ export async function forgetTreeAction(id: string): Promise<TreeActionResult> {
 	try {
 		await forgetTree(id)
 		const remaining = await listTrees()
-		if (remaining[0]) await selectTree(remaining[0].id)
-		revalidatePath("/", "layout")
+		if (remaining[0]) selectTree(remaining[0].id)
+		invalidateTrees()
 		return { ok: true }
 	} catch (error) {
 		return await toActionError(error)

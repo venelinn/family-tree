@@ -9,10 +9,12 @@ import type { TreeSnapshot } from "./types"
  * than stored, so they cannot drift out of step with the union rows that are
  * the actual truth.
  *
- * Photos are turned into URLs here too, which is why no component has to know
- * that a bundle's photos are served by a route while an unconverted tree's sit
- * under `public/`. The graph carries `src` values; `photoEntry` in `photos.ts`
- * maps them back when one is removed.
+ * Photos are turned into displayable `src` values here too, which is why no
+ * component has to know that a bundle's photos are files on disk while an
+ * unconverted tree's are served paths. `photoDir` comes from the store's own
+ * location and is undefined for a loose `.json` tree, which has none — in that
+ * case every entry passes through as-is. `photoEntry` in `bundle.ts` maps them
+ * back when one is removed.
  */
 
 /** Pulls a year out of either an ISO date or free text like `Jun 1991`. */
@@ -21,12 +23,13 @@ function yearOf(value: string | undefined): number | undefined {
 	return match ? Number(match[0]) : undefined
 }
 
-export function toFamilyGraph(snapshot: TreeSnapshot): FamilyGraph {
+export function toFamilyGraph(
+	snapshot: TreeSnapshot,
+	photoDir?: string,
+): FamilyGraph {
 	const people = new Map<string, Person>()
 	for (const record of snapshot.people) {
-		const photos = record.photos.map((entry) =>
-			photoUrl(snapshot.meta.id, entry),
-		)
+		const photos = record.photos.map((entry) => photoUrl(photoDir, entry))
 		people.set(record.id, {
 			id: record.id,
 			name: record.fullName,

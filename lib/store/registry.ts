@@ -223,12 +223,19 @@ function slugify(name: string, fallback: string): string {
 	return slug || fallback
 }
 
+/**
+ * What a tree called this would be named as a folder — `nikolov.familytree`.
+ *
+ * Split out from `defaultFileFor` for the native picker, which asks the user for
+ * a *parent* directory and needs to build the bundle name inside it. Same slug
+ * either way, so a tree lands under the same name wherever it is put.
+ */
+export const bundleNameFor = (name: string, fallback = "family") =>
+	`${slugify(name, fallback)}${BUNDLE_EXTENSION}`
+
 /** Where a tree with this name goes by default. Shown in onboarding. */
 export const defaultFileFor = async (name: string, fallback = "family") =>
-	path.join(
-		await defaultTreeDir(),
-		`${slugify(name, fallback)}${BUNDLE_EXTENSION}`,
-	)
+	path.join(await defaultTreeDir(), bundleNameFor(name, fallback))
 
 /**
  * Check a user-supplied destination before anything is written to it.

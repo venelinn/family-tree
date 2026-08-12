@@ -1,3 +1,4 @@
+import { convertFileSrc } from "@tauri-apps/api/core"
 import { appDataDir, homeDir } from "@tauri-apps/api/path"
 import {
 	copyFile,
@@ -95,4 +96,16 @@ export const tauriFs: TreeFs = {
 	dataDir: () => appDataDir(),
 
 	homeDir: () => homeDir(),
+
+	/**
+	 * Rewrites an absolute path onto Tauri's asset protocol.
+	 *
+	 * The webview will not load `file://` from a page served over `tauri://`, so
+	 * a raw path in an `<img src>` silently renders nothing. This needs
+	 * `security.assetProtocol` enabled in `tauri.conf.json` *and* the path to be
+	 * inside the granted scope — which for a tree the user picked through the
+	 * native dialog it is, and `persisted-scope` is what keeps it so across a
+	 * restart.
+	 */
+	toSrc: (file) => convertFileSrc(file),
 }

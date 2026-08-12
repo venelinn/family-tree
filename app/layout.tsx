@@ -1,38 +1,46 @@
 import type { Metadata } from "next"
-import { NextIntlClientProvider } from "next-intl"
-import { getLocale, getTranslations } from "next-intl/server"
+import { Providers } from "@/components/Providers"
 import { raleway } from "@/lib/fonts"
-import { getUserTheme } from "@/lib/theme"
+import { defaultLocale } from "@/lib/localization"
+import { themeInitScript } from "@/lib/theme"
 import "@/styles/globals.scss"
 
-export async function generateMetadata(): Promise<Metadata> {
-	const t = await getTranslations("app")
-	return {
-		title: t("title"),
-		description: t("description"),
-	}
+/**
+ * Static, because a build has no reader to ask.
+ *
+ * This used to be `generateMetadata` calling `getTranslations`, which worked
+ * when there was a request whose locale could be resolved. There isn't one now,
+ * so a translated title would just bake whichever language built last. The
+ * desktop app takes its window title from `src-tauri/tauri.conf.json` and never
+ * shows this; the web tab shows the app's name, which is a proper noun anyway.
+ */
+export const metadata: Metadata = {
+	title: "Family Tree",
+	description: "A private, offline family tree.",
 }
 
-export default async function RootLayout({
+export default function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode
 }>) {
-	const locale = await getLocale()
-	const theme = await getUserTheme()
-
 	return (
-		// Rendered from the cookie on the server, so the first paint is already
-		// the right theme — no flash, and no blocking script in `<head>`.
-		// `system` is stamped too, purely so the choice is visible in devtools;
-		// no `[data-theme]` rule matches it, which is what leaves the
-		// `prefers-color-scheme` query in `styles/_theme-dark.scss` in charge and
-		// lets the OS decide.
-		<html lang={locale} data-theme={theme}>
+		// `lang` is the default here and corrected on hydration by `Providers`;
+		// `data-theme` is stamped by the script below before anything paints.
+		<html lang={defaultLocale} suppressHydrationWarning>
+			<head>
+				{/*
+				  Blocking, and first. The theme was a cookie precisely so this
+				  wouldn't be needed — see `lib/theme.ts` — but with no server
+				  render there is nothing earlier than this that knows the answer.
+				  `suppressHydrationWarning` above is because this script mutates
+				  the very element React is about to reconcile.
+				*/}
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: the only way to run before first paint; the content is a constant, not user input */}
+				<script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+			</head>
 			<body className={raleway.className}>
-				{/* No `messages` prop: rendered from a Server Component, the provider
-				    picks up the request's catalogue on its own. */}
-				<NextIntlClientProvider>{children}</NextIntlClientProvider>
+				<Providers>{children}</Providers>
 			</body>
 		</html>
 	)

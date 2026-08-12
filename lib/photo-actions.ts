@@ -1,9 +1,9 @@
-"use server"
+"use client"
 
-import { revalidatePath } from "next/cache"
 import { toActionError } from "./action-error"
 import { getStore } from "./data"
 import { TreeOpError } from "./errors"
+import { invalidateTrees } from "./invalidate"
 import { removePhoto, savePhoto, setPrimaryPhoto } from "./photos"
 
 /**
@@ -32,7 +32,7 @@ export async function uploadPhotoAction(
 		if (!(file instanceof File)) throw new TreeOpError("photoMissing")
 
 		const photos = await savePhoto(await getStore(), personId, file)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true, photos }
 	} catch (error) {
 		return await toActionError(error)
@@ -45,7 +45,7 @@ export async function removePhotoAction(
 ): Promise<PhotoResult> {
 	try {
 		const photos = await removePhoto(await getStore(), personId, url)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true, photos }
 	} catch (error) {
 		return await toActionError(error)
@@ -58,7 +58,7 @@ export async function setPrimaryPhotoAction(
 ): Promise<PhotoResult> {
 	try {
 		const photos = await setPrimaryPhoto(await getStore(), personId, url)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true, photos }
 	} catch (error) {
 		return await toActionError(error)

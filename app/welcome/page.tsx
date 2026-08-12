@@ -1,10 +1,9 @@
-import { redirect } from "next/navigation"
-import { getLocale } from "next-intl/server"
+"use client"
+
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect } from "react"
 import { Onboarding } from "@/components/Onboarding"
-// Side effect only: installs the `node:fs` backend under the store.
-import "@/lib/store/fs.server"
-import { defaultTreeDir, listTrees } from "@/lib/store/registry"
-import { getUserTheme } from "@/lib/theme"
+import { useTreeList } from "@/lib/client-data"
 
 /**
  * First run, and "start another tree" afterwards.
@@ -17,22 +16,35 @@ import { getUserTheme } from "@/lib/theme"
  * tree to someone who just wanted the app.
  */
 
-export default async function WelcomePage({
-	searchParams,
-}: {
-	searchParams: Promise<{ new?: string }>
-}) {
-	const trees = await listTrees()
-	const wantsAnother = "new" in (await searchParams)
-
-	if (trees.length > 0 && !wantsAnother) redirect("/")
-
+/**
+ * `useSearchParams` forces a client-side bailout, which a static export refuses
+ * to prerender without a boundary to fall back to. There is nothing worth
+ * showing while it resolves — the wizard is one frame away and a placeholder
+ * would flash — so the fallback is empty.
+ */
+export default function WelcomePage() {
 	return (
-		<Onboarding
-			defaultDir={await defaultTreeDir()}
-			locale={await getLocale()}
-			theme={await getUserTheme()}
-			hasTrees={trees.length > 0}
-		/>
+		<Suspense fallback={null}>
+			<Welcome />
+		</Suspense>
 	)
+}
+
+function Welcome() {
+	const list = useTreeList()
+	const params = useSearchParams()
+	const router = useRouter()
+	const wantsAnother = params.has("new")
+	const hasTrees = (list?.trees.length ?? 0) > 0
+
+	useEffect(() => {
+		if (list && hasTrees && !wantsAnother) router.replace("/")
+	}, [list, hasTrees, wantsAnother, router])
+
+	// Still reading, or about to leave. Either way there is nothing to offer yet,
+	// and rendering the wizard would show it for a frame to someone who already
+	// has a tree.
+	if (!list || (hasTrees && !wantsAnother)) return null
+
+	return <Onboarding hasTrees={hasTrees} />
 }

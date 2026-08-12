@@ -12,6 +12,8 @@ import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { Button } from "@/components/Button"
 import { FormError, Input } from "@/components/Forms"
+import { canPickFolder, pickFolder } from "@/lib/pick-folder"
+import { basename, join } from "@/lib/store/path"
 import type { TreeSummary } from "@/lib/store/registry"
 import {
 	adoptTreeAction,
@@ -140,9 +142,28 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 									label={t("treeMove")}
 									variant="ghost"
 									className={styles.trees__action}
-									onClick={() =>
-										setEditing({ id: tree.id, field: "path", value: tree.file })
-									}
+									onClick={async () => {
+										// Same reasoning as adopting: a destination the user
+										// typed is outside the granted scope and would be
+										// refused. They choose the *parent*, and the tree keeps
+										// its own folder name inside it.
+										if (!canPickFolder()) {
+											setEditing({
+												id: tree.id,
+												field: "path",
+												value: tree.file,
+											})
+											return
+										}
+										const folder = await pickFolder(t("treeMoveLabel"))
+										if (folder)
+											run(() =>
+												relocateTreeAction(
+													tree.id,
+													join(folder, basename(tree.file)),
+												),
+											)
+									}}
 								/>
 								<Button
 									label={t("treeForget")}
@@ -245,25 +266,47 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 			>
 				<span className={styles.trees__adoptTitle}>{t("treeOpenTitle")}</span>
 				<p className={styles.trees__adoptHelp}>{t("treeOpenHelp")}</p>
-				<div className={styles.trees__adoptRow}>
-					<Input
-						label={t("treeOpenTitle")}
-						value={openPath}
-						onChange={(event) => setOpenPath(event.target.value)}
-						placeholder={t("treeOpenPlaceholder")}
-						spellCheck={false}
-						autoComplete="off"
-						className={styles.trees__adoptField}
-						full
-					/>
+				{canPickFolder() ? (
+					/**
+					 * One button, no field, and it adopts as soon as a folder is
+					 * chosen — the dialog *is* the confirmation, and a second click on
+					 * "Open" after it would be asking twice.
+					 *
+					 * Typing a path cannot work here: Tauri's filesystem plugin denies
+					 * anything outside a granted scope, and choosing through the native
+					 * dialog is what grants it. See `lib/pick-folder.ts`.
+					 */
 					<Button
-						type="submit"
 						label={t("treeOpen")}
 						variant="secondary"
-						disabled={pending || !openPath.trim()}
+						disabled={pending}
 						icon={<FolderInput size={15} strokeWidth={2} />}
+						onClick={async () => {
+							const folder = await pickFolder(t("treeOpenTitle"))
+							if (folder) run(() => adoptTreeAction(folder))
+						}}
 					/>
-				</div>
+				) : (
+					<div className={styles.trees__adoptRow}>
+						<Input
+							label={t("treeOpenTitle")}
+							value={openPath}
+							onChange={(event) => setOpenPath(event.target.value)}
+							placeholder={t("treeOpenPlaceholder")}
+							spellCheck={false}
+							autoComplete="off"
+							className={styles.trees__adoptField}
+							full
+						/>
+						<Button
+							type="submit"
+							label={t("treeOpen")}
+							variant="secondary"
+							disabled={pending || !openPath.trim()}
+							icon={<FolderInput size={15} strokeWidth={2} />}
+						/>
+					</div>
+				)}
 			</form>
 
 			<Button

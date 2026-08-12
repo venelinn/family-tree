@@ -1,8 +1,29 @@
 import path from "node:path"
 import type { NextConfig } from "next"
-import createNextIntlPlugin from "next-intl/plugin"
 
 const nextConfig: NextConfig = {
+	/**
+	 * Both targets are static.
+	 *
+	 * The desktop app has no server by construction — Tauri serves the bundle to
+	 * a webview over its own protocol. The web app has no server because it was
+	 * decided it would never read the repo's `data/`: with storage in the
+	 * visitor's browser there is nothing left for a server to do. See
+	 * `docs/decisions.md`.
+	 *
+	 * The practical consequence is that `"use server"`, route handlers and
+	 * `cookies()` are all unavailable, which is why the preferences moved to
+	 * `lib/prefs.ts` and the mutations became plain async functions.
+	 */
+	output: "export",
+
+	images: {
+		// Required by `output: "export"` — the default loader is a server route.
+		// Nothing here uses `next/image` for family photos anyway; those come from
+		// the local disk or IndexedDB and are addressed directly.
+		unoptimized: true,
+	},
+
 	sassOptions: {
 		// What makes `@use "styles/mixins"` resolve from a `.module.scss` sitting
 		// anywhere in the tree, rather than each module counting `../../` back to
@@ -11,17 +32,6 @@ const nextConfig: NextConfig = {
 		// that survives.
 		loadPaths: [path.join(import.meta.dirname, "styles"), import.meta.dirname],
 	},
-	experimental: {
-		// Photo uploads go through a server action, and the default 1MB body
-		// limit rejects almost any real photograph. Kept in step with
-		// `MAX_BYTES` in `lib/photos.ts`, which is what actually enforces it —
-		// this only has to be large enough not to reject first.
-		serverActions: { bodySizeLimit: "13mb" },
-	},
 }
 
-// Picks up `i18n/request.ts`, which is what lets `useTranslations` work in
-// server and client components without messages being threaded through props.
-const withNextIntl = createNextIntlPlugin()
-
-export default withNextIntl(nextConfig)
+export default nextConfig

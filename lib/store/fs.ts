@@ -73,6 +73,16 @@ export interface TreeFs {
 	dataDir(): Promise<string>
 	/** For expanding a leading `~`. */
 	homeDir(): Promise<string>
+	/**
+	 * An absolute path, as something an `<img src>` can load.
+	 *
+	 * Platform-specific and not guessable: a webview will not load a bare
+	 * `file://` from a page served over another protocol, so Tauri rewrites paths
+	 * onto its own asset protocol. Putting it here rather than importing
+	 * `convertFileSrc` where it is needed keeps `bundle.ts` — which `pnpm import`
+	 * also loads — free of any Tauri import.
+	 */
+	toSrc(path: string): string
 }
 
 let backend: TreeFs | undefined
@@ -115,6 +125,7 @@ export const copyFile = (from: string, to: string) => fs().copyFile(from, to)
 export const remove = (path: string, options?: { recursive?: boolean }) =>
 	fs().remove(path, options)
 export const dataDir = () => fs().dataDir()
+export const toSrc = (path: string) => fs().toSrc(path)
 export const homeDir = () => fs().homeDir()
 
 /** True for a path that exists and is a directory; false for anything else. */

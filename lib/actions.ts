@@ -1,9 +1,9 @@
-"use server"
+"use client"
 
-import { revalidatePath } from "next/cache"
 import { toActionError } from "./action-error"
 import { getStore } from "./data"
 import { TreeOpError } from "./errors"
+import { invalidateTrees } from "./invalidate"
 import { type PersonFormValues, toPersonInput } from "./person-input"
 import {
 	addRelative,
@@ -53,7 +53,7 @@ export async function addRelativeAction(
 			toPersonInput(values),
 			unionId,
 		)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true, personId: person.id }
 	} catch (error) {
 		return await toActionError(error)
@@ -70,7 +70,7 @@ export async function updatePersonAction(
 		// `photos` is deliberately dropped: it's managed by the import and photo
 		// scripts, and this form would otherwise blank it out on every save.
 		await store.updatePerson(personId, patch)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true, personId }
 	} catch (error) {
 		return await toActionError(error)
@@ -83,7 +83,7 @@ export async function deletePersonAction(
 	try {
 		const store = await getStore()
 		await removePerson(store, personId)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true }
 	} catch (error) {
 		return await toActionError(error)
@@ -121,7 +121,7 @@ export async function updateUnionAction(
 			marriagePlace: values.marriagePlace?.trim() || undefined,
 			divorced: values.divorced,
 		})
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true }
 	} catch (error) {
 		return await toActionError(error)
@@ -143,7 +143,7 @@ export async function linkRelativeAction(
 	try {
 		const store = await getStore()
 		await linkRelative(store, anchorId, relation, otherId)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true, personId: otherId }
 	} catch (error) {
 		return await toActionError(error)
@@ -159,7 +159,7 @@ export async function unlinkRelativeAction(
 	try {
 		const store = await getStore()
 		await unlinkRelative(store, anchorId, relation, otherId)
-		revalidatePath("/")
+		invalidateTrees()
 		return { ok: true }
 	} catch (error) {
 		return await toActionError(error)
@@ -181,7 +181,7 @@ export async function createFirstPersonAction(
 		const store = await getStore()
 		const person = await store.createPerson(toPersonInput(values))
 		await store.updateMeta({ rootPersonId: person.id })
-		revalidatePath("/", "layout")
+		invalidateTrees()
 		return { ok: true, personId: person.id }
 	} catch (error) {
 		return await toActionError(error)

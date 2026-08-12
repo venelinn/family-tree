@@ -2,16 +2,15 @@
 
 import { Languages, Type } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useTransition } from "react"
 import { ChoiceList } from "@/components/ChoiceList"
-import { setNamesFollowLanguage } from "@/lib/name-language-actions"
+import { useNamesFollowLanguage } from "@/lib/name-language"
 
 /**
  * Picks whether people's names follow the interface language.
  *
- * Same shape as `ThemePicker` and `LanguagePicker`, and for the same reason:
- * the write is a server action, so the response carries a fresh render and the
- * preference never lives in two places at once.
+ * Same shape as `ThemePicker` and `LanguagePicker`: it owns both halves of its
+ * preference, reading and writing the one stored value rather than taking the
+ * current one as a prop.
  */
 
 const OPTIONS = [
@@ -29,16 +28,9 @@ const OPTIONS = [
 	},
 ] as const
 
-export function NameLanguagePicker({ current }: { current: boolean }) {
+export function NameLanguagePicker() {
 	const t = useTranslations("settings")
-	const [pending, startTransition] = useTransition()
-
-	const choose = (follow: boolean) => {
-		if (follow === current) return
-		startTransition(async () => {
-			await setNamesFollowLanguage(follow)
-		})
-	}
+	const [current, setFollow] = useNamesFollowLanguage()
 
 	return (
 		<ChoiceList
@@ -49,8 +41,7 @@ export function NameLanguagePicker({ current }: { current: boolean }) {
 				icon: <Icon size={16} strokeWidth={2} />,
 			}))}
 			current={current}
-			onChoose={choose}
-			disabled={pending}
+			onChoose={setFollow}
 		/>
 	)
 }

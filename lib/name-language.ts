@@ -1,23 +1,31 @@
-import { cookies } from "next/headers"
+"use client"
+
+import { readPref, usePref } from "./prefs"
 
 /**
  * Whether people's names follow the interface language.
  *
- * One preference in one cookie, read on the server, exactly like the theme and
- * the locale — see `theme.ts` for why that shape was picked. It belongs beside
- * them rather than in the tree file: which language you read the family in is a
- * property of the reader, not of the family.
+ * One preference beside the theme and the locale, and stored the same way — see
+ * `prefs.ts`. It belongs here rather than in the tree file: which language you
+ * read the family in is a property of the reader, not of the family.
  *
  * On by default. Somebody who has entered a Cyrillic name for their grandmother
  * and then switched the app to Bulgarian meant for it to be used.
  */
 
-export const NAME_LANGUAGE_COOKIE = "names-follow-language"
+export const NAME_LANGUAGE_KEY = "names-follow-language"
 
 export const defaultNamesFollowLanguage = true
 
-export async function getNamesFollowLanguage(): Promise<boolean> {
-	const stored = (await cookies()).get(NAME_LANGUAGE_COOKIE)?.value
-	if (stored == null) return defaultNamesFollowLanguage
-	return stored === "on"
-}
+// Absent means "never chosen", which is the default rather than `off` — the
+// stored form is the same `"on"` / `"off"` the cookie used, so a browser that
+// has one from the previous version keeps its answer.
+const parse = (raw: string | null): boolean =>
+	raw == null ? defaultNamesFollowLanguage : raw === "on"
+
+const serialize = (value: boolean) => (value ? "on" : "off")
+
+export const useNamesFollowLanguage = () =>
+	usePref(NAME_LANGUAGE_KEY, defaultNamesFollowLanguage, parse, serialize)
+
+export const getNamesFollowLanguage = () => readPref(NAME_LANGUAGE_KEY, parse)

@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { Button } from "@/components/Button"
 import type { PersonFormValues } from "@/lib/actions"
-import type { ThemePreference } from "@/lib/theming"
 import { createTreeAction } from "@/lib/tree-actions"
 import BottomNav from "./BottomNav"
 import styles from "./Onboarding.module.scss"
@@ -29,20 +28,11 @@ import type { OnboardingData, StepId } from "./types"
  */
 
 interface OnboardingProps {
-	/** Where a tree goes unless the user picks somewhere else. Shown, not guessed. */
-	defaultDir: string
-	locale: string
-	theme: ThemePreference
 	/** True when this is an additional tree, not the first one. */
 	hasTrees: boolean
 }
 
-export function Onboarding({
-	defaultDir,
-	locale,
-	theme,
-	hasTrees,
-}: OnboardingProps) {
+export function Onboarding({ hasTrees }: OnboardingProps) {
 	const t = useTranslations("onboarding")
 	const router = useRouter()
 	const [pending, startTransition] = useTransition()
@@ -85,10 +75,11 @@ export function Onboarding({
 				setError(result.error)
 				return
 			}
+			// No `router.refresh()` any more. It existed because the client router
+			// cache held a render of `/` from before this tree existed, and only the
+			// server could produce a newer one. `/` now reads the store on mount, and
+			// `createTreeAction` has already invalidated, so it arrives current.
 			router.push("/")
-			// The action already revalidated, but the client router cache holds a
-			// prior render of `/` — from before this tree existed.
-			router.refresh()
 		})
 	}
 
@@ -113,12 +104,8 @@ export function Onboarding({
 				    under `prefers-reduced-motion` in the stylesheet. */}
 				<div key={step} className={styles.onboarding__slot}>
 					{step === "name" ? <NameStep {...stepProps} /> : null}
-					{step === "storage" ? (
-						<StorageStep {...stepProps} defaultDir={defaultDir} />
-					) : null}
-					{step === "preferences" ? (
-						<PreferencesStep {...stepProps} locale={locale} theme={theme} />
-					) : null}
+					{step === "storage" ? <StorageStep {...stepProps} /> : null}
+					{step === "preferences" ? <PreferencesStep {...stepProps} /> : null}
 					{step === "start" ? (
 						<StartStep
 							{...stepProps}

@@ -233,6 +233,8 @@
 		"storageCustomHelp": "Външен диск, шифрован том или която и да е папка на този компютър. Наречете я както искате.",
 		"storagePathLabel": "Пълен път до папката",
 		"storagePathPlaceholder": "/Volumes/Backup/Family",
+		"storageChooseFolder": "Изберете папка…",
+		"storageChangeFolder": "Промяна на папката…",
 		"storageResolved": "Папката ще бъде създадена в:",
 		"storageCloudWarning": "Тази папка се синхронизира в облака, така че копие ще напусне устройството. Добре е като резервно копие — но е важно да го знаете, ако не сте го искали.",
 		"preferencesTitle": "Език и изглед",

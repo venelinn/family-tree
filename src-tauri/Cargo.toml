@@ -21,8 +21,12 @@ tauri-build = { version = "2.6.3", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.3", features = [] }
+# `protocol-asset` is what serves photos to the webview: an absolute path
+# rewritten by `convertFileSrc` is only loadable with it on.
+tauri = { version = "2.11.3", features = ["protocol-asset"] }
 tauri-plugin-log = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
-tauri-plugin-persisted-scope = "2"
+# The matching feature keeps asset-protocol grants, not just fs ones, across
+# a restart — otherwise photos go blank the second time the app is opened.
+tauri-plugin-persisted-scope = { version = "2", features = ["protocol-asset"] }

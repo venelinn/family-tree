@@ -233,6 +233,8 @@
 		"storageCustomHelp": "An external drive, an encrypted volume, or any folder on this machine. Name it whatever you like.",
 		"storagePathLabel": "Full path to the folder",
 		"storagePathPlaceholder": "/Volumes/Backup/Family",
+		"storageChooseFolder": "Choose folder…",
+		"storageChangeFolder": "Change folder…",
 		"storageResolved": "The folder will be created at:",
 		"storageCloudWarning": "That folder syncs to the cloud, so a copy will leave this device. Fine as a backup — worth knowing if it wasn't what you meant.",
 		"preferencesTitle": "Language and appearance",

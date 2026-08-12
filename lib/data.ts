@@ -1,6 +1,3 @@
-import "server-only"
-// Side effect only: installs the `node:fs` backend under the store. See the file.
-import "./store/fs.server"
 import { getActiveTree } from "./active-tree"
 import { TreeOpError } from "./errors"
 import type { FamilyGraph } from "./family-graph"
@@ -13,6 +10,10 @@ import { toFamilyGraph } from "./store/to-graph"
  *
  * Everything downstream consumes `FamilyGraph`, so swapping this file's body for
  * a Supabase query later is the whole migration — no view or layout code changes.
+ *
+ * It no longer carries `server-only`. These functions run in the browser on both
+ * targets: the desktop app reads the user's files through Tauri, the web app
+ * reads IndexedDB. `lib/client-data.ts` is what subscribes React to them.
  *
  * There used to be one store here and a hard-coded `ROOT_PERSON_ID` beside it.
  * Both are gone: which trees exist and where their files are is
@@ -48,8 +49,9 @@ export type ActiveTreeResult =
 /**
  * Deliberately uncached. The tree is editable, so a module-level cache would
  * serve stale data to the very next render after a write — and the whole file
- * is ~100KB, which is nothing to re-read. Next's own request memoisation covers
- * the duplicate reads within a single render.
+ * is ~100KB, which is nothing to re-read. What used to dedupe the reads within
+ * one render was Next's request memoisation; now it is that there is exactly one
+ * caller, `useActiveTree`, holding the result in state.
  */
 export async function loadActiveTree(): Promise<ActiveTreeResult> {
 	const active = await getActiveTree()
@@ -62,7 +64,7 @@ export async function loadActiveTree(): Promise<ActiveTreeResult> {
 	return {
 		status: "ok",
 		meta: active,
-		graph: toFamilyGraph(await store.read()),
+		graph: toFamilyGraph(await store.read(), store.location.photoDir),
 	}
 }
 

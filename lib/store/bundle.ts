@@ -1,4 +1,4 @@
-import { exists, isDirectory } from "./fs"
+import { exists, isDirectory, toSrc } from "./fs"
 import * as path from "./path"
 
 /**
@@ -134,17 +134,48 @@ export function photoFile(photoDir: string, entry: string): string | undefined {
 }
 
 /**
- * The URL a stored photo is served at.
+ * The `src` a stored photo can be displayed from.
+ *
+ * There used to be a route — `/photo/<tree>/<entry>` — that read the file and
+ * streamed it back. With no server on either target there is nothing to serve
+ * it, so the path is handed to the platform instead: Tauri rewrites it onto its
+ * asset protocol, which is the only form the webview will load. See `toSrc` in
+ * `fs.ts` for why that indirection exists rather than a direct import.
  *
  * Anything else — `/photos/I85-0.jpg` from `pnpm photos`, or a remote URL in a
  * tree that was never localised — is already a working `src` and is passed
- * through untouched. That is what lets loose trees carry on unconverted.
+ * through untouched. That is what lets loose trees carry on unconverted, though
+ * on the desktop target those files are not present at all and will simply not
+ * resolve; they were only ever reachable from a checkout.
  */
-export const photoUrl = (treeId: string, entry: string) =>
-	isStoredPhoto(entry) ? `/photo/${encodeURIComponent(treeId)}/${entry}` : entry
+export function photoUrl(photoDir: string | undefined, entry: string): string {
+	if (!photoDir || !isStoredPhoto(entry)) return entry
+	const file = photoFile(photoDir, entry)
+	return file ? toSrc(file) : entry
+}
 
-/** The inverse: a URL from the client back to what the tree file records. */
+/**
+ * The inverse: a `src` from the client back to what the tree file records.
+ *
+ * Matching on the *last path segment* rather than on a known URL shape, because
+ * the shape is now the platform's and not ours — `asset://localhost/…`,
+ * `http://asset.localhost/…` and `file://…` have all been it at some point, and
+ * pinning a regex to any of them would break silently the day it changed. The
+ * segment is decoded first: a stored name is 64 hex characters and an extension,
+ * so `isStoredPhoto` is a strict enough test to be sure of what came back.
+ *
+ * Anything that isn't a stored photo returns unchanged, which is what keeps the
+ * legacy `/photos/…` references working.
+ */
 export function photoEntry(url: string): string {
-	const match = /^\/photo\/[^/]+\/([^/]+)$/.exec(url)
-	return match?.[1] && isStoredPhoto(match[1]) ? match[1] : url
+	const last = url.split("/").pop()
+	if (!last) return url
+	let decoded: string
+	try {
+		decoded = decodeURIComponent(last)
+	} catch {
+		// A malformed escape is not a stored photo by definition.
+		return url
+	}
+	return isStoredPhoto(decoded) ? decoded : url
 }

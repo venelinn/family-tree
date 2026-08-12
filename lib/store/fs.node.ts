@@ -87,4 +87,8 @@ export const nodeFs: TreeFs = {
 	async homeDir() {
 		return process.env.HOME ?? process.env.USERPROFILE ?? ""
 	},
+
+	// Nothing under Node renders an `<img>`, so this exists to satisfy the
+	// interface and to be correct if anything ever logs one.
+	toSrc: (file) => `file://${file}`,
 }

@@ -32,7 +32,6 @@ import type {
 	ViewType,
 } from "@/lib/layout/types"
 import { displayName } from "@/lib/person-name"
-import type { ThemePreference } from "@/lib/theming"
 import type { Relation } from "@/lib/tree-ops"
 
 import styles from "./TreeApp.module.scss"
@@ -44,13 +43,7 @@ interface TreeAppProps {
 	/** Which family this is. Shown in the toolbar, since there can be several. */
 	treeName: string
 	/**
-	 * Read from the cookie on the server and passed down solely for React Flow's
-	 * `colorMode` — every other element in the app is themed by CSS variables and
-	 * never needs to know which theme is on.
-	 */
-	theme: ThemePreference
-	/**
-	 * Read from the cookie on the server and handed to `PersonNameProvider`, so
+	 * Read once at the top and handed to `PersonNameProvider`, so
 	 * every name on the chart resolves the same way — see `person-name.ts`.
 	 */
 	namesFollowLanguage: boolean
@@ -89,7 +82,6 @@ export function TreeApp({
 	graph: serialized,
 	homePersonId,
 	treeName,
-	theme,
 	namesFollowLanguage,
 }: TreeAppProps) {
 	const t = useTranslations("form")
@@ -451,7 +443,6 @@ export function TreeApp({
 								onToggleAncestors={toggleAncestors}
 								onToggleDescendants={toggleDescendants}
 								addSlots={addSlots}
-								theme={theme}
 							/>
 						</ReactFlowProvider>
 					</div>

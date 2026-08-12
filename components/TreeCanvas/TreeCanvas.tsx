@@ -27,7 +27,7 @@ import {
 	UNION_SIZE,
 } from "@/lib/layout/constants"
 import type { LayoutNode, LayoutResult, ViewType } from "@/lib/layout/types"
-import type { ThemePreference } from "@/lib/theming"
+import { useTheme } from "@/lib/theme"
 import styles from "./TreeCanvas.module.scss"
 
 // Defined at module scope: a fresh object each render makes React Flow rebuild
@@ -63,13 +63,6 @@ interface TreeCanvasProps {
 	/** Whose add-slots are open, so their card can show a close button. */
 	addingFor?: string | null
 	onRequestAdd?: (personId: string) => void
-	/**
-	 * Handed to React Flow's own `colorMode` so its chrome — the zoom controls,
-	 * the minimap frame, the attribution — follows the theme. Our three
-	 * preferences happen to be exactly React Flow's three, `system` included, so
-	 * this passes straight through with nothing to resolve.
-	 */
-	theme: ThemePreference
 }
 
 export function TreeCanvas({
@@ -83,8 +76,20 @@ export function TreeCanvas({
 	addSlots = [],
 	addingFor,
 	onRequestAdd,
-	theme,
 }: TreeCanvasProps) {
+	/**
+	 * Read here rather than threaded down from the page.
+	 *
+	 * It used to arrive as a prop because only the server could see the cookie,
+	 * so the page read it and passed it through `TreeApp` to get here. The
+	 * preference is client-side now, so the one component that actually needs it
+	 * asks for it. Everything else in the app is themed by CSS variables and
+	 * never needs to know which theme is on; this is for React Flow's own
+	 * `colorMode`, which themes the zoom controls, the minimap frame and the
+	 * attribution. Our three preferences are exactly React Flow's three,
+	 * `system` included, so it passes straight through with nothing to resolve.
+	 */
+	const [theme] = useTheme()
 	const layoutNodes = useMemo<Node[]>(
 		() =>
 			// Ghost slots go last so they paint above the chart they overlap.

@@ -3,30 +3,19 @@ import { Button } from "@/components/Button"
 import { Heading } from "@/components/Heading"
 import { LanguagePicker } from "@/components/LanguagePicker"
 import { ThemePicker } from "@/components/ThemePicker"
-import type { ThemePreference } from "@/lib/theming"
 import type { StepProps } from "../types"
 import styles from "./Step.module.scss"
 
 /**
  * Language and theme, using the very same pickers as `/settings`.
  *
- * Deliberately not reimplemented: each picker writes its cookie through a
- * server action and the response re-renders this route, so the wizard changes
- * language under you as you pick — which is the only way to tell you picked the
- * right one. The wizard's own state lives in a component that stays mounted
- * across that re-render, so nothing is lost.
+ * Deliberately not reimplemented, and the wizard still changes language under
+ * you as you pick — which is the only way to tell you picked the right one. It
+ * used to do that by way of a server action re-rendering the route; now the
+ * provider in `app/layout.tsx` swaps the catalogue in place, so the wizard's
+ * own state is not merely preserved across the change but never unmounted.
  */
-
-interface PreferencesStepProps extends StepProps {
-	locale: string
-	theme: ThemePreference
-}
-
-export function PreferencesStep({
-	onNext,
-	locale,
-	theme,
-}: PreferencesStepProps) {
+export function PreferencesStep({ onNext }: StepProps) {
 	const t = useTranslations("onboarding")
 
 	return (
@@ -42,14 +31,14 @@ export function PreferencesStep({
 				<Heading as="h2" size="base" className={styles.step__sectionTitle}>
 					{t("preferencesLanguage")}
 				</Heading>
-				<LanguagePicker current={locale} />
+				<LanguagePicker />
 			</section>
 
 			<section className={styles.step__section}>
 				<Heading as="h2" size="base" className={styles.step__sectionTitle}>
 					{t("preferencesTheme")}
 				</Heading>
-				<ThemePicker current={theme} />
+				<ThemePicker />
 			</section>
 
 			<Button
