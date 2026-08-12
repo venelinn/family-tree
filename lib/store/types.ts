@@ -87,6 +87,34 @@ export interface TreeMeta {
 	updatedAt: string
 }
 
+/**
+ * A tree as the pickers need it: identity, where it is, and how big it is.
+ *
+ * `file` and `bundle` are optional because they are properties of a *file*
+ * store, and the web target has no files — its trees live in IndexedDB, keyed by
+ * id, with no path to show and nothing to convert. Their absence is the signal
+ * the UI uses: `TreeManager` hides the path, Move and Open when there is none,
+ * rather than testing which platform it is on.
+ */
+export interface TreeSummary extends TreeMeta {
+	/**
+	 * Absolute path, for display — "where is my data" has to be answerable.
+	 * Undefined for a browser-stored tree, where the honest answer is "in this
+	 * browser" rather than a path.
+	 */
+	file?: string
+	/** False when the file has been moved or deleted behind the app's back. */
+	available: boolean
+	peopleCount: number
+	/**
+	 * A directory that keeps its photos with it, rather than a loose `.json`
+	 * left over from before bundles. Settings offers to convert the ones that
+	 * aren't, and uploads are refused until they are. Undefined where the
+	 * question does not arise.
+	 */
+	bundle?: boolean
+}
+
 /** The rows alone — what the importer produces and what `replaceAll` takes. */
 export interface TreeRows {
 	people: PersonRecord[]

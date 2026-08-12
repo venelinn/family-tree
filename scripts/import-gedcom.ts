@@ -25,7 +25,7 @@ import { ingestServedPhotos } from "../lib/photos"
 import { DIR_MODE } from "../lib/store/bundle"
 import { setFs } from "../lib/store/fs"
 import { nodeFs } from "../lib/store/fs.node"
-import { getTreeStore, listTrees } from "../lib/store/registry"
+import { getTreeStore, listTrees } from "../lib/store/registry.local"
 import type {
 	PersonRecord,
 	TreeRows,

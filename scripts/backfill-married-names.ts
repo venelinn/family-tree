@@ -22,7 +22,7 @@ import { readFile } from "node:fs/promises"
 import { parseGedcomText } from "../lib/gedcom/parse-ged"
 import { setFs } from "../lib/store/fs"
 import { nodeFs } from "../lib/store/fs.node"
-import { getTreeStore, listTrees } from "../lib/store/registry"
+import { getTreeStore, listTrees } from "../lib/store/registry.local"
 
 // The store has no filesystem of its own — see `lib/store/fs.ts`.
 setFs(nodeFs)

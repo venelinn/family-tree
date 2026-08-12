@@ -121,7 +121,11 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 											</>
 										)}
 									</span>
-									<code className={styles.trees__path}>{tree.file}</code>
+									{/* Absent for a browser-stored tree: there is no path, and
+									    inventing one would be worse than saying nothing. */}
+									{tree.file ? (
+										<code className={styles.trees__path}>{tree.file}</code>
+									) : null}
 								</button>
 
 								<span className={styles.trees__check}>
@@ -138,33 +142,38 @@ export function TreeManager({ trees, activeId }: TreeManagerProps) {
 										setEditing({ id: tree.id, field: "name", value: tree.name })
 									}
 								/>
-								<Button
-									label={t("treeMove")}
-									variant="ghost"
-									className={styles.trees__action}
-									onClick={async () => {
-										// Same reasoning as adopting: a destination the user
-										// typed is outside the granted scope and would be
-										// refused. They choose the *parent*, and the tree keeps
-										// its own folder name inside it.
-										if (!canPickFolder()) {
-											setEditing({
-												id: tree.id,
-												field: "path",
-												value: tree.file,
-											})
-											return
-										}
-										const folder = await pickFolder(t("treeMoveLabel"))
-										if (folder)
-											run(() =>
-												relocateTreeAction(
-													tree.id,
-													join(folder, basename(tree.file)),
-												),
-											)
-									}}
-								/>
+								{tree.file ? (
+									<Button
+										label={t("treeMove")}
+										variant="ghost"
+										className={styles.trees__action}
+										onClick={async () => {
+											// Same reasoning as adopting: a destination the user
+											// typed is outside the granted scope and would be
+											// refused. They choose the *parent*, and the tree keeps
+											// its own folder name inside it.
+											if (!canPickFolder()) {
+												setEditing({
+													id: tree.id,
+													field: "path",
+													value: tree.file ?? "",
+												})
+												return
+											}
+											// Bound before the await: narrowing a property access
+											// does not survive into the closure below it.
+											const current = tree.file
+											const folder = await pickFolder(t("treeMoveLabel"))
+											if (folder && current)
+												run(() =>
+													relocateTreeAction(
+														tree.id,
+														join(folder, basename(current)),
+													),
+												)
+										}}
+									/>
+								) : null}
 								<Button
 									label={t("treeForget")}
 									variant="ghost"

@@ -23,6 +23,7 @@ export type ErrorCode =
 	| "diskReadOnly"
 	| "treeAlreadyBundle"
 	| "treeNotABundle"
+	| "notSupportedHere"
 	| "fileExists"
 	| "fileNotFound"
 	| "fileNotATree"

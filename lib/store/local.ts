@@ -11,43 +11,32 @@ import {
 	writeTextFile,
 } from "./fs"
 import * as path from "./path"
-import type {
-	PersonInput,
-	PersonRecord,
-	TreeMeta,
-	TreeRows,
-	TreeSnapshot,
-	TreeStore,
-	UnionInput,
-	UnionRecord,
-} from "./types"
+import { now, SnapshotTreeStore } from "./snapshot-store"
+import type { TreeSnapshot } from "./types"
 
 /**
  * File-backed `TreeStore` for local, single-user editing.
  *
- * No `server-only` guard here on purpose, and now three callers depend on that:
- * the import script drives this store from the CLI, the web build drives it from
- * a server action, and the desktop build drives it from inside the webview.
- * Which filesystem it gets is `lib/store/fs.ts`'s problem, not this file's —
- * everything below is the same code in all three.
+ * Everything that edits rows lives in `SnapshotTreeStore`; what is left here is
+ * the part that touches a disk — reading the JSON, writing it safely, and
+ * keeping backups. That split is what made the IndexedDB store small rather than
+ * a second copy of the same three hundred lines.
  *
- * Deliberately not clever: the whole tree is a few hundred rows, so each
- * mutation reads, edits and rewrites the file. What it does take seriously is
- * not corrupting that file — writes go to a temp path and are renamed into
- * place, and concurrent calls are serialised through a promise chain, because
- * Next.js will happily run two route handlers at once.
+ * No `server-only` guard here on purpose, and two callers depend on it: the
+ * import script drives this store from the CLI, and the desktop app drives it
+ * from inside the webview. Which filesystem it gets is `lib/store/fs.ts`'s
+ * problem, not this file's.
+ *
+ * What it takes seriously is not corrupting the file: writes go to a temp path
+ * and are renamed into place, so a crash mid-write leaves the previous good file
+ * rather than a truncated one. Files are written owner-only where the backend
+ * allows it — this is a household's names, birth dates and addresses, and on a
+ * shared machine the default umask would otherwise leave them world-readable.
  *
  * The tree may live anywhere on disk, which is why the path is a constructor
- * argument rather than a constant: see `lib/store/registry.ts`, which is what
- * decides where, and `bundle.ts` for what that path points at. Files are
- * written owner-only — this is a household's names, birth dates and addresses,
- * and on a shared machine the default umask would otherwise leave them
- * world-readable.
- *
- * The Supabase implementation will replace this file and nothing else.
+ * argument rather than a constant: see `lib/store/registry.local.ts`, which is
+ * what decides where, and `bundle.ts` for what that path points at.
  */
-
-const now = () => new Date().toISOString()
 
 /**
  * How many timestamped copies of `tree.json` to keep in a bundle's `backups/`.
@@ -63,18 +52,13 @@ const KEEP_BACKUPS = 20
 /** At most one snapshot per quarter hour, so twenty of them span a day's work. */
 const BACKUP_INTERVAL_MS = 15 * 60 * 1000
 
-/** Short, readable, and unique enough for a personal tree. */
-export const newId = (prefix: string) =>
-	`${prefix}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`
+export { newId } from "./snapshot-store"
 
-export class LocalTreeStore implements TreeStore {
+export class LocalTreeStore extends SnapshotTreeStore {
 	/** Bundle directory or loose `.json` — what the registry stores. */
 	readonly root: string
 	/** Everywhere this tree keeps something. */
 	readonly location: TreeLocation
-	private readonly id: string
-	/** Serialises mutations so two writes can't interleave. */
-	private queue: Promise<unknown> = Promise.resolve()
 
 	/**
 	 * Open the tree at `root`.
@@ -90,14 +74,18 @@ export class LocalTreeStore implements TreeStore {
 	}
 
 	private constructor(location: TreeLocation, id?: string) {
+		super(id ?? path.basename(location.root, path.extname(location.root)))
 		this.root = location.root
 		this.location = location
-		this.id = id ?? path.basename(location.root, path.extname(location.root))
 	}
 
 	/** The JSON this store reads and writes. */
 	get file(): string {
 		return this.location.file
+	}
+
+	override get photoDir(): string | undefined {
+		return this.location.photoDir
 	}
 
 	async read(): Promise<TreeSnapshot> {
@@ -118,38 +106,7 @@ export class LocalTreeStore implements TreeStore {
 		}
 	}
 
-	private empty(): TreeSnapshot {
-		const timestamp = now()
-		return {
-			meta: {
-				id: this.id,
-				name: this.id,
-				createdAt: timestamp,
-				updatedAt: timestamp,
-			},
-			people: [],
-			unions: [],
-			unionChildren: [],
-		}
-	}
-
-	/** Read, mutate, write — with the whole sequence serialised. */
-	private mutate<T>(
-		fn: (snapshot: TreeSnapshot) => T | Promise<T>,
-	): Promise<T> {
-		const run = this.queue.then(async () => {
-			const snapshot = await this.read()
-			const result = await fn(snapshot)
-			snapshot.meta.updatedAt = now()
-			await this.write(snapshot)
-			return result
-		})
-		// Keep the chain alive even if this call rejects.
-		this.queue = run.catch(() => undefined)
-		return run
-	}
-
-	private async write(snapshot: TreeSnapshot): Promise<void> {
+	protected async write(snapshot: TreeSnapshot): Promise<void> {
 		await mkdir(path.dirname(this.file), { recursive: true, mode: DIR_MODE })
 		await this.snapshotPrevious()
 		const temp = `${this.file}.tmp`
@@ -207,130 +164,5 @@ export class LocalTreeStore implements TreeStore {
 		} catch {
 			// Deliberately silent: the edit itself is what matters.
 		}
-	}
-
-	createPerson(input: PersonInput): Promise<PersonRecord> {
-		return this.mutate((snapshot) => {
-			const record: PersonRecord = {
-				...input,
-				id: input.id ?? newId("p"),
-				photos: input.photos ?? [],
-				updatedAt: now(),
-			}
-			snapshot.people.push(record)
-			return record
-		})
-	}
-
-	updatePerson(
-		id: string,
-		patch: Partial<Omit<PersonRecord, "id" | "updatedAt">>,
-	): Promise<PersonRecord> {
-		return this.mutate((snapshot) => {
-			const record = snapshot.people.find((person) => person.id === id)
-			if (!record) throw new Error(`No such person: ${id}`)
-			Object.assign(record, patch, { updatedAt: now() })
-			return record
-		})
-	}
-
-	deletePerson(id: string): Promise<void> {
-		return this.mutate((snapshot) => {
-			snapshot.people = snapshot.people.filter((person) => person.id !== id)
-			snapshot.unionChildren = snapshot.unionChildren.filter(
-				(link) => link.childId !== id,
-			)
-			// Leave the union in place but vacate the seat — the other spouse and
-			// the children are still real.
-			for (const union of snapshot.unions) {
-				if (union.husbandId === id) union.husbandId = undefined
-				if (union.wifeId === id) union.wifeId = undefined
-			}
-			// Deleting the person the chart opens on would leave the tree with no
-			// way in; the next reader picks a new root.
-			if (snapshot.meta.rootPersonId === id) {
-				snapshot.meta.rootPersonId = snapshot.people[0]?.id
-			}
-		})
-	}
-
-	createUnion(input: UnionInput): Promise<UnionRecord> {
-		return this.mutate((snapshot) => {
-			const record: UnionRecord = {
-				...input,
-				id: input.id ?? newId("u"),
-				updatedAt: now(),
-			}
-			snapshot.unions.push(record)
-			return record
-		})
-	}
-
-	updateUnion(
-		id: string,
-		patch: Partial<Omit<UnionRecord, "id" | "updatedAt">>,
-	): Promise<UnionRecord> {
-		return this.mutate((snapshot) => {
-			const record = snapshot.unions.find((union) => union.id === id)
-			if (!record) throw new Error(`No such union: ${id}`)
-			Object.assign(record, patch, { updatedAt: now() })
-			return record
-		})
-	}
-
-	deleteUnion(id: string): Promise<void> {
-		return this.mutate((snapshot) => {
-			snapshot.unions = snapshot.unions.filter((union) => union.id !== id)
-			snapshot.unionChildren = snapshot.unionChildren.filter(
-				(link) => link.unionId !== id,
-			)
-		})
-	}
-
-	addChild(unionId: string, childId: string, position?: number): Promise<void> {
-		return this.mutate((snapshot) => {
-			const exists = snapshot.unionChildren.some(
-				(link) => link.unionId === unionId && link.childId === childId,
-			)
-			if (exists) return
-			const siblings = snapshot.unionChildren.filter(
-				(link) => link.unionId === unionId,
-			)
-			snapshot.unionChildren.push({
-				unionId,
-				childId,
-				position: position ?? siblings.length,
-			})
-		})
-	}
-
-	removeChild(unionId: string, childId: string): Promise<void> {
-		return this.mutate((snapshot) => {
-			snapshot.unionChildren = snapshot.unionChildren.filter(
-				(link) => !(link.unionId === unionId && link.childId === childId),
-			)
-		})
-	}
-
-	updateMeta(
-		patch: Partial<Omit<TreeMeta, "id" | "createdAt" | "updatedAt">>,
-	): Promise<TreeMeta> {
-		return this.mutate((snapshot) => {
-			Object.assign(snapshot.meta, patch)
-			return snapshot.meta
-		})
-	}
-
-	replaceAll(rows: TreeRows): Promise<void> {
-		return this.mutate((snapshot) => {
-			snapshot.people = rows.people
-			snapshot.unions = rows.unions
-			snapshot.unionChildren = rows.unionChildren
-			// The root person may not have survived the replacement.
-			const stillThere = rows.people.some(
-				(person) => person.id === snapshot.meta.rootPersonId,
-			)
-			if (!stillThere) snapshot.meta.rootPersonId = undefined
-		})
 	}
 }

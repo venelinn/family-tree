@@ -13,8 +13,8 @@ import {
 	photoFile,
 } from "./store/bundle"
 import { dataDir, exists, mkdir, readFile, remove, writeFile } from "./store/fs"
-import type { LocalTreeStore } from "./store/local"
 import * as path from "./store/path"
+import type { SnapshotTreeStore } from "./store/snapshot-store"
 
 /**
  * Photo operations, kept below the server-action boundary.
@@ -54,7 +54,7 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 		.join("")
 }
 
-async function personOrThrow(store: LocalTreeStore, personId: string) {
+async function personOrThrow(store: SnapshotTreeStore, personId: string) {
 	const snapshot = await store.read()
 	const person = snapshot.people.find((candidate) => candidate.id === personId)
 	if (!person) throw new TreeOpError("noSuchPerson", { id: personId })
@@ -63,11 +63,11 @@ async function personOrThrow(store: LocalTreeStore, personId: string) {
 
 /** Save an uploaded image and append it to the person's photos. */
 export async function savePhoto(
-	store: LocalTreeStore,
+	store: SnapshotTreeStore,
 	personId: string,
 	file: File,
 ): Promise<string[]> {
-	const { photoDir } = store.location
+	const { photoDir } = store
 	if (!photoDir) throw new TreeOpError("treeNotABundle")
 
 	if (file.size === 0) throw new TreeOpError("photoMissing")
@@ -115,7 +115,7 @@ export async function savePhoto(
 
 /** Detach a photo, and delete the file once nobody else refers to it. */
 export async function removePhoto(
-	store: LocalTreeStore,
+	store: SnapshotTreeStore,
 	personId: string,
 	url: string,
 ): Promise<string[]> {
@@ -127,7 +127,7 @@ export async function removePhoto(
 
 	// Photos from `pnpm photos` are left alone: that script owns those files and
 	// the tree file is not the only thing pointing at them.
-	const { photoDir } = store.location
+	const { photoDir } = store
 	if (!photoDir || !isStoredPhoto(entry)) return photos
 
 	const stillUsed = snapshot.people.some(
@@ -142,7 +142,7 @@ export async function removePhoto(
 
 /** Promote a photo to the front — the cards render `photos[0]`. */
 export async function setPrimaryPhoto(
-	store: LocalTreeStore,
+	store: SnapshotTreeStore,
 	personId: string,
 	url: string,
 ): Promise<string[]> {
@@ -181,10 +181,10 @@ export interface StoredPhoto {
  * server chose.
  */
 export async function readPhoto(
-	store: LocalTreeStore,
+	store: SnapshotTreeStore,
 	entry: string,
 ): Promise<StoredPhoto | undefined> {
-	const { photoDir } = store.location
+	const { photoDir } = store
 	if (!photoDir) return undefined
 
 	const file = photoFile(photoDir, entry)

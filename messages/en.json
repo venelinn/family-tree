@@ -211,6 +211,7 @@
 		"photoTooBig": "That photo is larger than 12 MB",
 		"treeAlreadyBundle": "That tree already keeps its photos with it",
 		"treeNotABundle": "This tree is still a single file, so it has nowhere to keep photos. Convert it in Settings first.",
+		"notSupportedHere": "That isn't available in the browser version. The desktop app keeps trees as files you choose.",
 		"photoMalformed": "That image is damaged, or isn't the format it claims to be"
 	},
 	"onboarding": {

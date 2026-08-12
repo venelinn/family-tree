@@ -1,8 +1,8 @@
 import { getActiveTree } from "./active-tree"
 import { TreeOpError } from "./errors"
 import type { FamilyGraph } from "./family-graph"
-import type { LocalTreeStore } from "./store/local"
 import { getTreeStore, type TreeSummary } from "./store/registry"
+import type { SnapshotTreeStore } from "./store/snapshot-store"
 import { toFamilyGraph } from "./store/to-graph"
 
 /**
@@ -24,7 +24,7 @@ import { toFamilyGraph } from "./store/to-graph"
  */
 
 /** The store for the tree this request is looking at. */
-export async function getStore(): Promise<LocalTreeStore> {
+export async function getStore(): Promise<SnapshotTreeStore> {
 	const active = await getActiveTree()
 	if (!active) throw new TreeOpError("noSuchTree")
 	const store = await getTreeStore(active.id)
@@ -64,7 +64,7 @@ export async function loadActiveTree(): Promise<ActiveTreeResult> {
 	return {
 		status: "ok",
 		meta: active,
-		graph: toFamilyGraph(await store.read(), store.location.photoDir),
+		graph: toFamilyGraph(await store.read(), store.photoDir),
 	}
 }
 

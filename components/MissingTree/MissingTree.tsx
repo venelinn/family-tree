@@ -14,7 +14,8 @@ export async function MissingTree({
 	file,
 }: {
 	name: string
-	file: string
+	/** Undefined for a browser-stored tree, which has no path to show. */
+	file?: string
 }) {
 	const t = await getTranslations("errors")
 
@@ -24,7 +25,7 @@ export async function MissingTree({
 				<p className={styles.missing__message}>
 					{t("treeFileMissing", { name })}
 				</p>
-				<code className={styles.missing__path}>{file}</code>
+				{file ? <code className={styles.missing__path}>{file}</code> : null}
 				<Button
 					label={t("treeFileMissingAction")}
 					href="/settings"
