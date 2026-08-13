@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Providers } from "@/components/Providers"
+import { UpdateBanner } from "@/components/UpdateBanner"
 import { raleway } from "@/lib/fonts"
 import { defaultLocale } from "@/lib/localization"
 import { themeInitScript } from "@/lib/theme"
@@ -40,7 +41,12 @@ export default function RootLayout({
 				<script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
 			</head>
 			<body className={raleway.className}>
-				<Providers>{children}</Providers>
+				<Providers>
+					{children}
+					{/* Desktop only; renders nothing on the web, which updates by
+					    being reloaded. */}
+					<UpdateBanner />
+				</Providers>
 			</body>
 		</html>
 	)

@@ -5,15 +5,16 @@ data/nikolov.ged            MyHeritage GEDCOM export (import source only)
   │ pnpm photos             photos → public/photos/ (staging), export rewritten
   │ pnpm import             one-way, into a registered tree; photos → the bundle
   ▼
-data/trees.json             which trees exist and where each one is
-  │ lib/store/registry.ts   create / adopt / move / convert / forget; anywhere
-  │ lib/active-tree.ts      which one this browser is showing (cookie)
+<data dir>/trees.json       which trees exist and where each one is [desktop]
+  │ lib/store/registry.ts   dispatches to registry.local / registry.indexed
+  │ lib/active-tree.ts      which one this browser is showing (localStorage)
   ▼
 <chosen>.familytree/        the tree — one folder, system of record
   │ lib/store/bundle.ts     what's inside it and where
-  │ lib/store/local.ts      TreeStore implementation (file-backed) + backups
+  │ lib/store/local.ts      file-backed TreeStore + backups
+  │ lib/store/indexed.ts    the browser's TreeStore, and its photo blobs
   │ lib/photos.ts           content-addressed photos, metadata stripped on entry
-  │ lib/store/to-graph.ts   rows → read model, photo entries → URLs
+  │ lib/store/to-graph.ts   rows → read model; photo entries → src, via the store
   ▼
 lib/family-graph.ts         FamilyGraph { people, unions } + relationship queries
   │ lib/layout/family.ts    ─┐
@@ -22,37 +23,59 @@ lib/family-graph.ts         FamilyGraph { people, unions } + relationship querie
 components/*                React Flow canvas, cards, side panel
 ```
 
-## Two targets
+## Two targets, no server
 
-The same UI ships twice.
+The same UI ships twice, and **neither half has a server**. The desktop app is a
+Tauri window; the web app is a static export on a CDN. `"use server"`, route
+handlers and `cookies()` are all unavailable, which is why preferences live in
+`localStorage` and every mutation is a plain async call.
 
-| | Web | Desktop |
+| | Desktop (`pnpm app`) | Web (`pnpm dev`) |
 | --- | --- | --- |
-| Runs as | `next dev` / `next build`, a server | Tauri v2 window, `src-tauri/` |
-| Reaches the disk via | `node:fs`, on the server | Tauri's `fs` plugin, in the webview |
-| Store backend | `lib/store/fs.node.ts` | `lib/store/fs.tauri.ts` |
-| Mutations | server actions | direct calls |
-| Start it with | `pnpm dev` | `pnpm app` |
+| Shell | Tauri v2 window, `src-tauri/` | static export, any host |
+| Trees live in | a folder the user picked | this browser's IndexedDB |
+| Store | `LocalTreeStore` | `IndexedTreeStore` |
+| Registry | `registry.local.ts` | `registry.indexed.ts` |
+| Photos | files in the bundle | blobs in IndexedDB |
+| Paths shown | yes | none — there are none |
 
-Neither is a fork: `lib/store/`, `lib/layout/`, `lib/facts.ts` and every
-component are the same files on both. What differs is which filesystem is
-installed underneath and how a click reaches it.
+Everything above the store is the same files on both: `lib/layout/`,
+`lib/facts.ts`, every component. What differs is what is underneath.
 
-## The three seams
+Which target a bundle is is decided **at build time**, by `NEXT_PUBLIC_TAURI`
+(`pnpm dev:tauri` / `pnpm build:tauri`, both set by `tauri.conf.json`). Sniffing
+`window.__TAURI_INTERNALS__` at import time is unreliable — injection is not
+ordered against the bundle's own evaluation — so that global is only a fallback.
 
-Almost all the flexibility in this codebase comes from three boundaries.
+## The seams
 
-**`lib/store/fs.ts`** is which filesystem the store gets. A `TreeFs` interface,
-two implementations, and a `setFs()` the entry point calls: `fs.server.ts` for
-the web build, `components/TauriBootstrap` for the desktop one, and each CLI
-script for itself. The store above it — atomic renames, backups, the
-"never delete the user's only copy" ordering in `relocateTree` — is one
-implementation serving all three.
+Almost all the flexibility in this codebase comes from a few boundaries.
+
+**`lib/store/types.ts`** defines `TreeStore`, and it is the one that matters.
+Three implementations are anticipated and two exist:
+
+- `LocalTreeStore` — files, via `TreeFs`
+- `IndexedTreeStore` — IndexedDB
+- a Supabase store, later
+
+The first two share `SnapshotTreeStore`, which holds every row-editing method
+over a read-modify-write of the whole tree. **A Supabase store must not extend
+it**: that shape is correct for one writer and wrong for several, and each
+`TreeStore` method is meant to map to a single statement instead.
+
+**`lib/store/fs.ts`** is which filesystem the *file* store gets. A `TreeFs`
+interface with two implementations — `fs.node.ts` for `pnpm import`, `fs.tauri.ts`
+for the app — installed by the entry point. `registry.ts` calls `ensureFs()` on
+first use rather than at import, so nothing depends on module evaluation order.
 
 This is also why `lib/store/path.ts` exists rather than `node:path`: Tauri's
 path API is entirely async, and adopting it would have turned every synchronous
 path helper into a promise for no gain. It is POSIX-only, and the one file
 Windows support would have to revisit.
+
+**`lib/invalidate.ts`** replaces `revalidatePath`. Each action calls
+`invalidateTrees()` where it used to revalidate; the hooks in `client-data.ts`
+listen and re-read. No component has to remember to refresh, exactly as before.
 
 **`lib/data.ts`** is the only module that knows where data lives. Everything
 downstream consumes `FamilyGraph`. Moving to Supabase means implementing
@@ -92,10 +115,15 @@ endpoint.
 The tree modelled as **rows, not a document**: `people`, `unions`, and a
 `unionChildren` join table — deliberately the shape Postgres tables would take.
 
-`LocalTreeStore` writes to a temp file and renames it into place, and serialises
-mutations through a promise chain. Both matter: Next.js runs route handlers
-concurrently, and read-modify-write on a whole file is exactly the shape that
-loses data. (Tested: 10 concurrent `createPerson` calls, all 10 persisted.)
+`SnapshotTreeStore` holds every row-editing method, over a read-modify-write of
+the whole tree, with mutations serialised through a promise chain. That chain
+matters: read-modify-write on a whole document is exactly the shape that loses
+data when two edits overlap. (Tested: 10 concurrent `createPerson` calls, all 10
+persisted.) `LocalTreeStore` and `IndexedTreeStore` supply only `read`/`write`
+on top of it.
+
+`LocalTreeStore` writes to a temp file and renames it into place, so a crash
+mid-write leaves the previous good file rather than a truncated one.
 
 It is opened with **`LocalTreeStore.open()`, not `new`**. Deciding whether a path
 is a bundle or a loose `.json` is a `stat`, and Tauri has no synchronous one, so
@@ -105,9 +133,27 @@ the location is resolved once in a factory — which is what keeps `store.file` 
 `DIR_MODE` and `FILE_MODE` are honoured by the Node backend only; Tauri's plugin
 takes no mode. They stay at every call site because the intent still holds.
 
-`to-graph.ts` derives the read model. Back-references — `unionIds`,
+**Photos are a store operation, not a directory.** `canStorePhotos`, `hasPhoto`,
+`putPhoto`, `deletePhoto` and `photoSrc` are the whole surface `photos.ts` needs.
+A file store answers `photoSrc` with an asset-protocol URL; the browser store
+answers with an object URL for a blob it holds, cached per entry — the graph is
+re-read after every edit, and minting a fresh URL each time would leak one per
+photo per keystroke. Caching is safe because the key is a content hash.
+
+`to-graph.ts` derives the read model, and is **async** because resolving a photo
+in the browser means fetching a blob first. Back-references — `unionIds`,
 `childOfUnionId` — are **computed, never stored**, so they cannot drift from the
 union rows that are the truth.
+
+### `lib/transfer.ts`
+
+A tree as one JSON file: the snapshot plus its photos, base64-encoded under the
+same content-addressed names both stores use. It is the only bridge between the
+two targets, and the only backup a browser tree has.
+
+Exporting differs by target and has to: the web build hands the browser a blob
+URL on an `<a download>`, which **the Tauri webview silently ignores**, so the
+desktop app writes the file itself through a native save dialog.
 
 ### `lib/facts.ts`
 
@@ -174,9 +220,10 @@ titles, relationship labels, add-slot labels, and write failures alike. See
 
 ### `lib/theming.ts`, `lib/theme.ts`, `tokens/`, `styles/`
 
-Light and dark, `system` by default. Same three-file shape as the locale —
-shared constants, a server-side cookie read, a server action for the write — for
-the same reason: it is one preference, set once, on the settings page.
+Light and dark, `system` by default. Same shape as the locale — shared
+constants, plus a read and a write through `lib/prefs.ts` — for the same reason:
+it is one preference, set once, on the settings page. `themeInitScript` runs
+blocking in `<head>` so `data-theme` is stamped before first paint.
 
 The rule that shapes the components: **name the role, not the colour**.
 `var(--surface-container)`, never `#fff`. Roles are declared in `tokens/*.json`
@@ -193,18 +240,22 @@ holding the two together. `rules/css-styling.mdc` is the guide.
 ## Writes
 
 ```
-ghost card / panel  →  lib/actions.ts (server actions)
+ghost card / panel  →  lib/actions.ts        validation + translated errors
                          →  lib/tree-ops.ts   relationship logic + invariants
                               →  TreeStore     row writes
-                       revalidatePath("/")  →  server component re-renders
+                       invalidateTrees()  →  every mounted hook re-reads
 ```
+
+These were server actions and are now plain async functions — the `Action` suffix
+survives because it still separates the user-facing operations, which validate
+and translate, from the primitives beneath that throw. It also keeps
+`createTreeAction` from colliding with the `createTree` it wraps.
 
 `photos.ts` sits under `photo-actions.ts` the same way `tree-ops.ts` sits under
 `actions.ts` — upload validation is exactly the kind of rule that should not
-only be exercised by clicking. Uploaded files go to `public/photos/uploads/`,
-which is the one thing that does *not* follow a tree file to wherever it is
-kept: Next only serves static files from `public/`, and a route handler
-streaming arbitrary disk paths would be a file-read hole.
+only be exercised by clicking. It no longer builds paths: photos go through the
+store's own `putPhoto` / `deletePhoto` / `photoSrc`, so the same code stores a
+file inside a bundle on the desktop and a blob in IndexedDB on the web.
 
 `tree-ops.ts` is where anything spanning several rows lives — "add a father"
 means find-or-create the birth union, fill the husband seat, then link the

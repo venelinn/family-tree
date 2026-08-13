@@ -1,7 +1,11 @@
 {
 	"app": {
 		"title": "Семейно дърво",
-		"description": "Лично семейно дърво"
+		"description": "Лично семейно дърво",
+		"updateAvailable": "Налична е версия {version}.",
+		"updateInstall": "Обновяване и рестарт",
+		"updateInstalling": "Обновяване…",
+		"updateLater": "По-късно"
 	},
 	"toolbar": {
 		"fallbackTitle": "Семейно дърво",

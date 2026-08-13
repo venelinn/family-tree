@@ -25,19 +25,33 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**"]
+        "scope": [
+          "$APPDATA/**"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5MzUxNUJGRUZDMUM4NzgKUldSNHlNSHZ2eFUxT1FVcnpRc0ROVWhmOHl5Z0JXbEZEd2I5ZkNIemp5MnYwQmtLck1tcFFTcTYK",
+      "endpoints": [
+        "https://github.com/venelinn/family-tree/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

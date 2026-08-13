@@ -1,6 +1,8 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_process::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
     // Order matters and is not enforced: `persisted-scope` must be registered
     // *after* `fs`, or it silently does nothing and every tree the user opened
     // is forgotten on restart. `tauri add` prepends, so this came out wrong when

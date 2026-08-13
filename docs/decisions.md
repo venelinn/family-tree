@@ -118,14 +118,66 @@ had to be severed.
 
 **The web target stays.** It is not replaced, because a family tree you can open
 from a link is worth keeping and because Supabase is still the likely path to
-sharing one. The two are kept honest by `lib/store/fs.ts`: one store, one set of
-rules, two filesystems underneath.
+sharing one.
+
+## Neither target has a server
+
+Once it was decided the web app would never read the repo's `data/`, it had no
+server-side storage — and therefore nothing for a server to do. Both targets
+became static exports, which removed eight `"use server"` modules, the photo
+route handler, and the cookies that backed theme, locale and tree selection.
+
+What that cost, honestly: the cookie reads were what made `<html data-theme>`
+correct in the first byte of HTML, and that is gone. A blocking inline script in
+`<head>` takes its place — the very thing the cookie existed to avoid. It is a
+fair trade in an app served from local disk, and the comments at each site say
+so rather than quietly implying the old reasoning was wrong.
+
+What it bought: one deployment shape for both, no hosting bill, and a privacy
+promise that is structural rather than asserted. There is no server to send
+anything to on either side.
+
+## Two stores, one interface
+
+`TreeStore` was always the seam. It now has two implementations —
+`LocalTreeStore` over files, `IndexedTreeStore` over IndexedDB — sharing
+`SnapshotTreeStore`, which holds every row-editing method over a
+read-modify-write of the whole tree.
+
+The **registry** could not be shared the same way, and that is the interesting
+part. It is built on paths: adopt a file, move it, convert it to a bundle, warn
+when it lands in iCloud. None of that means anything in a browser origin. So
+`registry.ts` is a dispatcher over two implementations rather than one module
+with a swappable backend, `TreeSummary.file` is optional, and the UI hides the
+path row, Move and Open when it is absent — following the data rather than
+testing which platform it is on.
+
+**A Supabase store must implement `TreeStore` directly, not extend
+`SnapshotTreeStore`.** Whole-snapshot read-modify-write is correct for one writer
+and wrong for several: two people editing one tree would overwrite each other
+wholesale instead of row by row.
+
+## Exports carry photos, base64, in one JSON file
+
+The first version carried only the rows, so a tree exported from the desktop and
+imported into a browser arrived with every name and date and no faces —
+technically a tree, and not what anybody wanted.
+
+A zip would be the tidier container and base64 costs about a third in size on top
+of bytes that are already compressed. It was chosen anyway: no dependency, no
+streaming, and the export stays one file somebody can see is one file. A personal
+tree's photos are tens of megabytes, not hundreds. `collectPhotos` /
+`restorePhotos` is the seam to replace when that stops being true.
+
+Photos are keyed by the same content-addressed name both stores use, so importing
+writes each blob back under the name the rows already point at — no reference
+rewriting, and duplicates across trees collapse on their own.
 
 Costs, stated plainly: Rust in the toolchain, per-OS builds (you cannot build a
-Windows `.exe` on a Mac), `git push` no longer ships to everyone, and unsigned
-builds warn on first open until there is an Apple Developer account. macOS is the
-only target for now — Windows needs `lib/store/path.ts` to learn about
-backslashes and drive letters, and nothing else.
+Windows `.exe` on a Mac), `git push` no longer ships the desktop app to anyone,
+and unsigned builds warn on first open until there is an Apple Developer
+account. macOS is the only target for now — Windows needs `lib/store/path.ts` to
+learn about backslashes and drive letters, and nothing else.
 
 ## Local store before Supabase
 
@@ -160,10 +212,14 @@ silently: miss one and it looks fine until someone opens the app in dark. With
 tokens there is one place to look, and a component that skipped them is
 conspicuous because its colours don't respond to the setting at all.
 
-**Rejected:** `next-themes`. It solves the flash-of-wrong-theme problem for apps
-that keep the preference in `localStorage`. This one already reads a cookie on
-the server for the locale, so the same trick gives a correct `<html data-theme>`
-in the first byte of HTML — no provider, no blocking script, no dependency.
+**Rejected:** `next-themes`. The preference was a server-read cookie, which gave
+a correct `<html data-theme>` in the first byte of HTML with no provider, no
+blocking script and no dependency.
+
+That premise is gone — there is no server render on either target now — so the
+blocking script is back, as `themeInitScript` in `lib/theme.ts`. It is ~200 bytes
+inline and reads local storage before first paint. `next-themes` stays rejected:
+it would be a dependency to do the same two lines.
 
 ## Style Dictionary tokens, and a separate dark block
 

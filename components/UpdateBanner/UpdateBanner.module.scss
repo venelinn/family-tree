@@ -1,0 +1,25 @@
+@use "styles/typo-mixins" as typo;
+
+/**
+ * Pinned to the bottom, not the top: the toolbar and the chart are what somebody
+ * came for, and an update is never urgent enough to push them down the page.
+ */
+.update {
+	position: fixed;
+	inset-inline: 0;
+	bottom: 0;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: var(--spacing-3);
+	padding: var(--spacing-3) var(--spacing-4);
+	border-block-start: 1px solid var(--outline-variant);
+	background: var(--surface-container-high);
+	color: var(--on-surface);
+}
+
+.update__text {
+	@include typo.ui-body;
+}

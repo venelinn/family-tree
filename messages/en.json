@@ -1,7 +1,11 @@
 {
 	"app": {
 		"title": "Family tree",
-		"description": "A private family tree"
+		"description": "A private family tree",
+		"updateAvailable": "Version {version} is available.",
+		"updateInstall": "Update and restart",
+		"updateInstalling": "Updating…",
+		"updateLater": "Later"
 	},
 	"toolbar": {
 		"fallbackTitle": "Family tree",

@@ -22,8 +22,8 @@ ribbons.
 
 Editing works: select a card and ghost "Add brother / sister / partner / son /
 daughter / father / mother" cards appear around it, MyHeritage style; the panel
-has Edit and Delete. Writes go through server actions → `lib/tree-ops.ts` →
-`TreeStore`, then `revalidatePath("/")`.
+has Edit and Delete. Writes go through the action modules → `lib/tree-ops.ts` →
+`TreeStore`, then `invalidateTrees()`.
 
 Marriages are editable too — date, place, and whether it ended — from the pencil
 on the marriage row in the Facts timeline. That row is the only editable fact,
@@ -38,8 +38,9 @@ in `tree-ops.ts` is the counterpart to `linkRelative`.
 picker for linking — one interaction, one implementation.
 
 **Photos can be dropped onto the panel.** `lib/photos.ts` holds the rules,
-`photo-actions.ts` is the thin wrapper. Files go to `public/photos/uploads/`,
-owner-only, and imported photos are never deleted from disk — only detached.
+`photo-actions.ts` is the thin wrapper. Photos are content-addressed and stored
+by the store itself — files inside the bundle on desktop, blobs in IndexedDB on
+web — and are never deleted while another person still refers to them.
 
 **Two surnames per person.** `surname` is the name at birth (the maiden name);
 `marriedName` is the one taken on marriage. MyHeritage exports the second as
@@ -50,30 +51,40 @@ under the name; the form offers the field for women, and for anyone who already
 has one stored so an imported value can't become uneditable.
 
 Localised: English and Bulgarian via `next-intl`, picked on `/settings` and kept
-in a cookie (no `/en` `/bg` prefix, no middleware). Adding a language is three
-files — see [docs/i18n.md](docs/i18n.md).
+in `localStorage` (no `/en` `/bg` prefix, no middleware). The catalogue is chosen
+client-side in `components/Providers`; `i18n/request.ts` is gone with the server.
+Adding a language is three files — see [docs/i18n.md](docs/i18n.md).
 
-Themed: light and dark, `system` by default, picked on `/settings` and kept in a
-cookie the same way. Colour lives in semantic tokens built by Style Dictionary
+Themed: light and dark, `system` by default, picked on `/settings` and kept in
+`localStorage` the same way. Colour lives in semantic tokens built by Style Dictionary
 from `tokens/*.json`, with the dark values in `styles/_theme-dark.scss` — see
 [docs/theming.md](docs/theming.md).
 
 Multi-tree: several trees, each a file that **may live anywhere on disk** —
 external drive, encrypted volume, off the repo entirely. First run goes through
-`/welcome` (name → where to store it → language/theme → start from me or empty).
-Settings switches, renames, moves, adopts. See [docs/storage.md](docs/storage.md).
+`/welcome` (name → where to store it, desktop only → language/theme → start from
+me or empty), with "Already have a tree?" on the first step for importing or
+opening one. Settings switches, renames, moves, adopts, exports and imports. See [docs/storage.md](docs/storage.md).
 
-**It ships twice now — web and a Tauri desktop app.** `pnpm dev` is the web
-target (server, server actions, `node:fs`); `pnpm app` is the same UI in a native
-macOS window, reaching the disk through Tauri's `fs` plugin and working offline.
-Neither is a fork: `lib/store/fs.ts` is a `TreeFs` interface with two backends,
-installed by whichever entry point is running — `fs.server.ts` on the web, a
-bootstrap component in the desktop app, and each CLI script for itself. Needs the
-Rust toolchain; see [docs/getting-started.md](docs/getting-started.md).
+**It ships twice now, and neither half has a server.** `pnpm app` is a Tauri
+macOS window keeping trees as folders you pick; `pnpm dev` is a static export
+keeping them in the browser's IndexedDB. Both work offline. Needs the Rust
+toolchain — see [docs/getting-started.md](docs/getting-started.md).
 
 The desktop app exists because a hosted Next.js server *cannot* write to the
-user's disk — Netlify and Vercel give every request an ephemeral container. See
-[docs/decisions.md](docs/decisions.md#a-desktop-app-as-well-as-a-web-app).
+user's disk. The web app lost its server because it was decided it would never
+read `data/` — with storage in the visitor's browser there was nothing left for a
+server to do. That removed eight `"use server"` modules, the photo route handler
+and the theme/locale/tree cookies.
+
+`TreeStore` is the seam: `LocalTreeStore` (files) and `IndexedTreeStore`
+(IndexedDB) share `SnapshotTreeStore`. The **registry** could not be shared —
+it is built on paths, which a browser has none of — so `registry.ts` dispatches
+to `registry.local.ts` or `registry.indexed.ts`, and `TreeSummary.file` is
+optional. Supabase is still a planned third `TreeStore`.
+
+**Moving a tree between the two** is a single JSON export carrying rows *and*
+photos, base64-encoded. It is also the only backup a browser tree has.
 
 Not built: Supabase, merging duplicate people, birth-order editing (the
 `position` column exists, no UI), adoption / step-parents (`unionChildren` has
@@ -85,11 +96,36 @@ can never be translated).
 
 ## Traps
 
+**`assetProtocol.scope: []` means deny everything, not "unrestricted".** It cost
+an hour: the tree loaded and all 51 photos were refused with "asset protocol not
+configured to allow the path". `$APPDATA/**` is granted statically; user-picked
+folders are granted by the dialog.
+
+**The folder dialog needs `recursive: true`.** Without it the scope grant covers
+the chosen folder only, and every photo under `photos/8f/3a/` is denied — which
+reads as "the app lost my pictures", not as a permissions problem.
+
+**A blob download does nothing in the Tauri webview.** `<a download>` is silently
+ignored — WKWebView has no download handling unless Rust adds it. Export on the
+desktop writes the file itself through a native save dialog; only the web build
+downloads.
+
+**Which target a bundle is, is decided at build time** by `NEXT_PUBLIC_TAURI`
+(`pnpm dev:tauri` / `pnpm build:tauri`). Do not sniff `window.__TAURI_INTERNALS__`
+at import time — injection is not ordered against bundle evaluation. It survives
+as a fallback only, and `registry.ts` installs the fs backend lazily via
+`ensureFs()` rather than on import.
+
+**Never invent CSS variable names.** Tokens are `--spacing-N`, `--outline-variant`,
+`--surface-container`, `--border-radius`, built by Style Dictionary from
+`tokens/*.json`. Guessing `--space-3` / `--color-border` produced a control that
+rendered as unstyled text, because unknown custom properties fail silently.
+
 **Nothing under `lib/store/` may import `node:fs` or `node:path`.** Both targets
 share those files, and the desktop one bundles them for a webview where neither
 exists. Use `lib/store/fs.ts` and `lib/store/path.ts`. The Node backend lives in
-`fs.node.ts` and is reachable only from `fs.server.ts` (which is `server-only`,
-so a leak into the client bundle is a build error) and from `scripts/`.
+`fs.node.ts` and is imported only from `scripts/`; the app installs the Tauri one
+through `ensureFs()` in `fs.client.ts`.
 
 **`tauri add` registers plugins in the wrong order.** It *prepends*, and
 `persisted-scope` must be initialised **after** `fs` or it silently does nothing
@@ -174,15 +210,17 @@ don't know the reader's language. Plurals and gender agreement live in the ICU
 message too — a `count === 1` test in a component bakes English grammar into
 every language, and Bulgarian inflects *Роден* / *Родена*.
 
-**The active tree is a cookie, not `localStorage`.** The tree is loaded during
-the *server* render, so the choice has to arrive with the request; localStorage
-would paint one family's chart and then swap it for another's. Same reason as
-the theme, with higher stakes.
+**Preferences are `localStorage` now, not cookies** — theme, locale,
+names-follow-language and the active tree, all through `lib/prefs.ts`. The
+cookies existed because the *server* rendered them and a cookie arrives with the
+request; with no server render on either target that reasoning has no premise
+left. The dark-mode flash is back and handled by a blocking inline script in
+`<head>` (`themeInitScript`), which is exactly what the cookie was avoiding.
 
-**Changing the language must `revalidatePath("/", "layout")`.** Without it the
-client router cache serves the chart back in the old language. The cookie alone
-is not enough. **The theme has exactly the same requirement** — the `data-theme`
-attribute lives on the root layout.
+**After any write, call `invalidateTrees()`.** It is the direct replacement for
+`revalidatePath`, lives in `lib/invalidate.ts`, and each action already calls it
+where the revalidate used to be — so no component has to remember. The hooks in
+`lib/client-data.ts` listen and re-read.
 
 **Never write a Tailwind palette class.** `bg-slate-100`, `text-rose-600` and
 friends look correct in light and wrong in dark, and nothing fails to tell you.
@@ -203,7 +241,7 @@ traps when adding one: it must not collide with a Tailwind utility (`--color-sol
 - Back-references (`unionIds`, `childOfUnionId`) are derived, never stored.
 - GEDCOM is the import format; the parser is local and was validated against the older JSON export at **zero diffs** across 252 people / 94 unions.
 - Local store chosen over Supabase for now: free schema churn, git history, no auth work. Revisit if sharing with family becomes the goal.
-- Dark mode is semantic tokens + `light-dark()`, not `dark:` variants and not `next-themes`. The preference is a server-read cookie, which is why there's no flash and no blocking script.
+- Dark mode is semantic tokens + `light-dark()`, not `dark:` variants and not `next-themes`. The preference was a server-read cookie; with no server render it is `localStorage` plus a blocking inline script in `<head>`.
 - A tree's *name and root person* live in its own file; the index (`data/trees.json`) holds only id + path. Copy the file anywhere and it stays whole.
 - Tree files are written `0600`, directories `0700`. Cloud-synced destinations (iCloud, Dropbox, OneDrive) are warned about, never blocked.
 - No delete for trees — only "remove from list". Deletion is unrecoverable and there is no undo.

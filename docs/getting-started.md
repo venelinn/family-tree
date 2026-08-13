@@ -28,18 +28,69 @@ works exactly as it does in the browser. `pnpm app:build` produces a `.dmg`.
 
 macOS only for now — see [decisions.md](decisions.md#a-desktop-app-as-well-as-a-web-app).
 
+**They cannot run at the same time.** Both use port 3022, and more importantly
+`pnpm app` builds with `NEXT_PUBLIC_TAURI=1` — so opening localhost:3022 in a
+browser while the desktop app runs serves the *desktop* build to a browser, which
+will try to read files it has no access to. Run one at a time.
+
+## The two targets, in practice
+
+They share no storage. A tree made in one is invisible to the other until you
+move it across as a file.
+
+| | `pnpm app` | `pnpm dev` |
+| --- | --- | --- |
+| Trees in | a folder you pick | this browser's IndexedDB |
+| First run | Choose a folder, or open an existing `.familytree` | Import a file, or start empty |
+| Getting an existing tree in | **Settings → Open**, pick the folder | **Import**, pick a `tree.json` or an export |
+
+`data/tree.familytree/tree.json` can be imported into the browser directly — it
+is already the format Import expects. Photos will be missing, because the bytes
+live beside it as files; a full **Export** carries them base64-encoded.
+
 ## Scripts
 
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Web dev server on port 3022 |
-| `pnpm app` | Desktop app in a native window (starts `pnpm dev` for you) |
-| `pnpm build` | Production build of the web target |
+| `pnpm app` | Desktop app in a native window (starts the dev server for you) |
+| `pnpm build` | Static export of the web target, into `out/` |
 | `pnpm app:build` | Desktop `.dmg` |
 | `pnpm lint` | Biome check (lint + format + import order) |
 | `pnpm format` | Biome format, writing changes |
 | `pnpm photos` | Download photos from an export into `public/photos/`, rewrite the export to local paths |
 | `pnpm import` | One-way import of a `.ged` into the active tree |
+
+## Releasing
+
+Tagging is what ships a desktop build; `git push` alone ships nothing.
+
+```bash
+pnpm version patch && git push --follow-tags
+```
+
+`.github/workflows/release.yml` then builds on a macOS runner, signs the update
+artifacts and publishes a GitHub Release with the `.dmg`, the updater tarball and
+`latest.json`. Installed copies check that file on launch and offer the update.
+
+**Two secrets have to exist in the repo first** — Settings → Secrets and
+variables → Actions:
+
+| Secret | Value |
+| --- | --- |
+| `TAURI_SIGNING_PRIVATE_KEY` | the contents of `~/.tauri/family-tree.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | empty, unless the key was given one |
+
+The **public** half is baked into `src-tauri/tauri.conf.json`. Losing the private
+key means no shipped version can ever be updated again — back it up somewhere
+that is not this repo.
+
+Note the CLI wants the key *contents* in `TAURI_SIGNING_PRIVATE_KEY`;
+`TAURI_SIGNING_PRIVATE_KEY_PATH` is ignored and the build fails at the signing
+step having already produced an unsigned `.dmg`.
+
+The web target deploys itself from `netlify.toml` — `pnpm build` into `out/`,
+no functions, no server.
 
 ## Refreshing data from MyHeritage
 

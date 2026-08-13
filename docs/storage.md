@@ -15,24 +15,55 @@ letting you decide *where* on disk. A promise you can't verify the location of
 isn't much of a promise, so the location is now a choice, shown as an absolute
 path before anything is written.
 
-**The desktop app makes this structural rather than promised.** Shipped as a
-Tauri window there is no server to send anything to and no host to trust — the
-app opens your file directly and works with the network cable out. That is the
-point of the target; see [decisions.md](decisions.md#a-desktop-app-as-well-as-a-web-app).
+**Both targets make this structural rather than promised.** Neither has a
+server: the desktop app is a Tauri window that opens your file directly, and the
+web app is a static export whose storage is the visitor's own browser. Both work
+with the network cable out. See
+[decisions.md](decisions.md#a-desktop-app-as-well-as-a-web-app).
 
-## Where the data directory is
+## Where a tree actually lives
 
-Both targets keep the same layout; only the root differs, and the backend
-decides it.
+Two targets, two answers, and they share no storage at all.
 
-| Target | Data directory |
-| --- | --- |
-| Web / CLI scripts | `FAMILY_TREE_DATA_DIR`, else `<repo>/data` |
-| Desktop | `~/Library/Application Support/com.venelinnikolov.familytree` |
+| | Desktop | Web |
+| --- | --- | --- |
+| A tree is | a `.familytree` folder you chose | a record in this browser's IndexedDB |
+| The index is | `<data dir>/trees.json` | the records themselves |
+| Default data dir | `~/Library/Application Support/com.venelinnikolov.familytree` | n/a |
+| Photos | files inside the bundle | blobs in the same database |
+| Survives reinstalling the OS | if you backed the folder up | no |
+| Survives clearing site data | yes | **no** |
 
-An installed app has no repo to sit inside, which is why it cannot be `data/`.
-Either way this is only the *default* and the index — a tree itself may be
-anywhere, and paths outside the data directory are stored absolute.
+`FAMILY_TREE_DATA_DIR`, or `<repo>/data`, still applies to the CLI scripts — that
+is what `pnpm import` targets. An installed app has no repo to sit inside, which
+is why the desktop default cannot be `data/`. Either way that is only the
+*default*: a tree may be anywhere, and paths outside the data directory are
+stored absolute.
+
+**The web app never reads `data/`.** It cannot — a page has no filesystem. Getting
+an existing tree into it means importing a file; see below.
+
+### The browser is not a safe place for the only copy
+
+IndexedDB can be evicted under storage pressure and is deleted outright by
+"clear browsing data". `forgetTree` on the web genuinely deletes, unlike its file
+counterpart which leaves your folder alone. Onboarding says so on the last step,
+and Export sits before Forget in Settings for the same reason.
+
+## Moving a tree between them
+
+One JSON file, carrying the rows **and the photos**, base64-encoded under the
+same content-addressed names both stores use — so importing writes each blob back
+under the name the rows already point at, with no rewriting of references.
+
+- **Export** — desktop opens a native save dialog; the web downloads. A tree with
+  50 photos comes out around 15–20 MB, since base64 costs about a third on top.
+- **Import** — always creates a *new* tree, never overwrites. It is the one
+  operation that could destroy data nobody asked to lose, and "I have two now" is
+  far easier to recover from than "it replaced the wrong one".
+
+A zip would be tidier and is the seam to replace if these files get unwieldy;
+base64 was chosen because it needs no dependency and keeps the export one file.
 
 ## A tree is a folder
 
@@ -110,23 +141,42 @@ FAMILY_TREE_DATA_DIR=/Volumes/Vault/family-tree pnpm dev
 
 ## Onboarding
 
-`/welcome`, five steps, and **nothing is written until the last one** — a wizard
-that created the file on step one would litter half-configured trees every time
+`/welcome`, and **nothing is written until the last step** — a wizard that
+created the file on step one would litter half-configured trees every time
 somebody changed their mind.
 
 | Step | Asks | Where it goes |
 | --- | --- | --- |
 | Name | What to call the tree | `meta.name` |
-| Storage | Default location, or a path you type | the file itself |
-| Language & appearance | Locale and theme | the existing cookies |
-| Start | From you, or empty | whether step 5 appears |
+| Storage | Default location, or a folder you pick | the file itself — **desktop only** |
+| Language & appearance | Locale and theme | `localStorage` |
+| Start | From you, or empty | whether the last step appears |
 | About you | Name, sex, dates, birthplace | the first person, and `meta.rootPersonId` |
 
-The storage step resolves the path live through `previewStorageAction` and shows
-it before you commit, including for the default. If the path lands inside
+The storage step is **skipped on the web**, where there is nothing to choose: a
+browser tree goes in the browser. The start step says so there instead, together
+with the warning about clearing site data.
+
+On the desktop the step resolves the path live through `previewStorageAction`
+and shows it before you commit, including for the default. If it lands inside
 iCloud, Dropbox, OneDrive or similar, it says so. That is a **warning, not a
 block** — syncing is a reasonable backup — but "I didn't realise Documents was
 iCloud" is exactly how this data ends up somewhere it was never meant to go.
+
+**"Already have a tree?"** sits on the first step, and is the way in for anyone
+not starting from scratch: import a file on either target, or open a
+`.familytree` folder on the desktop. Both skip the rest of the wizard — a tree
+that exists already has a name, a location and a first person. Without it a
+fresh install was a dead end, since `/` redirects here and the only other route
+in was a `/settings` URL you had to know about.
+
+**The folder picker is a permissions mechanism, not a nicety.** Tauri's
+filesystem plugin denies any path outside a granted scope, and choosing through
+the native dialog is what grants it — for the fs *and* the asset protocol, which
+is what makes the photos loadable. A typed path is refused before the store ever
+sees it. `recursive: true` on that dialog matters too: without it the grant stops
+at the folder itself and every photo two levels down under `photos/8f/3a/` is
+denied.
 
 `/` redirects here when no tree is registered. With trees already registered
 `/welcome` redirects home unless `?new` is present, so a stale bookmark can't
@@ -140,13 +190,14 @@ first person instead of a chart.
 
 ## Switching trees
 
-The active tree is a **cookie**, read on the server — the same shape as the
-locale and the theme, and for a stronger version of the same reason. `lib/data.ts`
-loads the tree during the server render, so the choice has to arrive *with* the
-request; `localStorage` is only readable after the page has painted, which would
-mean rendering one family's chart and then swapping it for another's.
+The active tree is one id in `localStorage`. It was a cookie, because the tree
+was loaded during the *server* render and the choice had to arrive with the
+request — reading it after paint would have shown one family's chart and then
+swapped it for another's. With the store running in the browser on both targets
+that inversion is gone: nothing can render a chart before the client has read
+this, because the client is what reads the tree.
 
-The cookie holds an opaque id and nothing else — no names, no paths.
+It holds an opaque id and nothing else — no names, no paths.
 
 A stale cookie (the tree was removed, or this is a different browser) falls back
 to the first registered tree rather than erroring.
@@ -231,10 +282,26 @@ image data comes out byte-identical. AVIF is not accepted, because its metadata
 box isn't parsed yet and passing it through unread would be worse than
 refusing it.
 
-They are served by `app/photo/[tree]/[name]/route.ts`, not from `public/`. The
-route never receives a path: `name` has to match 64 hex characters and a known
-extension before anything is built from it, and it is resolved inside a
-directory the server picked from the tree id.
+**How they reach the page differs by target, and neither is a URL to a server** —
+there is no server. The store answers `photoSrc(entry)`:
+
+- **Desktop** — an absolute path rewritten by `convertFileSrc` onto Tauri's asset
+  protocol, which needs `assetProtocol.enable` *and* the path inside the granted
+  scope. Note that `assetProtocol.scope: []` means **deny everything**, not "no
+  restriction"; `$APPDATA/**` is granted statically and user-picked folders come
+  from the dialog.
+- **Web** — an object URL for a blob in IndexedDB, cached per entry. The graph is
+  re-read after every edit, so minting a fresh URL each time would leak one per
+  photo per keystroke. Caching is safe because the key is a content hash: the
+  same name can never mean different bytes.
+
+There used to be a route, `app/photo/[tree]/[name]/route.ts`. It went with the
+server. The check it did — 64 hex characters and a known extension before
+anything becomes a path — now lives in `isStoredPhoto`, and still runs.
+
+An entry the store cannot resolve is **dropped** rather than rendered as a broken
+image. A tree imported into the browser before photos travelled with exports is
+exactly that case.
 
 ## Backups
 

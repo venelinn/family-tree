@@ -50,8 +50,14 @@ already goes wherever it is pointed.
 
 ### The photos: make a tree one thing, not two
 
-This is the real architectural gap. Today the tree file follows the user
-anywhere and the photos stay in `public/photos/uploads/` on the app's own disk.
+**Done.** A tree is a `.familytree` folder holding `tree.json`, `photos/` and
+`backups/`, so it moves as one item; the browser target keeps the same
+content-addressed photos as blobs in IndexedDB. Neither serves them from
+`public/`, and neither has a server to serve them from. The reasoning below is
+kept because it is why the format looks the way it does.
+
+The gap as it stood: the tree file followed the user anywhere and the photos
+stayed in `public/photos/uploads/` on the app's own disk.
 [`lib/photos.ts`](../lib/photos.ts) documents this honestly, but it means:
 
 - a tree copied to another machine silently loses every uploaded photo,
