@@ -1,0 +1,226 @@
+---
+description: HTML element rules and component usage conventions for boats-web
+globs: "**/*.{tsx,jsx}"
+alwaysApply: false
+---
+
+# HTML & Component Rules
+
+> **The kit.** `Heading`, `Button`, `Panel`, `Accordion`, `Callout`,
+> `ChoiceList`, `RelationIcon`, and the form controls in `@/components/Forms`
+> (`Input`, `Textarea`, `Select`, `Checkbox`, `FormError`). All of the sections
+> below are binding except **Modal** — there is no `Modal` component yet, so use
+> a native `<dialog>` and build one the first time a second place needs it.
+
+## Headings
+
+- **Never use raw `<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>` elements** — always use the `<Heading>` component from `@/components/Heading`
+- Use `as` for the semantic HTML element and `size` for the visual size — **they are separate decisions**. The document outline is what a screen reader navigates by (one `<h1>`, no skipped levels); the visual scale is a design question and often disagrees
+- `Heading` has no `"use client"`, so it renders to HTML with no JavaScript when used from a server component
+
+```tsx
+import { Heading } from "@/components/Heading"
+
+// Page title
+<Heading as="h1" size="h2">Page Title</Heading>
+
+// Section headings
+<Heading as="h2" size="h3">Section Title</Heading>
+
+// Subsection headings
+<Heading as="h3" size="h4">Subsection Title</Heading>
+```
+
+### Heading Props Reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `as` | `"h1" \| "h2" \| "h3" \| "h4" \| "h5" \| "div"` | `"h2"` | Semantic HTML element |
+| `size` | `"hero" \| "h1" \| "h2" \| "h3" \| "h4" \| "h5" \| "base"` | `"h2"` | Visual size |
+| `className` | `string` | — | Additional CSS class |
+| `uppercase` | `boolean` | `false` | Uppercase text transform |
+| `center` | `boolean` | `false` | Center-aligned text |
+| `isHidden` | `boolean` | `false` | Visually hidden, still announced |
+| `id` | `string` | — | For `aria-labelledby` on the section it titles |
+
+## Buttons
+
+- **Never use raw `<button>` elements** — always use the `<Button>` component from `@/components/Button`
+- **The exception is a composite control**: one whose content is a layout rather than a label with an optional icon — a disclosure header (title + count + chevron), a list row that is itself a button (avatar + two lines + dates), a canvas affordance below the UI type scale. `Button` models a labelled action; forcing one of these through it means overriding its size, padding, radius, type *and* colour, which is everything the component contributes. Style those as a raw `<button>` in the owning component's module, and say in a comment why. Current examples: `PersonPanel`'s action row and menu items, `PersonCard`'s reveal bar, `AddSlotCard`
+- **`href` decides the element**: with it you get a `next/link` (prefetched, client-side navigation), without it a real `<button>`. Actions get buttons, destinations get links — never the reverse
+- **`icon` takes a node, not a name** — `icon={<Plus size={16} />}`. A string resolved through a registry cannot be tree-shaken, so it would pull the whole icon set into the bundle
+- **An icon-only button needs `aria-label`** — there is no text to announce
+- `Button` has no `"use client"`. Passing `onClick` is what puts it in a client bundle, and only for the component that passes one — a server component cannot pass a function at all, which TypeScript catches at compile time
+
+```tsx
+import { Plus, X } from "lucide-react"
+import { Button } from "@/components/Button"
+
+// Standard action button
+<Button label={t("submit")} variant="primary" onClick={handleSubmit} />
+
+// Button with icon
+<Button label={t("addPerson")} variant="secondary" icon={<Plus size={16} />} />
+
+// Link styled as button — renders next/link, no JavaScript from a server component
+<Button label={t("settings")} variant="ghost" href="/settings" />
+
+// Icon-only button
+<Button icon={<X size={16} />} aria-label={t("close")} variant="ghost" />
+```
+
+### Button Props Reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | `string` | — | Button text (omit for icon-only) |
+| `variant` | `"primary" \| "secondary" \| "ghost" \| "danger" \| "link"` | `"secondary"` | Visual variant |
+| `href` | `string` | — | Renders as `next/link` when provided |
+| `isExternal` | `boolean` | `false` | With `href`, renders a plain `<a target="_blank">` |
+| `type` | `"button" \| "submit" \| "reset"` | `"button"` | HTML button type |
+| `onClick` | `MouseEventHandler` | — | Client components only |
+| `icon` | `ReactNode` | — | Icon element, before the label by default |
+| `iconAfter` | `ReactNode` | — | Icon element, always after the label |
+| `iconPosition` | `"left" \| "right"` | `"left"` | Placement of `icon` |
+| `size` | `"sm" \| "md" \| "lg"` | `"md"` | Button size |
+| `outlined` | `boolean` | `false` | Drops the fill, promotes it to the border |
+| `full` | `boolean` | `false` | Fills the container width |
+| `disabled` | `boolean` | `false` | Disabled state |
+
+### Variant roles (this codebase)
+
+| Use | `variant` |
+|-----|-----------|
+| The main commit on a form or step — save, add, continue | `primary` |
+| A secondary action that still needs a visible control | `secondary` |
+| Cancel, back, dismiss, low-emphasis chrome | `ghost` |
+| Delete and other irreversible actions | `danger` |
+| Inline in a sentence, where a button would be too loud | `link` |
+
+`primary` is the app's one inverted surface — ink-on-page in light, page-on-ink
+in dark. It follows the theme automatically; do not restyle it per component.
+
+## Empty States
+
+There is no shared `EmptyState` component yet. The pattern to copy is
+`components/EmptyTree/EmptyTree.tsx`: a bordered card with an icon badge, a
+`<Heading>`, one line of help, and **one** `variant="primary"` action that is
+the single path forward — never a bare `<p>` saying "nothing here".
+
+- The action must be the thing that produces the missing data, not a link to
+  somewhere else to think about it.
+- Every string goes through `useTranslations()`, including the help line.
+- Build the shared component the second time this shape is needed.
+
+## Page Structure (`app/` files)
+
+- **Pages should only contain data fetching and wrapper `<div>` elements** — all UI must be delegated to components
+- Never put complex HTML structures (grids, lists, cards, forms) directly in page files
+- Pages fetch data, transform it, and pass it as props to components
+- Wrapper `<div>` elements for layout (e.g., applying a page-level CSS class) are acceptable
+
+```tsx
+// Good: page.tsx passes data to components
+export default async function BoatPage({ params }) {
+  const boat = await fetchBoat(params.id)
+  return (
+    <div className={styles.page}>
+      <BoatHeader name={boat.name} year={boat.year} />
+      <BoatSpecs specs={boat.specifications} />
+      <BoatAmenities specs={boat.specifications} />
+    </div>
+  )
+}
+
+// Bad: page.tsx contains inline HTML structure
+export default async function BoatPage({ params }) {
+  const boat = await fetchBoat(params.id)
+  return (
+    <div>
+      <div className={styles.header}>
+        <h1>{boat.name}</h1>
+        <div className={styles.specGrid}>
+          <div className={styles.spec}>
+            <span>{boat.specs.length}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+## Text & Translations
+
+- **Never hardcode user-facing text strings** — always use `useTranslations()` from `next-intl`
+- This applies to **all** visible text: labels, headings, placeholders, button text, tooltips, error messages, tab names, menu items, badges, and config arrays with display strings
+- When defining config objects/arrays with labels (e.g. tab configs, menu items, filter options), store only keys/IDs and resolve labels via `t()` at render time
+- All three locale files (`messages/en.json`, `messages/fr.json`, `messages/es.json`) must be updated when adding new keys
+
+```tsx
+import { useTranslations } from "next-intl"
+
+// Good: translated text
+const t = useTranslations("Booking")
+<Button label={t("submit")} variant="primary" />
+<Heading as="h2" size="h3">{t("title")}</Heading>
+<p>{t("description")}</p>
+<input placeholder={t("searchPlaceholder")} />
+
+// Bad: hardcoded strings
+<Button label="Submit" variant="primary" />
+<Heading as="h2" size="h3">Booking Details</Heading>
+<p>Select your preferred date</p>
+```
+
+- For strings with dynamic values, use ICU message format in the JSON files and pass parameters:
+
+```tsx
+// messages/en.json: { "Booking": { "pricePerDay": "From {price} per day" } }
+t("pricePerDay", { price: boat.price })
+```
+
+## Form Inputs
+
+- **Never use raw `<input>`, `<select>` or `<textarea>` elements** — use `Input`, `Select`, `Textarea` and `Checkbox` from `@/components/Forms`
+- All of them take a `label` prop; do not render a separate `<label>`. An `id` is generated if you don't pass one, so a form can render a list of fields without minting ids
+- `full` makes the field fill its container; `hint` adds a help line; `error` replaces the hint and marks the control `aria-invalid`
+- A **whole-form** failure — a write that came back with a reason — is `<FormError>`, not a per-field `error`
+- `Checkbox` nests its control inside the label on purpose: a checkbox label is the thing you click, so the two are one target
+- The one raw control still in use is `<input type="range">` in `Toolbar`; a slider has no shared component yet
+
+```tsx
+import { Input, Select } from "@/components/Forms"
+
+// Text input with label
+<Input label={t("nameLabel")} placeholder={t("namePlaceholder")} full />
+
+// With a help line, and the same field reporting a problem
+<Input label={t("pathLabel")} hint={t("pathHint")} value={path} onChange={handleChange} full />
+<Input label={t("pathLabel")} error={t("pathInvalid")} value={path} onChange={handleChange} full />
+
+// Select with label
+<Select label={t("categoryLabel")} value={category} onChange={handleChange} full>
+  <option value="a">Option A</option>
+  <option value="b">Option B</option>
+</Select>
+
+// Bad: raw elements and external labels
+<label htmlFor="name">Name</label>
+<input type="text" id="name" />
+
+<label htmlFor="category">Category</label>
+<select id="category">
+  <option value="a">Option A</option>
+</select>
+```
+
+## Semantic HTML
+
+- Use `<main>` for the primary content area (already in layout.tsx)
+- Use `<section>` for distinct content sections, prefer the `<Section>` component from `@/components/Section`
+- Use `<nav>` for navigation regions
+- Use `<Button>` for actions, `<Link>` for navigation — never the reverse
+- **Never wrap a block-level component with an inline element** like `<a>` or `<Link>` — if a card needs to be clickable, pass `link` as a prop instead of wrapping it
+- **Always use the `<Modal>` component from `@/components/Modal` for modals, overlays, and confirmation dialogs** — never build dialogs from `<div>` overlays with `onClick` handlers. `<Modal>` wraps the native `<dialog>` element and provides `showModal()`/`close()`, `::backdrop`, Escape key, and outside-click handling out of the box
+- All interactive elements must have accessible names (`aria-label`, visible text, or `aria-labelledby`)

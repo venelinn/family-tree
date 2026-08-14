@@ -1,0 +1,15 @@
+// Sass functions.
+//
+//   @use "styles/functions" as fn;
+//   .thing { padding: fn.rem(18px); }
+//
+// Prefer a `--spacing-*` token over a raw conversion. This is for the values a
+// design hands over in pixels that have no token — icon boxes, hairline offsets.
+
+@use "sass:math";
+
+$font-base: 16px;
+
+@function rem($size, $base: $font-base) {
+	@return math.div($size, $base) * 1rem;
+}

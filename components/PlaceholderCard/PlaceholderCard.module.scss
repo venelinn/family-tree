@@ -1,0 +1,19 @@
+@use "styles/functions" as fn;
+
+// An empty slot reads as an outline, not a card: dashed, unfilled, and quiet
+// enough that a chart full of them still shows the people first.
+.placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--_card-width);
+	height: var(--_card-height);
+	border: 2px dashed var(--outline);
+	border-radius: var(--border-radius-lg);
+	color: var(--on-surface-faint);
+	font-size: fn.rem(12px);
+
+	& &__handle {
+		opacity: 0;
+	}
+}

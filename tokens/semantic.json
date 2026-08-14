@@ -1,0 +1,41 @@
+{
+	"background": { "value": "{surface}" },
+	"on-background": { "value": "{on-surface}" },
+
+	"surface": { "value": "{color.slate-50}" },
+	"surface-dim": { "value": "{color.slate-100}" },
+	"surface-bright": { "value": "{color.white}" },
+	"surface-container-lowest": { "value": "{color.white}" },
+	"surface-container-low": { "value": "{color.white}" },
+	"surface-container": { "value": "{color.white}" },
+	"surface-container-high": { "value": "{color.slate-50}" },
+	"surface-container-highest": { "value": "{color.slate-100}" },
+	"surface-veil": {
+		"value": "color-mix(in srgb, {color.white} 95%, transparent)",
+		"comment": "Translucent panel — sticky headers over scrolling content"
+	},
+
+	"on-surface": { "value": "{color.slate-900}" },
+	"on-surface-soft": { "value": "{color.slate-700}" },
+	"on-surface-variant": { "value": "{color.slate-500}" },
+	"on-surface-faint": { "value": "{color.slate-400}" },
+	"on-surface-ghost": { "value": "{color.slate-300}" },
+
+	"outline-subtle": { "value": "{color.slate-100}" },
+	"outline-variant": { "value": "{color.slate-200}" },
+	"outline": { "value": "{color.slate-300}" },
+
+	"primary": { "value": "{color.slate-900}" },
+	"primary-hover": { "value": "{color.slate-700}" },
+	"on-primary": { "value": "{color.white}" },
+	"primary-container": { "value": "{color.slate-100}" },
+	"on-primary-container": { "value": "{color.slate-900}" },
+
+	"inverse-surface": { "value": "{primary}" },
+	"inverse-on-surface": { "value": "{on-primary}" },
+
+	"error": { "value": "{color.rose-600}" },
+	"on-error": { "value": "{color.white}" },
+	"error-container": { "value": "{color.rose-50}" },
+	"on-error-container": { "value": "{color.rose-700}" }
+}

@@ -1,0 +1,67 @@
+---
+description: React component patterns and file organization for boats-web
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Component Patterns
+
+## File Organization
+
+- **Every component must live in its own folder** — never place loose `.tsx` / `.module.scss` files directly inside a parent folder
+- Each folder has an `index.ts` that exports everything from that folder
+- For grouped components (e.g., `BoatDetails/`), each sub-component gets its own folder inside the group, and the group has a top-level `index.ts` that re-exports all sub-components
+
+```
+components/
+  ComponentName/
+    ComponentName.tsx            # Main component
+    ComponentName.module.scss    # Styles
+    ComponentName.stories.tsx    # Storybook stories
+    ComponentNameConnector.tsx   # Server/data wrapper (optional)
+    index.ts                     # export { ComponentName } from "./ComponentName"
+
+  GroupName/                     # Grouped components (e.g., BoatDetails)
+    SubComponent/
+      SubComponent.tsx
+      SubComponent.module.scss
+      SubComponent.stories.tsx
+      index.ts
+    AnotherComponent/
+      AnotherComponent.tsx
+      AnotherComponent.module.scss
+      index.ts
+    index.ts                     # Re-exports all sub-components
+```
+
+## Client vs Server
+
+- Add `"use client"` only when the component uses hooks, event handlers, or browser APIs
+- Connectors that fetch Contentful data are server components (no `"use client"`)
+- Page components in `app/[lang]/` are server components by default
+
+## Props & Types
+
+- Define props as `type` (not `interface`) unless extending
+- Colocate types with the component, or in a shared `types/` file if reused
+- Use `Record<string, unknown>` instead of `any` where possible
+
+## Hooks
+
+- `useWindowSize()` — returns `{ windowSize, isMobile, isDesktop }` (breakpoint: 800px)
+- `useAuth()` — returns `{ isAuthenticated, isLoading, user, signOut }`
+- `useNavigationContext()` — returns `{ isOpen, toggle, ref, setRef, fixed, sticky, stuck }`
+
+## i18n
+
+- Use `useTranslations("Namespace")` for scoped translations
+- Namespace matches JSON key: `"Search"`, `"Navigation"`, `"Gallery"`, `"Calendar"`
+- Root-level keys accessed with `useTranslations()` (no namespace): `"filters"`, `"quickFilters"`, `"map"`
+- Always update all three locale files: `messages/en.json`, `messages/fr.json`, `messages/es.json`
+
+## Common Mistakes to Avoid
+
+- Don't put `isOpen` in useEffect dependency arrays that close menus (creates open→close loops)
+- Don't use `em` for icon sizes (parent-dependent) — use `rem` or px numbers
+- Don't conditionally render based on `typeof window` (causes hydration mismatches)
+- Don't use `useId()` for elements that render in both server and client (use stable string IDs)

@@ -1,0 +1,141 @@
+// The reset, replacing Tailwind's preflight.
+//
+// Tailwind is here for its utilities only — `theme.css` + `utilities.css`, the
+// same integration bgmtl uses, with no preflight — so the base styling browsers
+// apply has to be dealt with here instead. It lives in the `reset` layer, so any
+// component rule outranks it without needing specificity.
+//
+// Deliberately smaller than preflight: this app has no long-form prose, and
+// every list, heading and control it renders is styled by a component.
+
+@mixin styles {
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+
+	// Margins are the layout's business — a grid `gap` or an explicit rule —
+	// never the element's. Without this every `<p>` in a panel would push its
+	// neighbours apart by a font-size the component never asked for.
+	body,
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6,
+	p,
+	figure,
+	blockquote,
+	dl,
+	dd {
+		margin: 0;
+	}
+
+	// Every list in this app is a styled list: rows of relatives, search results,
+	// settings choices. A bullet would be a bug in all of them.
+	ul,
+	ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	// Controls do not inherit the page font on their own, which is why an
+	// unstyled `<button>` renders in the system UI face.
+	button,
+	input,
+	optgroup,
+	select,
+	textarea {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		letter-spacing: inherit;
+	}
+
+	button {
+		cursor: pointer;
+	}
+
+	button:disabled {
+		cursor: default;
+	}
+
+	// iOS renders an unstyled control with its own chrome and refuses a
+	// background until it is told the element is a button. Paired with the
+	// transparent background above, this is what preflight does too.
+	button,
+	[type="button"],
+	[type="reset"],
+	[type="submit"] {
+		-webkit-appearance: button;
+		appearance: button;
+		background-color: transparent;
+		background-image: none;
+	}
+
+	// A replaced element is a block in every layout this app builds; leaving it
+	// inline adds the descender gap under every avatar.
+	img,
+	svg,
+	video,
+	canvas {
+		display: block;
+	}
+
+	// `max-width` is for `img` and `video` only, exactly as preflight has it —
+	// **never `svg`**. React Flow draws each edge as its own `<svg>` inside a
+	// zero-width absolutely-positioned container and relies on `overflow:
+	// visible` to paint outside it. `max-width: 100%` resolves to `0` there, and
+	// a zero width disables rendering of an `<svg>` outright, so every line
+	// between two people silently disappears.
+	img,
+	video {
+		max-width: 100%;
+		height: auto;
+	}
+
+	a {
+		color: inherit;
+		text-decoration: inherit;
+	}
+
+	// `<code>` for file paths. The family is named so the monospace token
+	// applies, since the browser default would be its own stack at 0.8em.
+	code,
+	kbd,
+	samp,
+	pre {
+		font-family: var(--font-family-mono);
+		font-size: 1em;
+	}
+
+	table {
+		border-collapse: collapse;
+		border-color: inherit;
+	}
+
+	hr {
+		height: 0;
+		border: 0;
+		border-top: 1px solid;
+		color: inherit;
+	}
+
+	// Long words — a place name, an id — should wrap rather than widen a panel.
+	body {
+		overflow-wrap: break-word;
+	}
+
+	// Not `!important`, unlike preflight's: an important declaration in a layer
+	// outranks every later layer, which is exactly the trap the layer order
+	// exists to avoid. See `rules/css-styling.mdc`.
+	[hidden] {
+		display: none;
+	}
+}

@@ -1,0 +1,195 @@
+{
+	"font": {
+		"family": {
+			"heading": {
+				"value": "inherit",
+				"comment": "Headings share the body face. next/font puts it on <body> via a class, so inheriting is how it reaches them."
+			},
+			"body": {
+				"value": "inherit"
+			},
+			"mono": {
+				"value": "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
+				"comment": "No webfont: paths and hashes need to line up, not to be branded, and the system stack is already the right shape on every OS."
+			}
+		},
+		"size": {
+			"base": {
+				"value": "16px"
+			}
+		},
+		"weight": {
+			"light": {
+				"value": 300
+			},
+			"normal": {
+				"value": 400
+			},
+			"medium": {
+				"value": 500
+			},
+			"semibold": {
+				"value": 600
+			},
+			"bold": {
+				"value": 700
+			},
+			"extrabold": {
+				"value": 800
+			},
+			"base": {
+				"value": "{font.weight.normal}"
+			}
+		}
+	},
+	"heading": {
+		"margin": {
+			"top": {
+				"value": "0"
+			},
+			"bottom": {
+				"value": "0",
+				"comment": "Spacing below a heading belongs to the layout that owns it — a grid gap or the next element's margin — not to the heading. Opt in per component with --heading-bottom."
+			}
+		},
+		"size": {
+			"hero": {
+				"font-size": {
+					"value": "36px"
+				},
+				"line-height": {
+					"value": "44px"
+				},
+				"font-weight": {
+					"value": "{font.weight.bold}"
+				}
+			},
+			"h1": {
+				"font-size": {
+					"value": "30px"
+				},
+				"line-height": {
+					"value": "38px"
+				},
+				"font-weight": {
+					"value": "{font.weight.bold}"
+				}
+			},
+			"h2": {
+				"font-size": {
+					"value": "24px"
+				},
+				"line-height": {
+					"value": "32px"
+				},
+				"font-weight": {
+					"value": "{font.weight.semibold}"
+				}
+			},
+			"h3": {
+				"font-size": {
+					"value": "20px"
+				},
+				"line-height": {
+					"value": "28px"
+				},
+				"font-weight": {
+					"value": "{font.weight.semibold}"
+				}
+			},
+			"h4": {
+				"font-size": {
+					"value": "17px"
+				},
+				"line-height": {
+					"value": "24px"
+				},
+				"font-weight": {
+					"value": "{font.weight.semibold}"
+				}
+			},
+			"h5": {
+				"font-size": {
+					"value": "15px"
+				},
+				"line-height": {
+					"value": "22px"
+				},
+				"font-weight": {
+					"value": "{font.weight.semibold}"
+				}
+			}
+		}
+	},
+	"ui": {
+		"body": {
+			"font-size": {
+				"value": "16px"
+			},
+			"line-height": {
+				"value": "24px"
+			},
+			"font-weight": {
+				"value": "{font.weight.normal}"
+			}
+		},
+		"caption": {
+			"font-size": {
+				"value": "14px"
+			},
+			"line-height": {
+				"value": "20px"
+			},
+			"font-weight": {
+				"value": "{font.weight.normal}"
+			},
+			"font-style": {
+				"value": "normal"
+			}
+		},
+		"small": {
+			"font-size": {
+				"value": "12px"
+			},
+			"line-height": {
+				"value": "16px"
+			},
+			"font-weight": {
+				"value": "{font.weight.normal}"
+			},
+			"font-style": {
+				"value": "normal"
+			}
+		}
+	},
+	"body": {
+		"font": {
+			"size": {
+				"value": "{font.size.base}"
+			},
+			"weight": {
+				"value": "{font.weight.base}"
+			},
+			"line-height": {
+				"value": "1.5"
+			},
+			"letter-spacing": {
+				"value": "normal"
+			}
+		}
+	},
+	"paragraph": {
+		"margin": {
+			"bottom": {
+				"value": "1rem"
+			}
+		}
+	},
+	"label": {
+		"margin": {
+			"bottom": {
+				"value": "0.5rem"
+			}
+		}
+	}
+}

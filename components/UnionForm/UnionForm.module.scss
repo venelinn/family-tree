@@ -1,0 +1,41 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.unionForm {
+	@include shared.form-panel;
+
+	&__spouses {
+		@include shared.resetList;
+		display: grid;
+		gap: var(--spacing-1-5);
+	}
+
+	&__spouse {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-2-5);
+	}
+
+	&__name {
+		@include typo.ui-caption;
+		@include shared.ellipsis;
+		color: var(--on-surface-soft);
+	}
+
+	// Sits directly under the checkbox it explains, so it loses the gap the grid
+	// would otherwise give it.
+	&__hint {
+		@include shared.field-hint;
+		margin-top: calc(var(--spacing-2) * -1);
+	}
+
+	&__actions {
+		display: flex;
+		gap: var(--spacing-2);
+		margin-top: var(--spacing-1);
+	}
+
+	&__submit {
+		flex: 1;
+	}
+}

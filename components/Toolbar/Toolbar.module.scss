@@ -1,0 +1,91 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.toolbar {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: var(--spacing-4);
+	padding: var(--spacing-3) var(--spacing-5);
+	border-bottom: 1px solid var(--outline-variant);
+	background-color: var(--surface-container);
+
+	// The title block is the one thing allowed to shrink — everything to its
+	// right is a control at its natural size. Without `min-width: 0` a long name
+	// pushes the controls off the edge instead of ellipsing.
+	&__identity {
+		min-width: 0;
+	}
+
+	&__title {
+		@include shared.ellipsis;
+	}
+
+	&__meta {
+		@include typo.ui-small;
+		@include shared.ellipsis;
+		color: var(--on-surface-faint);
+	}
+
+	&__separator {
+		margin-inline: var(--spacing-1-5);
+		color: var(--on-surface-ghost);
+	}
+
+	&__controls {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-3);
+		margin-left: auto;
+	}
+
+	&__depth {
+		@include typo.ui-small;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-2);
+		color: var(--on-surface-variant);
+	}
+
+	&__slider {
+		width: 6rem;
+		// The native control, themed. `color-scheme` in `_theme-dark.scss` handles
+		// the track; this is the thumb and the filled portion.
+		accent-color: var(--primary);
+	}
+
+	// Fixed width so the number changing from 1 to 4 doesn't shuffle the row.
+	&__depthValue {
+		@include typo.tabular;
+		width: var(--spacing-3);
+	}
+
+	// Segmented control: one track, the pressed segment lifted out of it.
+	&__views {
+		display: flex;
+		gap: var(--spacing-0-5);
+		padding: var(--spacing-0-5);
+		border-radius: var(--border-radius);
+		background-color: var(--surface-container-highest);
+	}
+
+	// Scoped by an ancestor so these beat `Button`'s own `.btn--*` rules whatever
+	// order the two module stylesheets land in. Only `--_btn-*` variables are
+	// reassigned — the properties themselves stay declared once, in `Button`.
+	//
+	// The header is a row of controls that have to line up: `Button`'s default
+	// `md` padding is 8px, and the search input next to it is 6px. Two pixels is
+	// invisible on its own and obvious in a row.
+	&__controls &__control {
+		--_btn-padding: var(--spacing-1-5) var(--spacing-3);
+	}
+
+	&__views &__view {
+		--_btn-border: transparent;
+		--_btn-radius: var(--border-radius-sm);
+
+		&[aria-pressed="true"] {
+			box-shadow: 0 1px 2px var(--box-shadow-color);
+		}
+	}
+}

@@ -1,0 +1,44 @@
+@use "styles/mixins" as shared;
+
+.select {
+	display: inline-grid;
+	gap: var(--spacing-1);
+	width: var(--_field-width, auto);
+
+	&--full {
+		--_field-width: 100%;
+	}
+
+	&__label {
+		@include shared.field-label;
+	}
+
+	&__control {
+		@include shared.field-control;
+		// The native arrow can't be recoloured, so it is replaced by one drawn in
+		// `currentcolor` — which means it follows the theme like everything else.
+		// `url()` with a data URI, not an external file: an inline SVG survives the
+		// artifact CSP and costs no request.
+		padding-right: var(--spacing-8);
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right var(--spacing-2) center;
+		background-size: 1.15rem;
+		-webkit-appearance: none;
+		appearance: none;
+		cursor: pointer;
+	}
+
+	&__hint {
+		@include shared.field-hint;
+		margin-top: 0;
+	}
+
+	&__error {
+		@include shared.field-error;
+	}
+
+	&--invalid {
+		--_field-border: var(--error);
+	}
+}

@@ -1,0 +1,41 @@
+@use "styles/typo-mixins" as typo;
+
+// The tree's file is named in the registry but isn't on disk — moved, renamed,
+// or on a drive that isn't plugged in. The path is shown because it is the only
+// thing that lets the user work out which.
+.missing {
+	display: grid;
+	place-items: center;
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding-inline: var(--spacing-6);
+	background-color: var(--background);
+
+	&__card {
+		display: grid;
+		justify-items: center;
+		gap: var(--spacing-3);
+		max-width: 28rem;
+		padding: var(--spacing-8) var(--spacing-6);
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius-xl);
+		background-color: var(--surface-container);
+		text-align: center;
+	}
+
+	&__message {
+		@include typo.ui-body;
+		color: var(--on-surface);
+	}
+
+	&__path {
+		@include typo.ui-small;
+		padding: var(--spacing-2) var(--spacing-3);
+		border-radius: var(--border-radius);
+		background-color: var(--surface-container-highest);
+		color: var(--on-surface-soft);
+		font-family: var(--font-family-mono);
+		// A file path has no spaces to break at, and must not run off the card.
+		word-break: break-all;
+	}
+}

@@ -1,0 +1,230 @@
+@use "styles/functions" as fn;
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.trees {
+	display: grid;
+	gap: var(--spacing-4);
+
+	&__list {
+		@include shared.resetList;
+		overflow: hidden;
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius);
+	}
+
+	&__item + &__item {
+		border-top: 1px solid var(--outline-subtle);
+	}
+
+	&__item[aria-current="true"] {
+		background-color: var(--root-soft);
+	}
+
+	&__row {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-3);
+		padding: var(--spacing-3) var(--spacing-4);
+	}
+
+	&__choose {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		flex-direction: column;
+		align-items: start;
+		gap: var(--spacing-0-5);
+		text-align: left;
+		cursor: pointer;
+
+		// Already the active tree, or missing from disk: nothing to click.
+		&:disabled {
+			cursor: default;
+		}
+	}
+
+	&__name {
+		@include typo.ui-caption;
+		color: var(--on-surface-soft);
+		font-weight: var(--font-weight-medium);
+	}
+
+	&__meta {
+		@include typo.ui-small;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-1-5);
+		color: var(--on-surface-faint);
+	}
+
+	// The path is the answer to "so where did it actually go?", which is the next
+	// question after choosing a location during onboarding.
+	&__path {
+		@include shared.ellipsis;
+		display: block;
+		max-width: 100%;
+		margin-top: var(--spacing-1);
+		color: var(--on-surface-ghost);
+		font-family: var(--font-family-mono);
+		font-size: fn.rem(11px);
+	}
+
+	&__check {
+		width: var(--spacing-4);
+		height: var(--spacing-4);
+		flex: 0 0 auto;
+		color: var(--root-ink);
+	}
+
+	&__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-3);
+		padding: 0 var(--spacing-4) var(--spacing-3);
+	}
+
+	// Text actions, not buttons: three bordered controls per row would outweigh
+	// the tree they belong to.
+	&__actions &__action {
+		--_btn-padding: 0;
+		--_btn-color: var(--on-surface-variant);
+
+		@include typo.ui-small;
+		font-weight: var(--font-weight-medium);
+
+		&:hover:not(:disabled) {
+			--_btn-bg: transparent;
+			--_btn-color: var(--_action-hover, var(--on-surface));
+		}
+
+		&[data-action="forget"] {
+			--_action-hover: var(--error);
+		}
+	}
+
+	&__drawer {
+		display: grid;
+		gap: var(--spacing-2);
+		padding: var(--spacing-3) var(--spacing-4);
+		border-top: 1px solid var(--outline-subtle);
+		background-color: var(--surface-container-high);
+	}
+
+	&__drawerText {
+		@include typo.ui-small;
+		color: var(--on-surface-variant);
+		line-height: 1.6;
+	}
+
+	&__convert {
+		justify-self: start;
+	}
+
+	&__editRow {
+		display: flex;
+		gap: var(--spacing-2);
+	}
+
+	&__editField {
+		flex: 1;
+	}
+
+	// A path is monospaced wherever it appears, including while being edited.
+	&__editField[data-field="path"] input {
+		font-family: var(--font-family-mono);
+		font-size: var(--ui-small-font-size);
+	}
+
+	&__done {
+		display: grid;
+		gap: var(--spacing-1-5);
+		padding: var(--spacing-2-5) var(--spacing-3);
+		border-radius: var(--border-radius);
+		background-color: var(--root-soft);
+	}
+
+	&__doneTitle {
+		@include typo.ui-caption;
+		color: var(--on-surface-soft);
+	}
+
+	&__doneNote {
+		@include typo.ui-small;
+		color: var(--on-surface-variant);
+	}
+
+	// Dashed: a tree that isn't registered yet.
+	&__adopt {
+		display: grid;
+		gap: var(--spacing-2);
+		padding: var(--spacing-4);
+		border: 1px dashed var(--outline-variant);
+		border-radius: var(--border-radius);
+	}
+
+	&__adoptTitle {
+		@include shared.field-label;
+	}
+
+	&__adoptHelp {
+		@include typo.ui-small;
+		color: var(--on-surface-variant);
+	}
+
+	&__adoptRow {
+		display: flex;
+		gap: var(--spacing-2);
+		margin-top: var(--spacing-1);
+	}
+
+	&__adoptField {
+		flex: 1;
+
+		input {
+			font-family: var(--font-family-mono);
+			font-size: var(--ui-small-font-size);
+		}
+	}
+
+	&__new {
+		justify-content: center;
+	}
+}
+
+/**
+ * The import control is a `<label>` wrapping a hidden `<input type="file">`,
+ * because a file picker cannot be opened programmatically without a real input
+ * — and a label is the one element that forwards a click to one. Styled to match
+ * `Button`'s secondary variant rather than reusing it, since `Button` renders a
+ * `<button>` and nesting an input inside one is invalid.
+ */
+.trees__import {
+	@include typo.ui-body;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--spacing-2);
+	padding: var(--spacing-2) var(--spacing-3);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--border-radius);
+	background: var(--surface-container);
+	color: var(--on-surface);
+	cursor: pointer;
+
+	&:hover {
+		background: var(--surface-container-highest);
+	}
+
+	input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	&:focus-within {
+		outline: 2px solid var(--outline);
+		outline-offset: 2px;
+	}
+}

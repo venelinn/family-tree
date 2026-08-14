@@ -1,0 +1,433 @@
+@use "styles/functions" as fn;
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+// The side panel: everything known about one person, in one scrolling column.
+.panel {
+	display: flex;
+	width: 20rem;
+	flex-shrink: 0;
+	flex-direction: column;
+	overflow-y: auto;
+	border-left: 1px solid var(--outline-variant);
+	background-color: var(--surface-container);
+
+	// Nobody selected. Same width as the full panel so the chart doesn't resize
+	// when a card is clicked.
+	&--empty {
+		@include typo.ui-caption;
+		align-items: center;
+		justify-content: center;
+		padding: var(--spacing-6);
+		color: var(--on-surface-faint);
+		text-align: center;
+	}
+
+	&__header {
+		padding: var(--spacing-5) var(--spacing-5) var(--spacing-4);
+	}
+
+	&__identity {
+		display: flex;
+		align-items: start;
+		gap: var(--spacing-3);
+	}
+
+	&__names {
+		min-width: 0;
+		flex: 1;
+	}
+
+	&__lifespan {
+		@include typo.ui-caption;
+		margin-top: var(--spacing-1);
+		color: var(--on-surface-variant);
+	}
+
+	&__married {
+		@include typo.ui-small;
+		margin-top: var(--spacing-0-5);
+		color: var(--on-surface-variant);
+	}
+
+	&__place {
+		@include typo.ui-small;
+		margin-top: var(--spacing-0-5);
+		color: var(--on-surface-faint);
+	}
+
+	&__error {
+		margin-top: var(--spacing-3);
+	}
+
+	// ── The action row ──────────────────────────────────────────────────────
+	// One row for everything you can do to this person, rather than a banner, a
+	// button pair and an accordion scattered down the panel.
+	&__actions {
+		position: relative;
+		display: flex;
+		align-items: start;
+		gap: var(--spacing-1);
+		margin-top: var(--spacing-4);
+	}
+
+	// A composite control — a circular icon over its own label — so it is a raw
+	// `<button>` styled here rather than a `Button`. See `rules/html-rules.mdc`.
+	&__action {
+		--_action-border: var(--outline-variant);
+		--_action-bg: var(--surface-container-high);
+		--_action-color: var(--on-surface-soft);
+
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-1);
+		cursor: pointer;
+
+		&:hover:not(:disabled) {
+			--_action-border: var(--outline);
+			--_action-bg: var(--surface-container-highest);
+			--_action-color: var(--on-surface);
+		}
+
+		&:disabled {
+			opacity: 0.4;
+			cursor: not-allowed;
+		}
+
+		// The one the chart is already centred on: marked as the current state,
+		// not offered as an action.
+		&[aria-current="true"] {
+			--_action-border: var(--root-line);
+			--_action-bg: var(--root-soft);
+			--_action-color: var(--root-ink);
+
+			opacity: 1;
+		}
+
+		&:focus-visible {
+			outline: none;
+
+			.panel__actionIcon {
+				@include shared.focus-ring;
+			}
+		}
+	}
+
+	&__actionIcon {
+		display: flex;
+		width: var(--spacing-10);
+		height: var(--spacing-10);
+		align-items: center;
+		justify-content: center;
+		border: 1px solid var(--_action-border);
+		border-radius: 50%;
+		background-color: var(--_action-bg);
+		color: var(--_action-color);
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				background-color var(--animation-duration-fast) ease,
+				border-color var(--animation-duration-fast) ease,
+				color var(--animation-duration-fast) ease;
+		}
+	}
+
+	&__actionLabel {
+		color: var(--on-surface-variant);
+		font-size: fn.rem(10px);
+		font-weight: var(--font-weight-medium);
+	}
+
+	// ── The overflow menu ───────────────────────────────────────────────────
+	// A full-viewport backdrop so a click anywhere else closes the menu. It is a
+	// button so Escape and the keyboard reach it too.
+	&__backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 10;
+		cursor: default;
+	}
+
+	&__menu {
+		position: absolute;
+		top: var(--spacing-12);
+		right: 0;
+		z-index: 20;
+		width: 14rem;
+		padding-block: var(--spacing-1);
+		overflow: hidden;
+		border: 1px solid var(--outline-variant);
+		border-radius: var(--border-radius);
+		background-color: var(--surface-container);
+		box-shadow: var(--box-shadow-base);
+	}
+
+	&__menuItem {
+		@include typo.ui-caption;
+		display: block;
+		width: 100%;
+		padding: var(--spacing-2) var(--spacing-3);
+		color: var(--_menu-item-color, var(--on-surface-soft));
+		text-align: left;
+		cursor: pointer;
+
+		&:hover,
+		&:focus-visible {
+			background-color: var(--surface-container-high);
+		}
+
+		&[data-danger="true"] {
+			--_menu-item-color: var(--error);
+		}
+	}
+
+	&__menuLine {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-2);
+	}
+
+	&__menuDivider {
+		margin-block: var(--spacing-1);
+		border: 0;
+		border-top: 1px solid var(--outline-subtle);
+	}
+
+	&__empty {
+		@include typo.ui-caption;
+		color: var(--on-surface-faint);
+	}
+}
+
+// The one thing the panel styles inside an `Accordion`.
+.note {
+	@include typo.ui-caption;
+	color: var(--on-surface-soft);
+	line-height: 1.6;
+	// So the paragraph breaks the parser turned MyHeritage's HTML into survive to
+	// the screen.
+	white-space: pre-line;
+}
+
+// ── The facts timeline ──────────────────────────────────────────────────────
+.facts {
+	@include shared.resetList;
+	display: grid;
+	gap: var(--spacing-3);
+}
+
+.fact {
+	--_fact-edit-opacity: 0;
+
+	display: flex;
+	gap: var(--spacing-3);
+
+	&:hover,
+	&:focus-within {
+		--_fact-edit-opacity: 1;
+	}
+
+	&__when {
+		width: fn.rem(44px);
+		flex-shrink: 0;
+		padding-top: var(--spacing-0-5);
+		text-align: right;
+	}
+
+	&__year {
+		@include typo.ui-caption;
+		@include typo.tabular;
+		color: var(--on-surface-soft);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	&__age {
+		color: var(--on-surface-faint);
+		font-size: fn.rem(10px);
+	}
+
+	// The rule down the left is the timeline itself.
+	&__body {
+		min-width: 0;
+		flex: 1;
+		padding-left: var(--spacing-3);
+		border-left: 1px solid var(--outline-subtle);
+	}
+
+	&__head {
+		display: flex;
+		align-items: start;
+		gap: var(--spacing-1-5);
+	}
+
+	&__title {
+		@include typo.ui-caption;
+		min-width: 0;
+		flex: 1;
+		color: var(--on-surface);
+		font-weight: var(--font-weight-medium);
+	}
+
+	// Only marriages carry a union id, and a marriage is the one fact here that
+	// isn't derived from somebody's dates — so it is the only one editable in
+	// place.
+	.fact &__edit {
+		--_btn-size: 1.5rem;
+		--_btn-color: var(--on-surface-ghost);
+		--_btn-opacity: var(--_fact-edit-opacity);
+		--_btn-radius: var(--border-radius-sm);
+
+		margin-right: calc(var(--spacing-1) * -1);
+		flex: 0 0 auto;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: opacity var(--animation-duration-fast) ease;
+		}
+
+		&:focus-visible {
+			--_btn-opacity: 1;
+		}
+	}
+
+	&__related {
+		@include typo.ui-small;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-1-5);
+		margin-top: var(--spacing-1);
+		padding: var(--spacing-0-5) var(--spacing-1);
+		border-radius: var(--border-radius-sm);
+		color: var(--on-surface-soft);
+		cursor: pointer;
+
+		&:hover {
+			background-color: var(--surface-container-highest);
+		}
+	}
+
+	&__relatedName {
+		@include shared.ellipsis;
+	}
+
+	&__date {
+		@include typo.ui-small;
+		margin-top: var(--spacing-0-5);
+		color: var(--on-surface-variant);
+	}
+
+	&__place {
+		@include typo.ui-small;
+		display: flex;
+		align-items: start;
+		gap: var(--spacing-1);
+		margin-top: var(--spacing-0-5);
+		color: var(--on-surface-faint);
+	}
+
+	&__pin {
+		margin-top: var(--spacing-0-5);
+		flex: 0 0 auto;
+	}
+}
+
+// ── Immediate family ────────────────────────────────────────────────────────
+.relatives {
+	@include shared.resetList;
+	display: grid;
+	gap: var(--spacing-0-5);
+}
+
+.relative {
+	--_unlink-opacity: 0;
+
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-1);
+
+	&:hover,
+	&:focus-within {
+		--_unlink-opacity: 1;
+	}
+
+	&__link {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		align-items: center;
+		gap: var(--spacing-2-5);
+		padding: var(--spacing-1-5) var(--spacing-2);
+		border-radius: var(--border-radius);
+		text-align: left;
+		cursor: pointer;
+
+		&:hover {
+			background-color: var(--surface-container-highest);
+		}
+	}
+
+	&__names {
+		min-width: 0;
+		flex: 1;
+	}
+
+	&__name {
+		@include typo.ui-caption;
+		@include shared.ellipsis;
+		display: block;
+		color: var(--on-surface);
+		font-weight: var(--font-weight-medium);
+	}
+
+	&__relation {
+		@include typo.ui-small;
+		display: block;
+		color: var(--on-surface-variant);
+	}
+
+	&__years {
+		@include typo.ui-small;
+		display: block;
+		color: var(--on-surface-faint);
+	}
+
+	&__confirm {
+		display: flex;
+		flex-shrink: 0;
+		align-items: center;
+		gap: var(--spacing-1);
+	}
+
+	// Two clicks, deliberately. Breaking a link is not destructive — both people
+	// stay — but it is invisible once done, and an accidental detach on a
+	// 253-person tree could go unnoticed for a long time.
+	.relative &__unlink {
+		--_btn-size: 1.75rem;
+		--_btn-color: var(--on-surface-ghost);
+		--_btn-opacity: var(--_unlink-opacity);
+		--_btn-radius: var(--border-radius-sm);
+
+		flex: 0 0 auto;
+
+		&:hover:not(:disabled) {
+			--_btn-bg: var(--surface-container-highest);
+			--_btn-color: var(--error);
+		}
+
+		&:focus-visible {
+			--_btn-opacity: 1;
+		}
+	}
+
+	.relative &__cancel {
+		--_btn-size: 1.5rem;
+		--_btn-color: var(--on-surface-faint);
+		--_btn-radius: var(--border-radius-sm);
+	}
+
+	.relative &__yes {
+		--_btn-padding: var(--spacing-1) var(--spacing-2);
+		--_btn-radius: var(--border-radius-sm);
+	}
+}

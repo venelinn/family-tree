@@ -1,0 +1,28 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.checkbox {
+	@include typo.ui-caption;
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-2);
+	color: var(--on-surface-soft);
+	cursor: pointer;
+
+	&__control {
+		// The native box, themed rather than rebuilt: `accent-color` plus the
+		// `color-scheme` set in `_theme-dark.scss` is the whole of it, and a
+		// hand-drawn checkbox loses the platform's own focus and touch behaviour.
+		flex: 0 0 auto;
+		accent-color: var(--primary);
+
+		&:focus-visible {
+			@include shared.focus-ring;
+		}
+	}
+
+	&:has(&__control:disabled) {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+}

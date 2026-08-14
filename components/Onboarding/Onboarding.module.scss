@@ -1,0 +1,54 @@
+.onboarding {
+	display: flex;
+	min-height: 100vh;
+	min-height: 100dvh;
+	flex-direction: column;
+	background-color: var(--background);
+
+	&__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--spacing-4) var(--spacing-6);
+	}
+
+	&__brand {
+		color: var(--on-surface-faint);
+		font-size: var(--ui-caption-font-size);
+		font-weight: var(--font-weight-medium);
+	}
+
+	&__main {
+		display: flex;
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+		padding-inline: var(--spacing-6);
+	}
+
+	// Keyed on the step in the markup, so each one mounts fresh and re-enters.
+	&__slot {
+		width: 100%;
+		padding-block: var(--spacing-10);
+		animation: step-enter var(--animation-duration-slow)
+			var(--animation-ease-out) both;
+	}
+
+	// Someone who has asked their OS to stop moving things means it.
+	@media (prefers-reduced-motion: reduce) {
+		&__slot {
+			animation: none;
+		}
+	}
+}
+
+@keyframes step-enter {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

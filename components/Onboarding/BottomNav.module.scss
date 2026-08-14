@@ -1,0 +1,61 @@
+@use "styles/typo-mixins" as typo;
+
+// Pinned to the bottom of every step. `--surface-veil` rather than a translucent
+// white: the token is already a theme-aware near-opaque panel colour, so the bar
+// reads correctly over the page in dark mode too.
+.nav {
+	position: sticky;
+	bottom: 0;
+	padding: var(--spacing-4) var(--spacing-6);
+	border-top: 1px solid var(--outline-variant);
+	background-color: var(--surface-veil);
+	backdrop-filter: blur(8px);
+
+	&__inner {
+		display: flex;
+		max-width: 42rem;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--spacing-4);
+		margin-inline: auto;
+	}
+
+	// On the first step there is nowhere to go back to. Hidden rather than
+	// removed, so the progress block doesn't jump left.
+	&__back[data-hidden="true"] {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	&__progress {
+		display: flex;
+		flex-direction: column;
+		align-items: end;
+		gap: var(--spacing-1-5);
+	}
+
+	&__count {
+		@include typo.ui-small;
+		color: var(--on-surface-variant);
+		font-weight: var(--font-weight-medium);
+	}
+
+	&__track {
+		width: 8rem;
+		height: var(--spacing-1-5);
+		overflow: hidden;
+		border-radius: var(--border-radius);
+		background-color: var(--surface-container-highest);
+	}
+
+	&__fill {
+		width: var(--_nav-progress);
+		height: 100%;
+		border-radius: var(--border-radius);
+		background-color: var(--root-ink);
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: width var(--animation-duration-slow) var(--animation-ease-out);
+		}
+	}
+}

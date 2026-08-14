@@ -1,0 +1,36 @@
+# The web target: a static export, and nothing else.
+#
+# No functions, no redirects to a server, no subdomain routing — there is no
+# server to route to. `pnpm build` writes `out/` and Netlify serves it. The
+# visitor's trees live in their own browser's IndexedDB, so there is nothing
+# here that could hold family data even if it wanted to.
+#
+# Deliberately *not* set: `NEXT_PUBLIC_TAURI`. Setting it would build the desktop
+# variant, which reaches for a filesystem no browser has.
+
+[build]
+  command = "pnpm build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Next's static export writes hashed filenames under `_next/static`, so those are
+# safe to cache forever. Everything else must not be, or a deploy leaves people
+# on the previous version until they hard-refresh.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    # The app makes no outbound requests of any kind — see docs/privacy.md — so
+    # the policy can say exactly that rather than approximating it. `blob:` is
+    # needed for photo object URLs out of IndexedDB, and `data:` for the fonts
+    # `next/font` inlines.
+    Content-Security-Policy = "default-src 'self'; img-src 'self' blob: data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"

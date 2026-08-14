@@ -1,0 +1,34 @@
+// `--_avatar-size` is set from the component as an inline custom property —
+// the size is a runtime prop, and a variable is how a value crosses from JS
+// into CSS without inline styling the properties themselves.
+.avatar {
+	flex: 0 0 auto;
+	width: var(--_avatar-size);
+	height: var(--_avatar-size);
+	border-radius: 50%;
+
+	&--photo {
+		// A portrait is rarely square, and letterboxing a face looks worse than
+		// cropping one.
+		object-fit: cover;
+	}
+
+	&--initials {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: var(--_avatar-bg, var(--male-solid));
+		color: var(--_avatar-color, var(--male-ink));
+		// Derived from the size rather than passed in: one source of truth, and
+		// the ratio survives a size the caller hasn't tried before.
+		font-size: calc(var(--_avatar-size) * 0.32);
+		font-weight: var(--font-weight-semibold);
+		// Two initials in a circle should not be able to wrap.
+		white-space: nowrap;
+
+		&[data-sex="female"] {
+			--_avatar-bg: var(--female-solid);
+			--_avatar-color: var(--female-ink);
+		}
+	}
+}

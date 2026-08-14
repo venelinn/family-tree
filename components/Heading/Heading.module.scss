@@ -1,0 +1,55 @@
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+// The modifiers set `--heading-*` knobs rather than declaring properties a
+// second time — the typo mixins already declare each one exactly once, reading
+// from those knobs. See `rules/css-styling.mdc`.
+.heading {
+	// A heading is short enough that the last line landing alone looks like a
+	// mistake. `balance` is ignored past a few lines, so it costs nothing here.
+	text-wrap: balance;
+
+	&--hero {
+		@include typo.hero;
+	}
+
+	&--h1 {
+		@include typo.h1;
+	}
+
+	&--h2 {
+		@include typo.h2;
+	}
+
+	&--h3 {
+		@include typo.h3;
+	}
+
+	&--h4 {
+		@include typo.h4;
+	}
+
+	&--h5 {
+		@include typo.h5;
+	}
+
+	// For a heading that should read as body copy — a panel label, a form
+	// section — while still being a heading in the outline.
+	&--base {
+		@include typo.ui-body($bold: true);
+	}
+
+	&--uppercase {
+		--heading-case: uppercase;
+		--heading-letter-spacing: 0.04em;
+	}
+
+	&--center {
+		--heading-align: center;
+		--heading-justify-self: center;
+	}
+
+	&--hidden {
+		@include shared.sr-only;
+	}
+}

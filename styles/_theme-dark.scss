@@ -1,0 +1,133 @@
+// Dark theme
+//
+// Hand-maintained companion to the generated `_css-variables.css`, which holds
+// the light values. This file re-declares the same semantic and domain tokens
+// with their dark counterparts. Nothing else in the app knows a theme exists —
+// components ask for `var(--surface-container)` and get the right colour.
+//
+// It is part of the token layer, so literal hex is correct *here* and nowhere
+// else. Where a dark value happens to already exist in the palette (a light
+// accent reused as a dark ink, say) it is referenced rather than re-typed.
+//
+// ── The three states ────────────────────────────────────────────────────────
+// The preference is a cookie, stamped on `<html>` as `data-theme` by
+// `app/layout.tsx` before the first byte, so there is no flash and no blocking
+// script. `system` is stamped too but matched by no selector — which is what
+// leaves the `prefers-color-scheme` query below in charge, so a change to the
+// OS setting is picked up live with no JavaScript.
+//
+// Both entry points share one `dark-tokens` mixin. Duplicating the list instead
+// is how the two halves of a theme drift apart.
+
+@mixin dark-tokens {
+	// Native chrome: scrollbars, the depth slider, the "deceased" checkbox and
+	// form autofill all follow this without being styled per component.
+	color-scheme: dark;
+
+	// ── Chrome ──────────────────────────────────────────────────────────────
+	// `surface` is the page; the containers are raised off it. In light they are
+	// near-identical and the outline does the separating. In dark the container
+	// is *lighter* than the page — which is how depth reads without shadows.
+	--surface: #0b1120;
+	--surface-dim: #070d18;
+	--surface-bright: #1d2839;
+	--surface-container-lowest: #0b1120;
+	--surface-container-low: #101828;
+	--surface-container: #151e2e;
+	--surface-container-high: #1d2839;
+	--surface-container-highest: #232f42;
+	--surface-veil: color-mix(in srgb, #151e2e 95%, transparent);
+
+	// ── Text ────────────────────────────────────────────────────────────────
+	// Never pure white: on a dark ground it vibrates.
+	--on-surface: #e8edf5;
+	--on-surface-soft: #c2cbd9;
+	--on-surface-variant: #93a1b5;
+	--on-surface-faint: #6f7f96;
+	--on-surface-ghost: #55637a;
+
+	// ── Outlines ────────────────────────────────────────────────────────────
+	--outline-subtle: #1e2839;
+	--outline-variant: #2a3648;
+	--outline: #3b4a61;
+
+	// ── Accent ──────────────────────────────────────────────────────────────
+	// This app's accent is ink itself — a primary button is the one inverted
+	// surface — so `primary` flips with the theme rather than staying a brand
+	// hue. `inverse-surface` / `background` / `on-background` reference these in
+	// the generated tokens and follow automatically.
+	--primary: var(--color-slate-200);
+	--primary-hover: var(--color-slate-300);
+	--on-primary: #0b1120;
+	--primary-container: #232f42;
+	--on-primary-container: #e8edf5;
+
+	// ── Error ───────────────────────────────────────────────────────────────
+	--error: var(--color-rose-400);
+	--on-error: #0b1120;
+	--error-container: #351620;
+	--on-error-container: var(--color-rose-300);
+
+	// ── Elevation ───────────────────────────────────────────────────────────
+	// The light shadow is invisible on dark; deepen it rather than drop it.
+	--box-shadow-color: rgb(0 0 0 / 0.45);
+
+	// ── Domain: person cards ────────────────────────────────────────────────
+	// The tints carry the meaning, so in dark they become deep washes rather
+	// than pale ones — a light tint on a dark card reads as a highlight instead
+	// of a category. Ink and line swap roles: the light theme's line colour is
+	// legible as dark-theme text.
+	--male-line: #2a5f80;
+	--male-soft: #12283a;
+	--male-ink: var(--color-sky-300);
+	--male-solid: #2b5470;
+
+	--female-line: #8a3f55;
+	--female-soft: #351621;
+	--female-ink: var(--color-rose-300);
+	--female-solid: #6f2c40;
+
+	// ── Domain: the person the chart is centred on ──────────────────────────
+	// `root-ring` and `branch-ring` are deliberately absent: a selection ring is
+	// a signal, not chrome, and it is legible on both grounds. Leaving them out
+	// means the generated light value stands in both themes.
+	--root-line: #1f6a53;
+	--root-soft: #0d2b23;
+	--root-ink: var(--color-emerald-300);
+
+	--branch-line: #7a5a18;
+	--branch-soft: #2e2411;
+	--branch-soft-hover: #3d3016;
+	--branch-ink: var(--color-amber-300);
+
+	// ── Domain: the canvas ──────────────────────────────────────────────────
+	// React Flow takes these as inline styles from TypeScript, where a `var()`
+	// resolves — so the canvas re-themes without `TreeCanvas` knowing the theme.
+	--canvas-dot: #253044;
+	--edge-spouse: var(--color-slate-500);
+	--edge-descent: var(--color-slate-600);
+	--union: var(--color-slate-500);
+
+	// Mourning ribbon. Deliberately not `--on-surface`: inverting it would put a
+	// near-white corner on a dark card, which reads as a highlight — the
+	// opposite of what it means.
+	--ribbon: #9aa8bd;
+}
+
+:root {
+	color-scheme: light;
+}
+
+// An explicit choice wins, whatever the OS says.
+:root[data-theme="dark"] {
+	@include dark-tokens;
+}
+
+// No choice made (`system`, and the default for a first visit) — follow the OS.
+// `:not([data-theme="light"])` rather than `[data-theme="system"]` so a missing
+// attribute behaves the same as an explicit `system`.
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		@include dark-tokens;
+	}
+}

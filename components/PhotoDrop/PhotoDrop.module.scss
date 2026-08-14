@@ -1,0 +1,161 @@
+@use "styles/functions" as fn;
+@use "styles/typo-mixins" as typo;
+@use "styles/mixins" as shared;
+
+.photos {
+	display: grid;
+	gap: var(--spacing-3);
+
+	&__grid {
+		@include shared.resetList;
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: var(--spacing-2);
+	}
+
+	&__item {
+		--_photo-actions-opacity: 0;
+
+		position: relative;
+
+		&:hover,
+		&:focus-within {
+			--_photo-actions-opacity: 1;
+		}
+	}
+
+	&__image {
+		width: 100%;
+		aspect-ratio: 1;
+		border-radius: var(--border-radius);
+		object-fit: cover;
+
+		// The primary photo is the one on the card, so it is marked as chosen
+		// rather than merely first.
+		&[data-primary="true"] {
+			box-shadow:
+				0 0 0 1px var(--surface-container),
+				0 0 0 3px var(--root-ring);
+		}
+	}
+
+	&__actions {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--spacing-1);
+		border-radius: var(--border-radius);
+		// A scrim over a photograph, which is fixed content in both themes — one of
+		// the narrow cases where the raw palette is the right answer.
+		background-color: color-mix(in srgb, var(--color-black) 55%, transparent);
+		opacity: var(--_photo-actions-opacity);
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition: opacity var(--animation-duration-fast) ease;
+		}
+	}
+
+	&__actions &__action {
+		--_btn-size: 1.75rem;
+		--_btn-bg: var(--surface-container);
+		--_btn-color: var(--on-surface-soft);
+		--_btn-radius: var(--border-radius-sm);
+
+		&:hover:not(:disabled) {
+			--_btn-color: var(--_photo-action-hover, var(--on-surface));
+		}
+
+		&[data-action="promote"] {
+			--_photo-action-hover: var(--branch-ink);
+		}
+
+		&[data-action="remove"] {
+			--_photo-action-hover: var(--error);
+		}
+	}
+
+	&__badge {
+		@include typo.tabular;
+		position: absolute;
+		top: var(--spacing-1);
+		left: var(--spacing-1);
+		padding-inline: var(--spacing-1);
+		border-radius: var(--border-radius-sm);
+		background-color: color-mix(
+			in srgb,
+			var(--surface-container) 90%,
+			transparent
+		);
+		color: var(--root-ink);
+		font-size: fn.rem(9px);
+		font-weight: var(--font-weight-medium);
+		text-transform: uppercase;
+	}
+
+	// The drop zone. Dashed and unfilled until a file is over it, at which point
+	// it takes the root green — the app's one "yes, this" colour.
+	&__drop {
+		--_drop-border: var(--outline-variant);
+		--_drop-bg: transparent;
+		--_drop-color: var(--on-surface-variant);
+
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-1-5);
+		width: 100%;
+		padding: var(--spacing-5) var(--spacing-4);
+		border: 2px dashed var(--_drop-border);
+		border-radius: var(--border-radius-lg);
+		background-color: var(--_drop-bg);
+		color: var(--_drop-color);
+		text-align: center;
+		cursor: pointer;
+
+		@media (prefers-reduced-motion: no-preference) {
+			transition:
+				background-color var(--animation-duration-fast) ease,
+				border-color var(--animation-duration-fast) ease;
+		}
+
+		&:hover:not(:disabled) {
+			--_drop-border: var(--outline);
+			--_drop-bg: var(--surface-container-high);
+		}
+
+		&:focus-visible {
+			@include shared.focus-ring;
+		}
+
+		&:disabled {
+			opacity: 0.6;
+			cursor: progress;
+		}
+
+		&[data-over="true"] {
+			--_drop-border: var(--root-line);
+			--_drop-bg: var(--root-soft);
+			--_drop-color: var(--root-ink);
+		}
+	}
+
+	&__dropLabel {
+		@include typo.ui-caption;
+		font-weight: var(--font-weight-medium);
+	}
+
+	&__dropHint {
+		@include typo.ui-small;
+		color: var(--on-surface-faint);
+	}
+
+	// The real file input, driven by the drop zone above. Off-screen rather than
+	// `display: none` — Safari has historically ignored `.click()` on a file
+	// input it considers unrendered. It carries `aria-hidden` in the markup, so
+	// assistive technology hears the button and not the duplicate.
+	&__input {
+		@include shared.sr-only;
+	}
+}

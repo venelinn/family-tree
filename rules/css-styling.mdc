@@ -1,0 +1,278 @@
+---
+description: CSS/SCSS styling rules and conventions for family-tree
+globs: "**/*.{scss,css,module.scss}"
+alwaysApply: false
+---
+
+# CSS/SCSS Styling Rules
+
+## Absolute Rules
+
+- **Never use `!important`** — fix specificity issues properly
+- **Never use inline styles in components** — use CSS Modules or SCSS classes. The one exception is React Flow, which takes edge stroke, background dots and minimap fills as inline styles; those pass a `var(--token)` through (see `docs/theming.md`)
+- **TSX structure follows `rules/html-rules.mdc`** — semantic elements, `useTranslations()` for every visible string
+- **Never use hardcoded colors** (`#fff`, `#0b57d0`, `rgba(...)`, `hsl(...)`) — always use design token variables. The token layer itself (`tokens/*.json`, `styles/_theme-dark.scss`) is where literal colour is allowed, and nowhere else
+- **Prefer semantic tokens over the raw palette** — surfaces, text, borders and accents come from the themed semantic layer (`--surface*`, `--on-surface*`, `--outline*`, `--primary*`, `--on-primary*`, `--error*`, `--inverse-*`) or the domain layer (`--male-*`, `--female-*`, `--root-*`, `--branch-*`, `--canvas-dot`, `--edge-*`, `--union`, `--ribbon`). The raw palette (`--color-white`, `--color-black`, `--color-slate-*`, `--color-rose-*`, …) is **not** overridden in dark mode and will paint light-mode pixels on a dark background. See **Dark Mode**
+- CSS variables use `--_` prefix for private/scoped vars (e.g. `--_card-bg`)
+
+## Design Tokens
+
+- All values come from Style Dictionary (`tokens/*.json` → `styles/_css-variables.css` + `styles/_base-variables.scss` + `styles/variables.js`). The generated files carry a "do not edit" header and mean it — change the JSON and run `pnpm build-dictionary` (which `dev` and `build` do for you)
+- **Type comes from the mixins, the family from `next/font`.** `lib/fonts.ts` owns the webfont and the root layout puts its class on `<body>`; `body { @include typo.ui-body }` sets the scale. There is no `--font-sans`: a class inherits, and the custom property it replaced had to be declared on the same element it resolved against
+- Use `var(--spacing-*)` for spacing, `var(--border-radius*)` for corners, `var(--box-shadow-base)` for elevation. For typography prefer the typo mixins (see **Typography**); for colour prefer the semantic layer (see **Dark Mode**)
+- SCSS breakpoints: `base.$breakpoint-sm` (36rem), `base.$breakpoint-md` (48rem), `base.$breakpoint-lg` (62rem), `base.$breakpoint-xl` (75rem)
+- Each breakpoint has a `-max` variant (e.g. `$breakpoint-md-max: 47.9375rem`)
+
+## Dark Mode
+
+- Light values are generated into `styles/_css-variables.css`. Dark is a hand-maintained override in `styles/_theme-dark.scss`, applied by `[data-theme="dark"]` on `<html>` **and** by a `prefers-color-scheme` query for users who chose `system`. Both go through the same `dark-tokens` mixin — add a token to that mixin, never to one branch only
+- **Only the semantic and domain layers adapt.** They are the single source of truth for surfaces, text, borders and accents:
+
+  | Use | Token |
+  | --- | --- |
+  | Page background | `--background`, `--surface` |
+  | Card / panel / raised surface | `--surface-container`, `-lowest`, `-low`, `-high`, `-highest`, `--surface-bright`, `--surface-dim` |
+  | Translucent panel over scrolling content | `--surface-veil` |
+  | Primary text / icon on surface | `--on-surface` |
+  | Secondary text / muted icon | `--on-surface-variant` |
+  | Further emphasis steps | `--on-surface-soft`, `--on-surface-faint`, `--on-surface-ghost` |
+  | Hairline border / divider | `--outline-variant` (weakest: `--outline-subtle`) |
+  | Stronger border / outline | `--outline` |
+  | Primary fill (button, active toggle) | `--primary`, `--primary-hover`; text on it `--on-primary` |
+  | Pale brand-tint background | `--primary-container` (text: `--on-primary-container`) |
+  | Error text or icon | `--error`; on a filled error `--on-error`; tinted `--error-container` / `--on-error-container` |
+  | Inverted (e.g. tooltip) | `--inverse-surface` / `--inverse-on-surface` |
+  | Person cards | `--male-*` / `--female-*` (`-line`, `-soft`, `-ink`, `-solid`) |
+  | Chart focus | `--root-*`, `--branch-*` |
+  | Canvas | `--canvas-dot`, `--edge-spouse`, `--edge-descent`, `--union`, `--ribbon` |
+
+- **Do not use the raw palette for theme-driven chrome** — `--color-white`, `--color-black`, `--color-slate-*`, `--color-sky-*`, `--color-rose-*`, `--color-emerald-*`, `--color-amber-*` all keep their light-mode value under `[data-theme="dark"]`. A `background: var(--color-white)` reads as a stark white panel on a dark page
+- **Narrow exceptions where raw palette tokens are correct** — content that is itself fixed across themes:
+  - Image overlays / scrims: `color-mix(in srgb, var(--color-black), transparent X%)`
+  - Text or icon sitting on a fixed-colour filled badge
+- **`shared.asBox` already paints `var(--surface-container)`** — when you need a different surface level, override the local var: `--_as-box-bgr: var(--surface-container-high);`. Do not hardcode a colour
+- **Component-local dark overrides go through `--_` private vars**, not duplicated declarations — the same variable-swap pattern used for `:hover`/`:focus` (see **Responsive**). Reach for this only when a component needs something the token layer can't express; the usual answer is that it should use a different token:
+
+  ```scss
+  .spinner {
+    [data-theme="dark"] & {
+      --_spinner-track: var(--outline);
+    }
+
+    border-color: var(--_spinner-track, var(--outline-variant));
+    border-top-color: var(--primary);
+  }
+  ```
+
+- **Native form chrome adapts via `color-scheme: dark`** (already set in `_theme-dark.scss`) — do not restyle scrollbars, autofill, date pickers, or `accent-color` per component
+- **Verifying a change is dark-mode-safe**: open the page with `<html data-theme="dark">`. If text/borders/backgrounds disappear or render at wrong contrast, swap the offending token to its semantic equivalent from the table above
+
+## Tailwind's role
+
+The app is styled with CSS Modules. Tailwind is present for its **utilities
+only** — the same minimal integration bgmtl uses:
+
+```scss
+@layer utilities {
+  @import "tailwindcss/theme.css";
+  @import "tailwindcss/utilities.css";
+}
+```
+
+- **No preflight.** `styles/_reset.scss` does that job instead, in the `reset`
+  layer — smaller than preflight and written for what this app actually renders
+  (every list is a styled list, every control is a component)
+- **No component uses a utility class**, and none should. `@theme inline` in
+  `globals.scss` exposes the semantic tokens as utilities (`bg-surface-container`,
+  `text-on-surface-variant`) purely as an escape hatch for a one-off
+- Adding a colour to `@theme inline` is only worth it when a utility for it is
+  actually wanted; the tokens themselves are always available as `var(--…)`
+
+## Cascade Layers
+
+`styles/globals.scss` declares the whole cascade in one line:
+
+```scss
+@layer frameworks, reset, base, theme, layouts, components, utilities;
+```
+
+Later wins, so precedence is decided there and nowhere else — that is what makes
+`!important` unnecessary rather than merely discouraged.
+
+- `frameworks` — third-party CSS
+- `reset` — `styles/_reset.scss`, this app's replacement for Tailwind preflight
+- `base` — element defaults: `html`, `body`, global keyframes
+- `theme` / `layouts` — reserved; declared so their position is fixed before anything needs them
+- `components` — where component CSS would sit if Next layered it
+- `utilities` — Tailwind utilities
+- **Custom properties are unlayered on purpose.** Layers order *declarations of the same property*; token definitions never conflict, and keeping them out means `:root` and `[data-theme]` behave predictably
+
+**CSS Modules are emitted unlayered**, and unlayered rules beat every layer. That
+is deliberate for the migration — a converted component's styles are not at the
+mercy of a leftover utility class — but it means a Tailwind utility cannot
+override a module class. Convert a component's markup in one pass and the
+question doesn't arise.
+
+## CSS Modules
+
+- **One folder per component**, named for it, holding everything it owns:
+
+  ```
+  components/Toolbar/
+    Toolbar.tsx
+    Toolbar.module.scss
+    index.ts          // export { Toolbar } from "./Toolbar"
+  ```
+
+  Consumers import the folder (`from "@/components/Toolbar"`), so the
+  internal file layout can change without touching call sites. Sibling
+  components are imported by alias too: `from "@/components/PersonSearch"`.
+- One `.module.scss` per component, colocated with it
+- Import as `import styles from "./Component.module.scss"`
+- Use `clsx` for conditional classes — never string concatenation for multiple classes
+- **Styling another component from outside goes through its `--_` variables**, scoped under an ancestor of yours so the rule wins regardless of which module stylesheet loads first:
+
+  ```scss
+  // Toolbar.module.scss — retune Button without touching Button
+  &__controls &__control {
+    --_btn-padding: var(--spacing-1-5) var(--spacing-3);
+  }
+  ```
+
+  Never re-declare the other component's properties: it has declared them once
+  already, and a second declaration is a specificity race you win by accident.
+
+## BEM Methodology
+
+- Follow BEM (Block Element Modifier) for all class naming and HTML structure
+- **Block**: the component root (`.card`, `.panel`, `.toolbar`)
+- **Element**: a child part of the block, using `__` (`.card__title`, `.toolbar__group`)
+- **Modifier**: a variation or state, using `--` (`.card--deceased`, `.toolbar--compact`)
+- In SCSS modules, use nesting with `&`:
+
+```scss
+.card {
+  &__title { ... }
+  &__meta { ... }
+  &--deceased { ... }
+}
+```
+
+- In JSX, reference as `styles.card__title`, `styles['card--deceased']`
+- Keep nesting flat — max 2 levels (block > element). Never nest elements inside elements (`&__body__title` is wrong)
+- Use data attributes for dynamic states instead of BEM modifiers when toggled by JS: `data-sex="female"`, `data-size="sm"`
+- **Use `aria-pressed`, `aria-selected`, or `aria-expanded` for interactive toggle states** — style with `&[aria-pressed="true"]` instead of adding/removing a `.selected` class via JS. This keeps accessibility and styling in sync
+
+## Responsive
+
+- Mobile-first: default styles are mobile, use `@media (min-width: base.$breakpoint-md)` to add desktop styles
+- Prefer `@container` queries over `@media` when the component is inside a resizable container
+- Container queries require `container-type: inline-size` on a parent
+- **Never override property values directly inside state changes or media queries** — instead, declare the property once using a scoped CSS variable (`--_` prefix) with a fallback, then reassign only the variable in the alternate state. This applies to `:hover`, `:focus`, `:active`, `aria-*` selectors, and `@media`/`@container` queries alike:
+
+```scss
+// Bad — duplicates property declarations across states
+.card {
+  background: var(--surface-container);
+  box-shadow: var(--box-shadow-base);
+  scale: 1;
+  &:hover {
+    background: var(--surface-container-high);
+    box-shadow: 0 16px 24px var(--box-shadow-color);
+    scale: 1.02;
+  }
+}
+
+// Good — single declaration, variable swap
+.card {
+  --_card-bg: var(--surface-container);
+  --_card-shadow: var(--box-shadow-base);
+  --_card-scale: 1;
+
+  background: var(--_card-bg);
+  box-shadow: var(--_card-shadow);
+  scale: var(--_card-scale);
+
+  &:hover {
+    --_card-bg: var(--surface-container-high);
+    --_card-shadow: 0 16px 24px var(--box-shadow-color);
+    --_card-scale: 1.02;
+  }
+}
+```
+
+This also works for child element properties driven by parent state — declare the `--_` variable on the block, consume it on the element, reassign on the block's `:hover`:
+
+```scss
+.card {
+  --_content-color: inherit;
+  &:hover { --_content-color: var(--on-primary); }
+  &__content { color: var(--_content-color); }
+}
+```
+
+## Layout Patterns
+
+- **For single-column stacked layouts, use `display: grid; gap: ...`** — not `display: flex; flex-direction: column; gap: ...`. Grid is simpler when you only need vertical stacking with a gap
+- Use Flexbox for component internals that need horizontal alignment or wrapping
+- When using flex: always set `min-width: 0` on children that need to shrink below content size (inputs, text)
+- Use `flex: 0 0 auto` for fixed-size flex children (icons, buttons)
+
+## Units
+
+- Spacing: `var(--spacing-*)` tokens or `rem`. `fn.rem(18px)` converts a one-off value a design hands over in pixels
+- **Typography: prefer typo mixins over raw font-size/line-height tokens** — see **Typography**
+- Breakpoints: SCSS variables only (`base.$breakpoint-md`), not hardcoded px
+- Icon sizes in components: prefer `rem` or numeric px values, avoid `em` (parent-dependent)
+
+## Typography
+
+- **Use `@include typo.*` mixins instead of setting font-size/line-height tokens directly** — mixins set the full type scale (size, line-height, weight, and related properties) and stay aligned with the design system
+- Import at the top of the module:
+
+```scss
+@use "styles/typo-mixins" as typo;
+```
+
+- Available mixins: `typo.ui-body`, `typo.ui-caption`, `typo.ui-small`, `typo.h1`–`typo.h5`, `typo.hero`, `typo.tabular`. Heading mixins accept an optional `$color` arg; UI mixins accept an optional `$bold` arg
+
+```scss
+// Bad — only sets font-size; misses line-height, weight, etc.
+.label {
+  font-size: var(--ui-small-font-size);
+}
+
+// Good — full ui-small scale via mixin
+.label {
+  @include typo.ui-small;
+}
+
+// Bold variant
+.label {
+  @include typo.ui-small($bold: true);
+}
+```
+
+- Use `typo.tabular` for anything that lines up in a column — dates, ages, generation counts
+- Reserve raw `var(--ui-*-font-size)` / `var(--heading-size-*-font-size)` for one-off overrides, not as the default way to style text
+
+## Cross-Browser (Safari)
+
+- **Never use `oklch(from var(...))` or relative color syntax with CSS variables** — Safari doesn't support it reliably; use `color-mix(in srgb, ...)` instead
+- **Never rely on `aspect-ratio` alone for square buttons** — set explicit `width` and `height` and zero out padding via custom properties
+- **Always add `-webkit-appearance: none` on inputs** — Safari adds default styling that changes dimensions
+- **Always add `flex-shrink: 0` on icons and fixed-size elements** — prevents Safari from shrinking them in flex containers
+
+## File Structure
+
+Imports resolve from the project root via `sassOptions.loadPaths` in
+`next.config.ts`, so a module anywhere in the tree writes the same paths:
+
+```scss
+@use "styles/base-variables" as base;  // $breakpoint-*, generated
+@use "styles/typo-mixins" as typo;     // type scale
+@use "styles/mixins" as shared;        // asBox, sr-only, ellipsis, truncate, focus-ring
+@use "styles/functions" as fn;         // rem()
+
+.component { ... }
+```

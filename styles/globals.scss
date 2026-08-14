@@ -1,0 +1,111 @@
+// The one global stylesheet, loaded from `app/layout.tsx`.
+//
+// Colour is a two-file system:
+//
+//   1. `tokens/*.json`      → the palette and the roles it plays, built by
+//                             Style Dictionary into `_css-variables.css`
+//                             (light) — never edited by hand.
+//   2. `_theme-dark.scss`   → the same roles, dark. Hand-maintained.
+//
+// Components name the *role*, never the colour: `var(--surface-container)`, not
+// `#fff`. That is what makes the dark theme a change to one file rather than a
+// variant bolted onto every element. See `docs/theming.md`.
+//
+// Styling itself is CSS Modules, one per component. Tailwind is kept for its
+// utilities as an escape hatch only — there is no preflight, and no component
+// uses a utility class.
+
+@use "typo-mixins" as typo;
+@use "reset";
+@use "css-variables";
+@use "theme-dark";
+
+// The cascade, declared once and in order. Later layers win, so this line is the
+// only place the precedence of the whole stylesheet is decided — no specificity
+// arms race, no `!important`.
+//
+// `components` is where `.module.scss` output would sit if Next put it in a
+// layer. It doesn't: CSS Modules are emitted **unlayered**, and unlayered rules
+// beat every layer. That is the behaviour we want while both systems are live —
+// a converted component's own styles are not at the mercy of a leftover utility
+// class — but it does mean a Tailwind utility cannot override a module class.
+// Convert a component's markup in one pass and the question never comes up.
+@layer frameworks, reset, base, theme, layouts, components, utilities;
+
+// Tailwind is here for its utilities and nothing else — no preflight. The base
+// styling a browser applies is dealt with by `_reset.scss` instead, which is
+// smaller and knows what this app actually renders.
+//
+// `@import "tailwindcss"` cannot be used from Sass — Sass claims extensionless
+// `@import` for itself — so the two parts are imported by path.
+@layer utilities {
+	@import "tailwindcss/theme.css";
+	@import "tailwindcss/utilities.css";
+}
+
+@layer reset {
+	@include reset.styles;
+}
+
+// Automatic source detection resolves against the stylesheet's own directory,
+// and this one lives in `styles/`. Naming the roots explicitly keeps class
+// scanning correct wherever the entry point moves.
+@source "../app";
+@source "../components";
+@source "../lib";
+
+// The bridge to Tailwind: every `--color-*` here becomes a utility, so
+// `bg-surface-container` and `text-on-surface-variant` exist if a one-off ever
+// needs them. `inline` keeps the utility pointing at our variable rather than
+// snapshotting its value, which is what lets a utility re-theme.
+//
+// Watch for collisions with Tailwind's own utilities when naming: a token called
+// `solid` could not be used, because `border-solid` is already a border-style.
+@theme inline {
+	--color-background: var(--background);
+	--color-surface: var(--surface);
+	--color-surface-container: var(--surface-container);
+	--color-surface-container-high: var(--surface-container-high);
+	--color-surface-container-highest: var(--surface-container-highest);
+
+	--color-on-surface: var(--on-surface);
+	--color-on-surface-soft: var(--on-surface-soft);
+	--color-on-surface-variant: var(--on-surface-variant);
+	--color-on-surface-faint: var(--on-surface-faint);
+	--color-on-surface-ghost: var(--on-surface-ghost);
+
+	--color-outline: var(--outline);
+	--color-outline-variant: var(--outline-variant);
+	--color-outline-subtle: var(--outline-subtle);
+
+	--color-primary: var(--primary);
+	--color-on-primary: var(--on-primary);
+	--color-error: var(--error);
+}
+
+@layer base {
+	:root {
+		// Lets a transition interpolate to `auto` — which is what makes the native
+		// `<details>` disclosure in `Accordion` animate open instead of snapping.
+		// Opt-in, and inert for any property that isn't being transitioned.
+		interpolate-size: allow-keywords;
+	}
+
+	html,
+	body {
+		height: 100%;
+	}
+
+	// The family arrives from `next/font`'s class on `<body>`; the *scale* comes
+	// from the type mixin, so body copy is one step of the design system rather
+	// than a loose font-size.
+	body {
+		@include typo.ui-body;
+		background: var(--background);
+		color: var(--on-background);
+		-moz-osx-font-smoothing: grayscale;
+		-webkit-font-smoothing: antialiased;
+		-webkit-text-size-adjust: none;
+	}
+
+}

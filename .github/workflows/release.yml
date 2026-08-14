@@ -1,0 +1,75 @@
+name: Release
+
+# Tag-driven, not push-driven. `git push` ships nothing on its own: a desktop
+# release is an installer somebody downloads, so it happens when a version is
+# declared rather than on every commit.
+#
+#   pnpm version patch && git push --follow-tags
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  # `tauri-action` creates the release and uploads the installers to it.
+  contents: write
+
+jobs:
+  desktop:
+    # A matrix even though there is one entry, because adding Windows or Linux
+    # later is then a line rather than a rewrite. You cannot cross-compile a
+    # Tauri app, so each target needs its own runner — that is the whole reason
+    # this workflow exists rather than building locally.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      # Keyed on the lockfile *and* the manifest: a dependency bump must not
+      # reuse a cache built against the old graph.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      # The same checks that gate local work. A release is the worst possible
+      # place to discover the Bulgarian catalogue drifted.
+      - run: pnpm lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm i18n:check
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update artifacts. Without these the build still produces a
+          # .dmg, but `latest.json` has no signature and every client refuses
+          # the update — silently, since it validates before comparing versions.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Family Tree ${{ github.ref_name }}"
+          releaseBody: "See the assets below to download and install."
+          # Published, not draft: `latest.json` is fetched from
+          # `releases/latest/download/`, and a draft release is not "latest".
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}

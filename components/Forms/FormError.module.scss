@@ -1,0 +1,12 @@
+@use "styles/typo-mixins" as typo;
+
+// A whole-form failure — a write that came back with a reason — as opposed to
+// the per-field `error` prop. Tinted rather than plain red text so it reads as a
+// block that arrived, not as a field that is merely wrong.
+.formError {
+	@include typo.ui-caption;
+	padding: var(--spacing-2) var(--spacing-3);
+	border-radius: var(--border-radius);
+	background-color: var(--error-container);
+	color: var(--on-error-container);
+}
