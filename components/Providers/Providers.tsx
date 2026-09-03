@@ -30,7 +30,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
 	}, [locale])
 
 	return (
-		<NextIntlClientProvider locale={locale} messages={getMessages(locale)}>
+		/**
+		 * Fixed rather than the environment's, which is what `next-intl` warns
+		 * about: a static export is prerendered on a build machine and hydrated in
+		 * a reader's browser, so an inherited zone is two different zones and the
+		 * markup can differ between them.
+		 *
+		 * UTC because nothing here consumes it. Every date in the tree is free
+		 * text formatted by `date-fns` in `lib/date-format.ts`, and none of them
+		 * carries a time — so this only has to be *the same everywhere*, which a
+		 * real zone like Europe/Sofia would satisfy while implying a meaning the
+		 * app does not have.
+		 */
+		<NextIntlClientProvider
+			locale={locale}
+			messages={getMessages(locale)}
+			timeZone="UTC"
+		>
 			{children}
 		</NextIntlClientProvider>
 	)
