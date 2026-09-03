@@ -18,6 +18,7 @@
 		"i18n:check": "tsx scripts/check-messages.ts",
 		"photos": "tsx scripts/localize-photos.ts",
 		"import": "tsx scripts/import-gedcom.ts",
+		"archive": "tsx scripts/pack-archive.ts",
 		"backfill:married": "tsx scripts/backfill-married-names.ts",
 		"build-dictionary": "style-dictionary build -c ./tokens/config.js"
 	},

@@ -105,6 +105,17 @@ folders are granted by the dialog.
 the chosen folder only, and every photo under `photos/8f/3a/` is denied — which
 reads as "the app lost my pictures", not as a permissions problem.
 
+**Importing a bundle's `tree.json` loses every photo, silently.** `tree.json` is
+only half a `.familytree` bundle — the pictures are beside it in `photos/`, and
+Import is an `<input type=file>` that is handed one file, never a folder. There
+is no `photos` map in the store file, `assertLooksLikeTree` only checks that
+`people` and `unions` are arrays, and `restorePhotos` swallows per-photo
+failures, so the wrong file imports cleanly and arrives with no faces. Use
+Settings → Export, or `pnpm archive <bundle>` (`scripts/pack-archive.ts`) to
+pack rows + base64 photos out of band. Two bits of UI copy still say "Photos are
+not included" and still suggest importing a `tree.json`; both predate
+`collectPhotos` and are wrong.
+
 **A blob download does nothing in the Tauri webview.** `<a download>` is silently
 ignored — WKWebView has no download handling unless Rust adds it. Export on the
 desktop writes the file itself through a native save dialog; only the web build
